@@ -1,0 +1,1056 @@
+# 問題の単語リスト（唯一の正）
+# 書式:  こたえ(ひらがな) | 画像生成用の英語 | レベル(1-3) | 仮の絵文字(任意)
+# カテゴリ行:  ## カテゴリ名 | アイコン
+# 同じこたえは1回だけ（重複は build_questions.py が警告します）
+
+## くだもの | 🍎
+りんご | red apple | 1 | 🍎
+みかん | mandarin orange | 1 | 🍊
+ばなな | banana | 1 | 🍌
+いちご | strawberry | 1 | 🍓
+ぶどう | bunch of purple grapes | 1 | 🍇
+すいか | watermelon slice | 1 | 🍉
+もも | japanese peach | 1 | 🍑
+めろん | green melon | 1 | 🍈
+さくらんぼ | cherries | 1 | 🍒
+れもん | lemon | 1 | 🍋
+ぱいなっぷる | pineapple | 1 | 🍍
+なし | japanese pear nashi | 2 |
+かき | japanese persimmon kaki fruit | 2 |
+きうい | kiwi fruit cut in half | 2 | 🥝
+まんごー | mango | 2 | 🥭
+ぶるーべりー | blueberries | 2 | 🫐
+くり | chestnut | 2 | 🌰
+あぼかど | avocado cut in half | 2 | 🥑
+ここなっつ | coconut | 2 | 🥥
+ますかっと | green muscat grapes | 2 |
+おれんじ | orange fruit | 2 |
+ようなし | european pear | 3 | 🍐
+ゆず | yuzu citrus | 3 |
+びわ | loquat fruit | 3 |
+ぐれーぷふるーつ | grapefruit cut in half | 3 |
+らいち | lychee | 3 |
+ぱぱいや | papaya | 3 |
+らずべりー | raspberry | 3 |
+いちじく | fig fruit | 3 |
+うめ | green ume plum | 3 |
+すもも | red plum | 3 |
+ざくろ | pomegranate | 3 |
+どらごんふるーつ | dragon fruit | 3 |
+きんかん | kumquat | 3 |
+はっさく | hassaku citrus | 3 |
+あんず | apricot | 3 |
+らいむ | lime | 3 |
+すだち | sudachi green citrus | 3 |
+ぷるーん | prune | 3 |
+ぽんかん | ponkan orange | 3 |
+ぱっしょんふるーつ | passion fruit | 3 |
+
+## やさい | 🥕
+とまと | tomato | 1 | 🍅
+きゅうり | cucumber | 1 | 🥒
+にんじん | carrot | 1 | 🥕
+たまねぎ | onion | 1 | 🧅
+じゃがいも | potato | 1 | 🥔
+なす | eggplant | 1 | 🍆
+かぼちゃ | green kabocha pumpkin | 1 |
+とうもろこし | corn on the cob | 1 | 🌽
+ぴーまん | green bell pepper | 1 | 🫑
+きゃべつ | cabbage | 1 |
+ぶろっこりー | broccoli | 1 | 🥦
+きのこ | mushroom | 1 | 🍄
+れたす | lettuce | 2 | 🥬
+だいこん | daikon radish | 2 |
+はくさい | napa cabbage | 2 |
+ねぎ | japanese green onion negi | 2 |
+ほうれんそう | spinach | 2 |
+しいたけ | shiitake mushroom | 2 |
+さつまいも | sweet potato | 2 | 🍠
+えだまめ | edamame | 2 |
+にんにく | garlic | 2 | 🧄
+ぱぷりか | red paprika pepper | 2 |
+もやし | bean sprouts | 2 |
+たけのこ | bamboo shoot | 2 |
+えんどうまめ | green peas in pod | 2 |
+とうがらし | red chili pepper | 2 | 🌶️
+みにとまと | cherry tomatoes | 2 |
+ごぼう | burdock root | 3 |
+れんこん | lotus root slice | 3 |
+ごーや | bitter melon goya | 3 |
+おくら | okra | 3 |
+せろり | celery | 3 |
+あすぱらがす | asparagus | 3 |
+しょうが | ginger root | 3 | 🫚
+かぶ | white turnip | 3 |
+さといも | taro root | 3 |
+ながいも | nagaimo yam | 3 |
+ずっきーに | zucchini | 3 |
+みずな | mizuna greens | 3 |
+こまつな | komatsuna greens | 3 |
+えのき | enoki mushrooms | 3 |
+しめじ | shimeji mushrooms | 3 |
+まつたけ | matsutake mushroom | 3 |
+そらまめ | broad beans | 3 |
+いんげん | green beans | 3 |
+かりふらわー | cauliflower | 3 |
+ちんげんさい | bok choy | 3 |
+らでぃっしゅ | red radish | 3 |
+しそ | shiso leaf | 3 |
+ぱせり | parsley | 3 |
+
+## たべもの | 🍙
+ごはん | bowl of white rice | 1 | 🍚
+ぱん | bread loaf | 1 | 🍞
+おにぎり | onigiri rice ball | 1 | 🍙
+らーめん | bowl of ramen | 1 | 🍜
+うどん | bowl of udon noodles | 1 |
+すぱげってぃ | spaghetti | 1 | 🍝
+かれーらいす | japanese curry rice | 1 | 🍛
+すし | sushi | 1 | 🍣
+からあげ | karaage fried chicken | 1 |
+はんばーぐ | hamburg steak | 1 |
+はんばーがー | hamburger | 1 | 🍔
+ぴざ | pizza | 1 | 🍕
+さんどいっち | sandwich | 1 | 🥪
+おむらいす | omurice | 1 |
+たまごやき | tamagoyaki rolled omelette | 1 |
+めだまやき | fried egg sunny side up | 1 | 🍳
+たまご | egg | 1 | 🥚
+ぽてと | french fries | 1 | 🍟
+そーせーじ | sausage | 1 |
+ほっとけーき | pancakes | 1 | 🥞
+くっきー | cookie | 1 | 🍪
+けーき | strawberry shortcake | 1 | 🍰
+ちょこれーと | chocolate bar | 1 | 🍫
+あいすくりーむ | ice cream cone | 1 | 🍦
+ぷりん | custard pudding purin | 1 | 🍮
+どーなつ | donut | 1 | 🍩
+きゃんでぃー | wrapped candy | 1 | 🍬
+ぺろぺろきゃんでぃー | lollipop | 1 | 🍭
+ばーすでーけーき | birthday cake with candles | 1 | 🎂
+おべんとう | bento lunch | 1 | 🍱
+ぎゅうにゅう | milk | 1 | 🥛
+じゅーす | orange juice | 1 | 🧃
+みず | glass of water | 1 |
+ちーず | cheese | 1 | 🧀
+そば | soba noodles | 2 |
+てんぷら | shrimp tempura | 2 | 🍤
+ほっとどっぐ | hot dog | 2 | 🌭
+ぎょうざ | gyoza dumplings | 2 | 🥟
+やきそば | yakisoba | 2 |
+おこのみやき | okonomiyaki | 2 |
+たこやき | takoyaki | 2 |
+みそしる | miso soup | 2 |
+しちゅー | cream stew | 2 |
+こーんすーぷ | corn soup | 2 |
+さらだ | salad | 2 | 🥗
+とんかつ | tonkatsu pork cutlet | 2 |
+えびふらい | fried shrimp | 2 |
+ころっけ | croquette | 2 |
+はむ | ham slices | 2 |
+べーこん | bacon | 2 | 🥓
+すてーき | steak | 2 | 🥩
+なっとう | natto | 2 |
+とうふ | tofu | 2 |
+おもち | mochi rice cake | 2 |
+おせんべい | senbei rice cracker | 2 | 🍘
+だんご | dango | 2 | 🍡
+まきずし | sushi roll | 2 |
+しょくぱん | sliced bread | 2 |
+くろわっさん | croissant | 2 | 🥐
+めろんぱん | melon pan | 2 |
+あんぱん | anpan sweet bun | 2 |
+ぽっぷこーん | popcorn | 2 | 🍿
+ぜりー | fruit jelly | 2 |
+ぐみ | gummy candy | 2 |
+かきごおり | shaved ice kakigori | 2 | 🍧
+わたあめ | cotton candy | 2 |
+しゅーくりーむ | cream puff | 2 |
+くれーぷ | crepe | 2 |
+たいやき | taiyaki | 2 |
+どらやき | dorayaki | 2 |
+ぽてとちっぷす | potato chips | 2 |
+おちゃ | green tea | 2 | 🍵
+こーひー | coffee | 2 | ☕
+よーぐると | yogurt | 2 |
+ばたー | butter | 2 | 🧈
+じゃむ | jam jar | 2 |
+はちみつ | honey jar | 2 | 🍯
+けちゃっぷ | ketchup bottle | 2 |
+まよねーず | mayonnaise bottle | 2 |
+ちゃーはん | fried rice | 2 |
+ふらいどちきん | fried chicken drumstick | 2 | 🍗
+にくまん | nikuman steamed bun | 2 |
+しゅうまい | shumai dumplings | 3 |
+はるまき | spring roll | 3 |
+ぐらたん | gratin | 3 |
+ぎゅうどん | beef bowl gyudon | 3 |
+おやこどん | oyakodon | 3 |
+かつどん | katsudon | 3 |
+やきとり | yakitori | 3 |
+おでん | oden | 3 | 🍢
+さしみ | sashimi | 3 |
+いなりずし | inari sushi | 3 |
+まかろん | macarons | 3 |
+ぱふぇ | parfait | 3 |
+ようかん | yokan | 3 |
+こうちゃ | cup of black tea | 3 |
+ここあ | hot cocoa | 3 |
+らむね | ramune soda bottle | 3 |
+しお | salt shaker | 3 | 🧂
+さとう | sugar | 3 |
+しょうゆ | soy sauce bottle | 3 |
+みそ | miso paste | 3 |
+こめ | uncooked rice grains | 3 |
+こむぎこ | flour bag | 3 |
+おかゆ | rice porridge | 3 |
+しりある | cereal bowl | 3 |
+まーぼーどうふ | mapo tofu | 3 |
+おしるこ | oshiruko | 3 |
+ちくわ | chikuwa | 3 |
+かまぼこ | kamaboko | 3 |
+さくらもち | sakura mochi | 3 |
+かしわもち | kashiwa mochi | 3 |
+ばうむくーへん | baumkuchen | 3 |
+ろーるけーき | roll cake | 3 |
+うめぼし | umeboshi | 3 |
+ふりかけ | furikake | 3 |
+ぴくるす | pickles | 3 |
+
+## どうぶつ | 🐘
+いぬ | dog | 1 | 🐕
+ねこ | cat | 1 | 🐈
+うさぎ | rabbit | 1 | 🐇
+ぞう | elephant | 1 | 🐘
+きりん | giraffe | 1 | 🦒
+らいおん | lion | 1 | 🦁
+とら | tiger | 1 | 🐅
+くま | bear | 1 | 🐻
+ぱんだ | giant panda | 1 | 🐼
+さる | monkey | 1 | 🐒
+ごりら | gorilla | 1 | 🦍
+ぶた | pig | 1 | 🐖
+うし | cow | 1 | 🐄
+うま | horse | 1 | 🐎
+ひつじ | sheep | 1 | 🐑
+ねずみ | mouse | 1 | 🐁
+りす | squirrel | 1 | 🐿️
+きつね | fox | 1 | 🦊
+かば | hippopotamus | 1 | 🦛
+しまうま | zebra | 1 | 🦓
+かんがるー | kangaroo | 1 | 🦘
+こあら | koala | 1 | 🐨
+しろくま | polar bear | 1 | 🐻‍❄️
+はむすたー | hamster | 1 | 🐹
+へび | snake | 1 | 🐍
+わに | crocodile | 1 | 🐊
+かめ | turtle | 1 | 🐢
+かえる | frog | 1 | 🐸
+きょうりゅう | dinosaur | 1 | 🦕
+やぎ | goat | 2 | 🐐
+たぬき | tanuki raccoon dog | 2 |
+さい | rhinoceros | 2 | 🦏
+らくだ | camel | 2 | 🐫
+おおかみ | wolf | 2 | 🐺
+しか | deer | 2 | 🦌
+いのしし | wild boar | 2 |
+はりねずみ | hedgehog | 2 | 🦔
+もぐら | mole | 2 |
+こうもり | bat animal | 2 | 🦇
+あらいぐま | raccoon | 2 | 🦝
+ちーたー | cheetah | 2 |
+おらんうーたん | orangutan | 2 | 🦧
+ちんぱんじー | chimpanzee | 2 |
+れっさーぱんだ | red panda | 2 |
+かわうそ | otter | 2 | 🦦
+あるぱか | alpaca | 2 |
+となかい | reindeer | 2 |
+とかげ | lizard | 2 | 🦎
+かめれおん | chameleon | 2 |
+おたまじゃくし | tadpole | 2 |
+てぃらのさうるす | tyrannosaurus | 2 | 🦖
+まんもす | mammoth | 2 | 🦣
+にほんざる | japanese macaque | 2 |
+かぴばら | capybara | 2 |
+こいぬ | puppy | 2 |
+こねこ | kitten | 2 |
+ひょう | leopard | 3 | 🐆
+びーばー | beaver | 3 | 🦫
+すかんく | skunk | 3 | 🦨
+なまけもの | sloth | 3 | 🦥
+ありくい | anteater | 3 |
+あるまじろ | armadillo | 3 |
+もるもっと | guinea pig | 3 |
+ふぇれっと | ferret | 3 |
+ばく | tapir | 3 |
+ろば | donkey | 3 |
+らま | llama | 3 | 🦙
+いぐあな | iguana | 3 |
+やもり | gecko | 3 |
+さんしょううお | giant salamander | 3 |
+うーぱーるーぱー | axolotl | 3 |
+とりけらとぷす | triceratops | 3 |
+ぷてらのどん | pteranodon | 3 |
+ばっふぁろー | bison | 3 | 🦬
+へらじか | moose | 3 |
+まんどりる | mandrill | 3 |
+てながざる | gibbon | 3 |
+みーあきゃっと | meerkat | 3 |
+いたち | weasel | 3 |
+おこじょ | stoat ermine in white winter coat | 3 |
+むささび | flying squirrel | 3 |
+やまあらし | porcupine | 3 |
+はいえな | hyena | 3 |
+ゆきひょう | snow leopard | 3 |
+おかぴ | okapi | 3 |
+
+## とり | 🐤
+にわとり | chicken hen | 1 | 🐔
+ひよこ | baby chick | 1 | 🐤
+ぺんぎん | penguin | 1 | 🐧
+ふくろう | owl | 1 | 🦉
+あひる | duck | 1 | 🦆
+ふらみんご | flamingo | 1 | 🦩
+ことり | small bird | 1 | 🐦
+はと | pigeon | 2 | 🕊️
+からす | crow | 2 |
+すずめ | sparrow | 2 |
+はくちょう | swan | 2 | 🦢
+わし | eagle | 2 | 🦅
+おうむ | parrot | 2 | 🦜
+いんこ | budgerigar parakeet | 2 |
+くじゃく | peacock | 2 | 🦚
+だちょう | ostrich | 2 |
+かもめ | seagull | 2 |
+ぺりかん | pelican | 2 |
+つる | red-crowned crane bird | 3 |
+たか | hawk | 3 |
+きつつき | woodpecker | 3 |
+つばめ | swallow bird | 3 |
+うぐいす | japanese bush warbler | 3 |
+めじろ | japanese white-eye bird | 3 |
+きじ | green pheasant | 3 |
+しちめんちょう | turkey bird | 3 | 🦃
+こまどり | robin bird | 3 |
+かわせみ | kingfisher | 3 |
+とき | japanese crested ibis | 3 |
+はちどり | hummingbird | 3 |
+がちょう | goose | 3 | 🪿
+らいちょう | ptarmigan | 3 |
+おおはし | toucan | 3 |
+こうのとり | stork | 3 |
+みみずく | horned owl | 3 |
+
+## うみのいきもの | 🐟
+さかな | fish | 1 | 🐟
+くじら | whale | 1 | 🐋
+いるか | dolphin | 1 | 🐬
+さめ | shark | 1 | 🦈
+たこ | octopus | 1 | 🐙
+いか | squid | 1 | 🦑
+かに | crab | 1 | 🦀
+えび | shrimp | 1 | 🦐
+くらげ | jellyfish | 1 | 🪼
+ひとで | starfish | 1 |
+きんぎょ | goldfish | 1 |
+かい | seashell | 1 | 🐚
+あざらし | seal | 2 | 🦭
+らっこ | sea otter | 2 |
+あしか | sea lion | 2 |
+うみがめ | sea turtle | 2 |
+ふぐ | pufferfish | 2 | 🐡
+たつのおとしご | seahorse | 2 |
+くまのみ | clownfish | 2 |
+ねったいぎょ | tropical fish | 2 | 🐠
+こい | koi carp | 2 |
+まぐろ | tuna fish | 2 |
+さけ | salmon fish | 2 |
+うに | sea urchin | 2 |
+やどかり | hermit crab | 2 |
+さんご | coral | 2 | 🪸
+しゃち | orca killer whale | 2 |
+ざりがに | crayfish | 2 |
+せいうち | walrus | 3 |
+まんぼう | ocean sunfish | 3 |
+えい | stingray | 3 |
+めだか | medaka fish | 3 |
+いわし | sardine | 3 |
+さんま | pacific saury | 3 |
+たい | red sea bream | 3 |
+かつお | bonito fish | 3 |
+あじ | horse mackerel | 3 |
+うなぎ | eel | 3 |
+ちんあなご | garden eel | 3 |
+あさり | asari clam | 3 |
+ほたて | scallop | 3 |
+さざえ | turban shell | 3 |
+いそぎんちゃく | sea anemone | 3 |
+じんべえざめ | whale shark | 3 |
+なまず | catfish | 3 |
+ちょうちんあんこう | anglerfish | 3 |
+うみうし | sea slug nudibranch | 3 |
+くりおね | clione sea angel | 3 |
+いせえび | spiny lobster | 3 |
+ろぶすたー | lobster | 3 | 🦞
+
+## むし | 🐞
+ちょうちょ | butterfly | 1 | 🦋
+てんとうむし | ladybug | 1 | 🐞
+はち | bee | 1 | 🐝
+あり | ant | 1 | 🐜
+かぶとむし | japanese rhinoceros beetle | 1 |
+とんぼ | dragonfly | 1 |
+かたつむり | snail | 1 | 🐌
+くわがた | stag beetle | 2 |
+せみ | cicada | 2 |
+ばった | grasshopper | 2 |
+かまきり | praying mantis | 2 |
+こおろぎ | cricket insect | 2 | 🦗
+ほたる | firefly | 2 |
+みみず | earthworm | 2 | 🪱
+だんごむし | pill bug | 2 |
+いもむし | caterpillar | 2 | 🐛
+あおむし | green caterpillar | 2 |
+か | mosquito | 2 | 🦟
+はえ | housefly | 2 | 🪰
+みつばち | honeybee | 2 |
+すずむし | bell cricket | 3 |
+けむし | hairy caterpillar | 3 |
+みのむし | bagworm | 3 |
+かなぶん | june beetle | 3 |
+かめむし | stink bug | 3 |
+あめんぼ | water strider | 3 |
+げんごろう | diving beetle | 3 |
+たがめ | giant water bug | 3 |
+すずめばち | hornet | 3 |
+もんしろちょう | cabbage white butterfly | 3 |
+あげはちょう | swallowtail butterfly | 3 |
+が | moth | 3 |
+かみきりむし | longhorn beetle | 3 |
+なめくじ | slug | 3 |
+むかで | centipede | 3 |
+さそり | scorpion | 3 | 🦂
+やご | dragonfly nymph | 3 |
+きりぎりす | katydid | 3 |
+
+## のりもの | 🚗
+くるま | car | 1 | 🚗
+でんしゃ | train | 1 | 🚃
+しんかんせん | shinkansen bullet train | 1 | 🚄
+ばす | bus | 1 | 🚌
+ひこうき | airplane | 1 | ✈️
+ふね | ship | 1 | 🚢
+じてんしゃ | bicycle | 1 | 🚲
+ばいく | motorcycle | 1 | 🏍️
+しょうぼうしゃ | fire engine | 1 | 🚒
+きゅうきゅうしゃ | ambulance | 1 | 🚑
+ぱとかー | police car | 1 | 🚓
+たくしー | taxi | 1 | 🚕
+とらっく | truck | 1 | 🚚
+へりこぷたー | helicopter | 1 | 🚁
+ろけっと | rocket | 1 | 🚀
+しょべるかー | excavator | 2 |
+ごみしゅうしゅうしゃ | garbage truck | 2 |
+みきさーしゃ | cement mixer truck | 2 |
+くれーんしゃ | crane truck | 2 |
+ぶるどーざー | bulldozer | 2 |
+だんぷかー | dump truck | 2 |
+とらくたー | tractor | 2 | 🚜
+きかんしゃ | steam locomotive | 2 | 🚂
+よっと | sailboat | 2 | ⛵
+ぼーと | rowboat | 2 |
+せんすいかん | submarine | 2 |
+ききゅう | hot air balloon | 2 |
+ゆーふぉー | ufo flying saucer | 2 | 🛸
+さんりんしゃ | tricycle | 2 |
+きっくぼーど | kick scooter | 2 | 🛴
+すけーとぼーど | skateboard | 2 | 🛹
+べびーかー | baby stroller | 2 |
+くるまいす | wheelchair | 2 |
+すぽーつかー | sports car | 2 | 🏎️
+うちゅうせん | spaceship | 2 |
+そり | sled | 2 | 🛷
+ものれーる | monorail | 3 | 🚝
+ろーぷうぇい | ropeway gondola | 3 | 🚡
+けーぶるかー | cable car | 3 |
+かぬー | canoe | 3 | 🛶
+いちりんしゃ | unicycle | 3 |
+ろーどろーらー | road roller | 3 |
+ふぉーくりふと | forklift | 3 |
+きゃんぴんぐかー | camper van | 3 |
+ちかてつ | subway train | 3 | 🚇
+ろめんでんしゃ | tram streetcar | 3 | 🚋
+ふぇりー | ferry boat | 3 | ⛴️
+ひこうせん | airship blimp | 3 |
+ぐらいだー | glider | 3 |
+ばしゃ | horse carriage | 3 |
+じんりきしゃ | rickshaw | 3 |
+はしごしゃ | ladder fire truck | 3 |
+もーたーぼーと | motorboat | 3 | 🚤
+
+## いえのもの | 🏠
+いす | chair | 1 | 🪑
+つくえ | desk | 1 |
+べっど | bed | 1 | 🛏️
+まくら | pillow | 1 |
+てれび | television | 1 | 📺
+でんわ | telephone | 1 | ☎️
+すまほ | smartphone | 1 | 📱
+とけい | clock | 1 | 🕰️
+まど | window | 1 | 🪟
+どあ | door | 1 | 🚪
+かぎ | key | 1 | 🔑
+かさ | umbrella | 1 | ☂️
+はぶらし | toothbrush | 1 | 🪥
+たおる | towel | 1 |
+せっけん | soap | 1 | 🧼
+おふろ | bathtub | 1 | 🛁
+といれ | toilet | 1 | 🚽
+ごみばこ | trash can | 1 | 🗑️
+はし | chopsticks | 1 | 🥢
+すぷーん | spoon | 1 | 🥄
+ふぉーく | fork | 1 | 🍴
+おさら | plate | 1 | 🍽️
+こっぷ | drinking glass cup | 1 |
+ふらいぱん | frying pan | 1 |
+すいとう | kids water bottle | 1 |
+ばんそうこう | adhesive bandage | 1 | 🩹
+ますく | face mask | 1 |
+てぃっしゅ | tissue box | 1 |
+てーぶる | table | 2 |
+ふとん | futon | 2 |
+もうふ | blanket | 2 |
+そふぁ | sofa | 2 | 🛋️
+れいぞうこ | refrigerator | 2 |
+せんたくき | washing machine | 2 |
+そうじき | vacuum cleaner | 2 |
+ぱそこん | laptop computer | 2 | 💻
+めざましどけい | alarm clock | 2 | ⏰
+でんきゅう | light bulb | 2 | 💡
+かがみ | mirror | 2 | 🪞
+くし | comb | 2 |
+はみがきこ | toothpaste | 2 |
+しゃんぷー | shampoo bottle | 2 |
+しゃわー | shower head | 2 | 🚿
+といれっとぺーぱー | toilet paper | 2 | 🧻
+ほうき | broom | 2 | 🧹
+ばけつ | bucket | 2 | 🪣
+はんがー | clothes hanger | 2 |
+せんぷうき | electric fan | 2 |
+えあこん | air conditioner | 2 |
+こたつ | kotatsu table | 2 |
+かーてん | curtain | 2 |
+くっしょん | cushion | 2 |
+ほんだな | bookshelf | 2 |
+かれんだー | calendar | 2 | 📅
+うえきばち | flower pot | 2 | 🪴
+ろうそく | candle | 2 | 🕯️
+かいちゅうでんとう | flashlight | 2 | 🔦
+でんち | battery | 2 | 🔋
+りもこん | remote control | 2 |
+うちわ | uchiwa fan | 2 |
+おちゃわん | rice bowl chawan | 2 |
+まぐかっぷ | mug | 2 |
+やかん | kettle | 2 |
+なべ | cooking pot | 2 |
+ほうちょう | kitchen knife | 2 | 🔪
+おべんとうばこ | lunch box | 2 |
+ぺっとぼとる | plastic bottle | 2 |
+びん | glass bottle | 2 |
+かん | tin can | 2 | 🥫
+ほにゅうびん | baby bottle | 2 | 🍼
+おしゃぶり | pacifier | 2 |
+おむつ | diaper | 2 |
+くすり | medicine | 2 | 💊
+どらいやー | hair dryer | 2 |
+かご | basket | 2 | 🧺
+かいだん | stairs | 2 |
+やね | roof | 2 |
+ちりとり | dustpan | 3 |
+ぞうきん | cleaning rag | 3 |
+でんしれんじ | microwave oven | 3 |
+すいはんき | rice cooker | 3 |
+とーすたー | toaster | 3 |
+すとーぶ | heater stove | 3 |
+たたみ | tatami mat | 3 |
+たんす | chest of drawers | 3 |
+かびん | flower vase | 3 |
+ふうりん | wind chime | 3 |
+せんす | folding fan | 3 |
+ないふ | table knife | 3 |
+まないた | cutting board | 3 |
+おたま | ladle | 3 |
+ふらいがえし | spatula | 3 |
+ざる | colander | 3 |
+よだれかけ | baby bib | 3 |
+たいおんけい | thermometer | 3 | 🌡️
+つめきり | nail clipper | 3 |
+あいろん | clothes iron | 3 |
+せんたくばさみ | clothespin | 3 |
+かみぶくろ | paper bag | 3 |
+しょうかき | fire extinguisher | 3 | 🧯
+ひきだし | drawer | 3 |
+えんとつ | chimney | 3 |
+
+## ふく・みにつけるもの | 👕
+ぼうし | hat | 1 | 👒
+てぶくろ | gloves | 1 | 🧤
+くつした | socks | 1 | 🧦
+くつ | shoes | 1 | 👟
+ながぐつ | rain boots | 1 |
+しゃつ | shirt | 1 | 👕
+ずぼん | pants trousers | 1 | 👖
+すかーと | skirt | 1 |
+わんぴーす | dress | 1 | 👗
+ぱじゃま | pajamas | 1 |
+ぱんつ | underpants | 1 |
+りぼん | ribbon bow | 1 | 🎀
+かばん | bag | 1 | 👜
+りゅっく | backpack | 1 | 🎒
+めがね | glasses | 1 | 👓
+うきわ | swim ring float | 1 | 🛟
+はんかち | handkerchief | 1 |
+かんむり | crown | 1 | 👑
+さんだる | sandals | 2 | 🩴
+すりっぱ | slippers | 2 |
+せーたー | sweater | 2 |
+こーと | coat | 2 | 🧥
+まふらー | scarf | 2 | 🧣
+ねくたい | necktie | 2 | 👔
+らんどせる | randoseru school backpack | 2 |
+さいふ | wallet | 2 | 👛
+さんぐらす | sunglasses | 2 | 🕶️
+ゆびわ | ring | 2 | 💍
+ねっくれす | necklace | 2 |
+うでどけい | wristwatch | 2 | ⌚
+かみどめ | hair clip | 2 |
+かちゅーしゃ | headband | 2 |
+きもの | kimono | 2 | 👘
+みずぎ | swimsuit | 2 | 🩱
+ごーぐる | swim goggles | 2 | 🥽
+れいんこーと | raincoat | 2 |
+えぷろん | apron | 2 |
+べると | belt | 2 |
+ぼたん | button | 2 |
+ぶーつ | boots | 2 | 👢
+はいひーる | high heels | 2 | 👠
+てぃーしゃつ | t-shirt | 2 |
+きゃっぷ | baseball cap | 2 | 🧢
+へるめっと | helmet | 2 |
+てぃあら | tiara | 2 |
+うわばき | school indoor shoes uwabaki | 3 |
+へあごむ | hair tie scrunchie | 3 |
+ゆかた | yukata | 3 |
+はっぴ | happi coat | 3 |
+すもっく | smock | 3 |
+ぽけっと | pocket | 3 |
+たいつ | tights | 3 |
+ぱーかー | hoodie | 3 |
+みみあて | earmuffs | 3 |
+
+## からだ | ✋
+め | eye | 1 | 👁️
+はな | nose | 1 | 👃
+くち | mouth | 1 | 👄
+みみ | ear | 1 | 👂
+て | hand | 1 | ✋
+あし | foot | 1 | 🦶
+かお | face | 1 |
+ゆび | finger | 1 | ☝️
+おなか | tummy | 1 |
+は | tooth | 1 | 🦷
+あたま | head | 2 |
+かみのけ | hair | 2 |
+ほっぺ | cheek | 2 |
+くび | neck | 2 |
+うで | arm | 2 | 💪
+おへそ | belly button | 2 |
+おしり | bottom | 2 |
+した | tongue | 2 | 👅
+ほね | bone | 2 | 🦴
+まゆげ | eyebrows | 3 |
+まつげ | eyelashes | 3 |
+おでこ | forehead | 3 |
+あご | chin | 3 |
+かた | shoulder | 3 |
+ひじ | elbow | 3 |
+つめ | fingernail | 3 |
+せなか | back of body | 3 |
+ひざ | knee | 3 |
+かかと | heel | 3 |
+くちびる | lips | 3 |
+
+## かたち | ⭐
+まる | circle | 1 | ⭕
+さんかく | triangle | 1 | 🔺
+しかく | square | 1 | 🟥
+ほし | star shape | 1 | ⭐
+はーと | heart shape | 1 | ❤️
+やじるし | arrow | 2 | ➡️
+ひしがた | diamond rhombus | 3 | 🔷
+だえん | oval | 3 |
+ろっかっけい | hexagon | 3 |
+
+## しぜん・てんき | 🌈
+たいよう | sun | 1 | ☀️
+つき | crescent moon | 1 | 🌙
+くも | cloud | 1 | ☁️
+あめ | rain | 1 | 🌧️
+ゆき | snow | 1 | ❄️
+かみなり | lightning | 1 | ⚡
+にじ | rainbow | 1 | 🌈
+やま | mountain | 1 | ⛰️
+かわ | river | 1 |
+うみ | sea | 1 | 🌊
+いし | stone | 1 | 🪨
+き | tree | 1 | 🌳
+はっぱ | leaf | 1 | 🍃
+どんぐり | acorn | 1 |
+ゆきだるま | snowman | 1 | ☃️
+ひ | fire | 1 | 🔥
+かぜ | wind | 2 | 🌬️
+いけ | pond | 2 |
+しま | island | 2 | 🏝️
+すな | sand | 2 |
+いわ | big rock boulder | 2 |
+もり | forest | 2 |
+くさ | grass | 2 | 🌿
+おちば | fallen leaves | 2 | 🍂
+もみじ | red maple leaf | 2 | 🍁
+まつぼっくり | pine cone | 2 |
+かざん | volcano | 2 | 🌋
+ちきゅう | planet earth | 2 | 🌍
+ながれぼし | shooting star | 2 | 🌠
+こおり | ice cubes | 2 | 🧊
+なみ | ocean wave | 2 |
+たつまき | tornado | 3 | 🌪️
+たいふう | typhoon | 3 | 🌀
+みずうみ | lake | 3 |
+たき | waterfall | 3 |
+さばく | desert | 3 | 🏜️
+うちゅう | outer space | 3 |
+どせい | saturn planet | 3 | 🪐
+つらら | icicles | 3 |
+けむり | smoke | 3 |
+みずたまり | puddle | 3 |
+ゆうやけ | sunset | 3 | 🌅
+すなはま | sandy beach | 3 | 🏖️
+どうくつ | cave | 3 |
+おんせん | hot spring | 3 | ♨️
+
+## はな・しょくぶつ | 🌷
+おはな | flower | 1 | 🌼
+ちゅーりっぷ | tulip | 1 | 🌷
+ひまわり | sunflower | 1 | 🌻
+さくら | cherry blossom | 1 | 🌸
+たんぽぽ | dandelion | 1 |
+ばら | rose | 2 | 🌹
+あさがお | morning glory | 2 |
+あじさい | hydrangea | 2 |
+くろーばー | clover | 2 | ☘️
+さぼてん | cactus | 2 | 🌵
+やしのき | palm tree | 2 | 🌴
+たけ | bamboo | 2 | 🎋
+たね | seeds | 2 |
+ふたば | sprout seedling | 2 | 🌱
+はなたば | bouquet | 2 | 💐
+こすもす | cosmos flower | 3 |
+ゆり | lily | 3 |
+かーねーしょん | carnation | 3 |
+すいせん | daffodil | 3 |
+つくし | horsetail shoot tsukushi | 3 |
+よつばのくろーばー | four leaf clover | 3 | 🍀
+まつ | pine tree | 3 | 🌲
+ねこじゃらし | foxtail grass | 3 |
+すすき | japanese pampas grass | 3 |
+はす | lotus flower | 3 | 🪷
+らべんだー | lavender | 3 |
+ぱんじー | pansy | 3 |
+すみれ | violet flower | 3 |
+つばき | camellia | 3 |
+きく | chrysanthemum | 3 |
+
+## おもちゃ・あそび | 🧸
+ぼーる | ball | 1 |
+ふうせん | balloon | 1 | 🎈
+つみき | building blocks | 1 |
+ぬいぐるみ | teddy bear stuffed toy | 1 | 🧸
+くれよん | crayons | 1 | 🖍️
+えほん | picture book | 1 | 📖
+にんぎょう | doll | 1 |
+しゃぼんだま | soap bubbles | 1 | 🫧
+すべりだい | playground slide | 1 |
+ぶらんこ | swing | 1 |
+ろぼっと | robot | 1 | 🤖
+かんらんしゃ | ferris wheel | 1 | 🎡
+はなび | fireworks | 1 | 🎆
+くりすますつりー | christmas tree | 1 | 🎄
+ぷれぜんと | present gift box | 1 | 🎁
+こま | spinning top | 2 |
+とらんぷ | playing cards | 2 | 🃏
+ぱずる | jigsaw puzzle | 2 | 🧩
+さいころ | dice | 2 | 🎲
+おりがみ | origami crane | 2 |
+すなば | sandbox | 2 |
+じゃんぐるじむ | jungle gym | 2 |
+しーそー | seesaw | 2 |
+なわとび | jump rope | 2 |
+みずでっぽう | water pistol toy | 2 |
+すこっぷ | toy shovel | 2 |
+じょうろ | watering can | 2 |
+みにかー | toy car | 2 |
+じぇっとこーすたー | roller coaster | 2 | 🎢
+めりーごーらんど | merry-go-round | 2 | 🎠
+こいのぼり | carp streamers koinobori | 2 | 🎏
+くらっかー | party popper | 2 | 🎉
+おに | cute oni ogre | 2 | 👹
+てるてるぼうず | teru teru bozu | 2 |
+ねんど | modeling clay | 2 |
+しーる | stickers | 2 |
+よーよー | yo-yo | 2 | 🪀
+けんだま | kendama | 3 |
+かるた | karuta cards | 3 |
+てつぼう | horizontal bar | 3 |
+ふらふーぷ | hula hoop | 3 |
+おめん | festival mask | 3 |
+ちょうちん | paper lantern | 3 | 🏮
+ひなにんぎょう | hina dolls | 3 | 🎎
+かがみもち | kagami mochi | 3 |
+かどまつ | kadomatsu | 3 |
+びーだま | marbles | 3 |
+
+## がっき・おと | 🎵
+たいこ | drum | 1 | 🥁
+ぴあの | piano | 1 | 🎹
+ぎたー | guitar | 1 | 🎸
+らっぱ | trumpet | 1 | 🎺
+すず | jingle bell | 1 | 🔔
+ばいおりん | violin | 2 | 🎻
+ふえ | recorder flute | 2 |
+もっきん | xylophone | 2 |
+かすたねっと | castanets | 2 |
+たんばりん | tambourine | 2 |
+まらかす | maracas | 2 | 🪇
+まいく | microphone | 2 | 🎤
+へっどほん | headphones | 2 | 🎧
+てっきん | glockenspiel | 3 |
+はーもにか | harmonica | 3 |
+けんばんはーもにか | melodica | 3 |
+とらいあんぐる | triangle instrument | 3 |
+しんばる | cymbals | 3 |
+さっくす | saxophone | 3 | 🎷
+ちぇろ | cello | 3 |
+はーぷ | harp | 3 |
+あこーでぃおん | accordion | 3 | 🪗
+こと | koto | 3 |
+しゃみせん | shamisen | 3 |
+らじお | radio | 3 | 📻
+
+## どうぐ | ✏️
+えんぴつ | pencil | 1 | ✏️
+けしごむ | eraser | 1 |
+はさみ | scissors | 1 | ✂️
+のーと | notebook | 1 | 📓
+ほん | book | 1 | 📕
+のり | glue stick | 2 |
+じょうぎ | ruler | 2 | 📏
+ぺん | pen | 2 | 🖊️
+まじっく | marker pen | 2 |
+えのぐ | paints | 2 | 🎨
+かみ | sheet of paper | 2 | 📄
+ふでばこ | pencil case | 2 |
+てがみ | letter | 2 | 💌
+かなづち | hammer | 2 | 🔨
+のこぎり | saw | 2 | 🪚
+はしご | ladder | 2 | 🪜
+むしめがね | magnifying glass | 2 | 🔍
+かめら | camera | 2 | 📷
+じしゃく | magnet | 2 | 🧲
+ちず | map | 2 | 🗺️
+あみ | bug net | 2 |
+むしかご | insect cage | 2 |
+てんと | tent | 2 | ⛺
+はた | flag | 2 | 🚩
+おかね | money | 2 | 💴
+こいん | coin | 2 | 🪙
+ふで | calligraphy brush | 3 | 🖌️
+ほっちきす | stapler | 3 |
+せろはんてーぷ | tape | 3 |
+くりっぷ | paper clip | 3 | 📎
+がびょう | pushpin | 3 | 📌
+えんぴつけずり | pencil sharpener | 3 |
+こんぱす | drawing compass | 3 |
+ちきゅうぎ | globe | 3 |
+ふうとう | envelope | 3 | ✉️
+きって | postage stamp | 3 |
+はんこ | hanko seal | 3 |
+くぎ | nail | 3 |
+どらいばー | screwdriver | 3 | 🪛
+ねじ | screw | 3 | 🔩
+ぺんち | pliers | 3 |
+はり | sewing needle | 3 |
+いと | thread spool | 3 | 🧵
+みしん | sewing machine | 3 |
+そうがんきょう | binoculars | 3 |
+ぼうえんきょう | telescope | 3 | 🔭
+こくばん | blackboard | 3 |
+ちょーく | chalk | 3 |
+すけっちぶっく | sketchbook | 3 |
+つりざお | fishing rod | 3 | 🎣
+ねぶくろ | sleeping bag | 3 |
+
+## まち・たてもの | 🏠
+いえ | house | 1 | 🏠
+こうえん | park | 1 |
+ぽすと | red japanese postbox | 1 | 📮
+しんごう | traffic light | 1 | 🚥
+ふじさん | mount fuji | 1 | 🗻
+びる | building | 2 | 🏢
+がっこう | school | 2 | 🏫
+ほいくえん | nursery school | 2 |
+びょういん | hospital | 2 | 🏥
+えき | train station | 2 |
+すーぱー | supermarket | 2 |
+こんびに | convenience store | 2 | 🏪
+ぱんや | bakery | 2 |
+どうぶつえん | zoo | 2 |
+すいぞくかん | aquarium | 2 |
+ゆうえんち | amusement park | 2 |
+おしろ | japanese castle | 2 | 🏯
+とうきょうたわー | tokyo tower | 2 | 🗼
+おうだんほどう | crosswalk | 2 | 🚸
+ふみきり | railroad crossing | 2 |
+どうろ | road | 2 | 🛣️
+じどうはんばいき | vending machine | 2 |
+べんち | bench | 2 |
+ふんすい | fountain | 2 | ⛲
+ぷーる | swimming pool | 2 |
+えれべーたー | elevator | 2 | 🛗
+こうばん | koban police box | 3 |
+しょうぼうしょ | fire station | 3 |
+ゆうびんきょく | post office | 3 | 🏣
+くうこう | airport | 3 |
+はなや | flower shop | 3 |
+ほんや | bookstore | 3 |
+としょかん | library | 3 |
+じんじゃ | shinto shrine | 3 | ⛩️
+おてら | buddhist temple | 3 |
+とんねる | tunnel | 3 |
+ばすてい | bus stop | 3 | 🚏
+ちゅうしゃじょう | parking lot | 3 | 🅿️
+がそりんすたんど | gas station | 3 | ⛽
+でんちゅう | utility pole | 3 |
+がいとう | streetlight | 3 |
+こうじょう | factory | 3 | 🏭
+はたけ | vegetable field | 3 |
+たんぼ | rice paddy | 3 |
+とりい | torii gate | 3 |
+かんばん | signboard | 3 |
+えすかれーたー | escalator | 3 |
+
+## ひと・おしごと | 👶
+あかちゃん | baby | 1 | 👶
+おとうさん | father | 1 | 👨
+おかあさん | mother | 1 | 👩
+おじいちゃん | grandfather | 1 | 👴
+おばあちゃん | grandmother | 1 | 👵
+おとこのこ | boy | 1 | 👦
+おんなのこ | girl | 1 | 👧
+おいしゃさん | doctor | 1 | 🧑‍⚕️
+けいさつかん | police officer | 1 | 👮
+しょうぼうし | firefighter | 1 | 🧑‍🚒
+にんじゃ | ninja | 1 | 🥷
+おひめさま | princess | 1 | 👸
+さんたくろーす | santa claus | 1 | 🎅
+かんごしさん | nurse | 2 |
+せんせい | teacher | 2 | 🧑‍🏫
+こっくさん | chef cook | 2 | 🧑‍🍳
+ぱいろっと | airline pilot | 2 | 🧑‍✈️
+うちゅうひこうし | astronaut | 2 | 🧑‍🚀
+おすもうさん | sumo wrestler | 2 |
+おうさま | king | 2 | 🤴
+まほうつかい | wizard | 2 | 🧙
+おばけ | cute cartoon ghost | 2 | 👻
+かいぞく | pirate | 2 |
+うんてんしゅ | bus driver | 3 |
+だいくさん | carpenter | 3 |
+ゆうびんやさん | mail carrier | 3 |
+はいしゃさん | dentist | 3 |
+びようしさん | hairdresser | 3 |
+
+## すぽーつ | ⚽
+さっかーぼーる | soccer ball | 1 | ⚽
+やきゅう | baseball | 2 | ⚾
+ばすけっとぼーる | basketball | 2 | 🏀
+てにす | tennis racket and ball | 2 | 🎾
+すきー | skiing | 2 | ⛷️
+すけーと | ice skates | 2 | ⛸️
+すいえい | swimming | 2 | 🏊
+めだる | gold medal | 2 | 🏅
+とろふぃー | trophy | 2 | 🏆
+ばれーぼーる | volleyball | 3 | 🏐
+ばどみんとん | badminton shuttlecock | 3 | 🏸
+たっきゅう | ping pong | 3 | 🏓
+ごるふ | golf | 3 | ⛳
+ぐろーぶ | baseball glove | 3 |
+ばっと | baseball bat | 3 |
+ほいっする | whistle | 3 |
+からて | karate | 3 | 🥋
+ぼくしんぐ | boxing gloves | 3 | 🥊
+
+## たべもの | 🍙
+ばげっと | baguette | 2 | 🥖
+わっふる | waffle | 2 | 🧇
+ぴーなっつ | peanuts | 2 | 🥜
+かっぷらーめん | cup noodles | 2 |
+あーもんど | almonds | 3 |
+くるみ | walnut | 3 |
+ぴらふ | pilaf | 3 |
+たこす | taco | 3 | 🌮
+べーぐる | bagel | 3 | 🥯
+ぷれっつぇる | pretzel | 3 | 🥨
+すいーとぽてと | japanese sweet potato cake | 3 |
+もんぶらん | mont blanc cake | 3 |
+ちーずけーき | cheesecake | 3 |
+かすてら | castella cake | 3 |
+
+## どうぶつ | 🐘
+ぽにー | pony | 2 | 🐴
+こぶた | piglet | 2 |
+ちんちら | chinchilla | 3 |
+ぷれーりーどっぐ | prairie dog | 3 |
+くろひょう | black panther | 3 |
+じゃがー | jaguar | 3 |
+
+## いえのもの | 🏠
+じゃぐち | faucet | 2 |
+くつばこ | shoe cabinet | 3 |
+ふろしき | furoshiki wrapping cloth | 3 |
+せんめんき | washbasin | 3 |
+はかり | kitchen scale | 3 |
+しゃもじ | rice paddle shamoji | 3 |
+ゆのみ | yunomi teacup | 3 |
+どんぶり | donburi bowl | 3 |
+きゅうす | kyusu teapot | 3 |
+
+## のりもの | 🚗
+れっかーしゃ | tow truck | 3 |
+
+## おもちゃ・あそび | 🧸
+うんてい | monkey bars | 3 |
+とびばこ | vaulting box | 3 |
+
+## きせつ・ぎょうじ | 🎃
+はろうぃんかぼちゃ | jack-o-lantern | 2 | 🎃
+くりすますりーす | christmas wreath | 3 |
+いーすたーえっぐ | easter egg | 3 |
+おつきみだんご | tsukimi dango | 3 |
+ささかざり | tanabata bamboo decoration | 3 |
+かぶと | samurai helmet kabuto decoration | 3 |
+まめ | roasted soybeans | 3 |
+おとしだま | otoshidama envelope | 3 |
+みこし | mikoshi portable shrine | 3 |
+きんぎょすくい | goldfish scooping | 3 |
+わなげ | ring toss | 3 |
+たまいれ | tamaire ball toss game | 3 |
+つなひき | tug of war | 3 |
