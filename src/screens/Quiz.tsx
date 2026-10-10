@@ -16,8 +16,9 @@ const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rai
 const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
 // 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
 // テスト用に ?time=秒 で短くできる
-const TIME_MAX = (Number(new URLSearchParams(location.search).get('time')) || 60) * 1000
-const TIME_BONUS = 3_000
+const TIME_MAX = (Number(new URLSearchParams(location.search).get('time')) || 15) * 1000
+const TIME_BONUS = 3_000 // 正解で +3秒
+const TIME_PENALTY = 3_000 // まちがいで -3秒
 const TICK = 100
 
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
@@ -43,7 +44,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const [peeker, setPeeker] = useState<{ char: CharId; key: number } | null>(null)
   const [timeLeft, setTimeLeft] = useState(TIME_MAX)
   const timeRef = useRef(TIME_MAX)
-  const [timeGain, setTimeGain] = useState(0)
+  const [timeGain, setTimeGain] = useState<{ key: number; plus: boolean } | null>(null)
   // ときどき「ボーナス問題」（金色・バナナ3ばい）。最初の2問は普通
   const [isBonus, setIsBonus] = useState(false)
   const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
@@ -155,7 +156,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       setGain({ n: add, key: Date.now() })
       timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
       setTimeLeft(timeRef.current)
-      setTimeGain(Date.now())
+      setTimeGain({ key: Date.now(), plus: true })
       stats.current.correct++
       stats.current.bestCombo = Math.max(stats.current.bestCombo, c)
       stats.current.answers.push({ id: q.id, ok: true })
@@ -194,6 +195,9 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     } else {
       setCombo(0)
       setFever(false)
+      timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
+      setTimeLeft(timeRef.current)
+      setTimeGain({ key: Date.now(), plus: false })
       stats.current.answers.push({ id: q.id, ok: false })
       setPhase('wrong')
       setBubble('おしい！')
@@ -263,7 +267,11 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
         <div className={`gauge ${pct < 17 ? 'low' : pct < 40 ? 'mid' : ''}`}>
           <div className="gauge-fill" style={{ width: `${pct}%` }} />
           <span className="gauge-icon">⏰</span>
-          {timeGain > 0 && <span key={timeGain} className="time-gain">+3</span>}
+          {timeGain && (
+            <span key={timeGain.key} className={`time-gain ${timeGain.plus ? '' : 'minus'}`}>
+              {timeGain.plus ? '+3' : '-3'}
+            </span>
+          )}
         </div>
         <div className="coin-badge">
           🍌 {coins}

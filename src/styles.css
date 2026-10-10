@@ -492,6 +492,7 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .gauge.low { animation: gauge-pulse 0.5s ease-in-out infinite alternate; }
 @keyframes gauge-pulse { to { transform: scale(1.04); } }
 .gauge-icon { position: absolute; left: -10px; top: 50%; transform: translateY(-50%); font-size: 22px; }
+.time-gain.minus { color: #ff4a4a; }
 .time-gain { position: absolute; right: 8px; top: -4px; font-size: 18px; color: #3ee07a; text-shadow: 0 2px 0 var(--ink); animation: gain 1s ease-out forwards; }
 
 /* ---------- フィーバー ---------- */
