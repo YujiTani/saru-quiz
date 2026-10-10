@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { makeRound, type Question, type Round } from '../lib/quiz'
+import { getTimeLimit } from '../lib/settings'
 import { sfx } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
@@ -20,12 +21,14 @@ const feverLevelOf = (h: number) => (h >= 80 ? 3 : h >= 50 ? 2 : h >= 25 ? 1 : 0
 const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
 // 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
 // テスト用に ?time=秒 で短くできる
-const TIME_MAX = (Number(new URLSearchParams(location.search).get('time')) || 15) * 1000
+// テスト用に ?time=秒 で上書きできる（ふだんは設定画面の制限時間）
+const TIME_OVERRIDE = Number(new URLSearchParams(location.search).get('time')) || 0
 const TIME_BONUS = 3_000 // 正解で +3秒
 const TIME_PENALTY = 3_000 // まちがいで -3秒
 const TICK = 100
 
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
+  const TIME_MAX = (TIME_OVERRIDE || getTimeLimit()) * 1000
   const queueRef = useRef(questions)
   const [index, setIndex] = useState(0)
   const [round, setRound] = useState<Round>(() => makeRound(questions[0], level))

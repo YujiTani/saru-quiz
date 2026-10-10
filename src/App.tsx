@@ -8,11 +8,12 @@ import { unlockSpeech, speak } from './lib/speech'
 import { load, save, type Save } from './lib/storage'
 import { Quiz, type QuizResult } from './screens/Quiz'
 import { Result } from './screens/Result'
+import { Settings } from './screens/Settings'
 import { Title } from './screens/Title'
 
 const SESSION_SIZE = 60 // 時間ゲームなので多めに用意（足りなければ先頭に戻る）
 
-type Screen = { name: 'tap' } | { name: 'title' } | { name: 'quiz'; level: number; questions: Question[]; key: number } | { name: 'result'; level: number; result: QuizResult }
+type Screen = { name: 'tap' } | { name: 'title' } | { name: 'settings' } | { name: 'quiz'; level: number; questions: Question[]; key: number } | { name: 'result'; level: number; result: QuizResult }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
@@ -69,7 +70,8 @@ export default function App() {
           <span className="tap-text">タップしてね</span>
         </button>
       )}
-      {screen.name === 'title' && <Title coins={data.coins} onStart={startQuiz} />}
+      {screen.name === 'title' && <Title coins={data.coins} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} />}
+      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
         <Quiz key={screen.key} level={screen.level} questions={screen.questions} onFinish={(r) => finish(screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />
       )}

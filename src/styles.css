@@ -572,3 +572,45 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) {
   .fever-frame.lv2, .fever-frame.lv3 { animation: none; }
 }
+
+/* ---------- タイトル上部・せってい ---------- */
+.title-top { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.gear-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 3px solid var(--ink);
+  font-size: 24px;
+  line-height: 1;
+}
+.settings { justify-content: center; gap: 22px; }
+.settings-title { margin: 0; font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 44px; color: #fff; text-shadow: 3px 3px 0 var(--ink); }
+.settings-card {
+  width: 100%;
+  background: var(--card);
+  border: 5px solid var(--ink);
+  border-radius: 26px;
+  box-shadow: 0 8px 0 var(--ink);
+  padding: 18px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.settings-label { margin: 0; font-size: 26px; }
+.settings-note { margin: 0 0 6px; font-size: 16px; color: #6a4a6a; }
+.time-options { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.time-btn {
+  --c: #fff;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--ink);
+}
+.time-btn.is-on { --c: var(--yellow); transform: scale(1.02); }
+.time-num { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 46px; }
+.time-unit { font-size: 26px; }
+.back-btn { --c: #fff; height: 62px; font-size: 26px; width: 100%; max-width: 360px; }

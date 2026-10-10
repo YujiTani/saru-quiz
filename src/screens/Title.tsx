@@ -8,10 +8,13 @@ const LEVELS = [
   { level: 2, stars: '⭐⭐', label: 'ふつう', color: '#38b6ff' },
 ]
 
-export function Title({ coins, onStart }: { coins: number; onStart: (level: number) => void }) {
+export function Title({ coins, onStart, onSettings }: { coins: number; onStart: (level: number) => void; onSettings: () => void }) {
   return (
     <div className="screen title">
-      <div className="coin-badge">🍌 {coins}</div>
+      <div className="title-top">
+        <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
+        <div className="coin-badge">🍌 {coins}</div>
+      </div>
       <h1 className="logo">
         <span>おさるの</span>
         <span className="big">なあに？</span>
