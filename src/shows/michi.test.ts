@@ -5,7 +5,7 @@ import { isUnlocked, ownedIn, pickShow } from './registry'
 import { seeded } from '../lib/rng'
 import type { UnlockCtx } from './types'
 
-const u0: UnlockCtx = { masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {} }
+const u0: UnlockCtx = { masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {}, coins: 0 }
 const withU = (p: Partial<UnlockCtx>): UnlockCtx => ({ ...u0, ...p })
 const get = (l: { id: string }[], id: string) => l.find((s) => s.id === id)! as (typeof MICHI_SHOWS)[number]
 

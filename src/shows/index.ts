@@ -25,7 +25,7 @@ export function forcedShow(): Show | undefined {
 }
 
 /** 今の場面の材料から ShowCtx を作る（pic / host は画面から探す） */
-export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: number; y: number }; combo?: number }): ShowCtx {
+export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: number; y: number }; combo?: number; today?: Question[] }): ShowCtx {
   const motion = getMotion()
   const layer = makeLayer() // この演出ぶんの層（次の問題で clear されたら、あとから何も置かない）
   layer.motion = motion
@@ -42,6 +42,7 @@ export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: 
     sfx,
     at: p.at,
     combo: p.combo,
+    today: p.today,
   }
 }
 

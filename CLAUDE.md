@@ -46,12 +46,19 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
   - ふくしゅう: タイトルの「🔁 ふくしゅう（N）」（`save.review` があるときだけ）。`reviewSession` で新しいほうから最大10問、時間ゲージなし、GOAL＝出題数（みちのり・リーチもこの数）。ランキング・コース解放・「まえより」には入れない。最初の答えで正解した単語は review から外れる。`Quiz` の `mode: 'course' | 'review'` と決まりごとは `quiz.ts` の `MODE_RULES`（あとで practice・demo を足す）
   - 結果: `growthLines(prev, cur, level)`（せいかい数・さいこうれんぞく・クリアタイムが のびた項目だけ。最大3行）を `applyResult` が `events.growth` に入れる。前回は `save.lastByLevel[level]`（コースごと。古いデータの `lastResult` は `normalizeSave` で移す）。結果の最後に「まえより のびたよ」→「あたらしく おぼえたよ」（絵＋☆、タップで読み上げ）→ ☆が増えた・ぴかぴか → 「まだ あそぶー？」
   - 目で確かめる: くもりは `?show` のような強制がないので、smoke のように localStorage の `saru-quiz/players` の stats を書きかえる（box=1・due を40日前）
+- **毎日の楽しみ**（きねんしゃしん・えにっき・シール・バナナのやま）
+  - きねんしゃしん（`finale:photo`、`shows/finale.ts`）: コースのクリアの「くりあー！」のあと（時間切れは なし）に `chooseShow('finale', …)` で選んで再生。暗くなる → おさる（`getCurrent().char`）とこのプレイで正解した単語（`ctx.today`、新しい8個まで）が ひな壇に並ぶ → 「はい、ちーず！」→ 3・2・1 → フラッシュ（1回だけ・1秒ほどかけて消す。動きの強さ0なら出さない）→ 枠（白い縁・日づけ・テープ）が ぺたっと貼られる。全体 約3.9秒。`#show-layer` の `.photo-scene[data-phase]`（dark → arranged → count → flash → framed。smoke が見る）。ひな壇の並べ方は `lib/riser.ts` の `riserLayout(n)`（純粋。えにっきの日のページも同じ）。フィナーレを増やすときは `FINALE_SHOWS` に足す
+  - えにっき（`screens/Diary.tsx`、タイトルの `.diary-btn`）: 月のページ（横7列。遊んだ日だけ その日のシールと小さい絵。遊んでいない日は白いまま・印なし）→ 日をタップで その日のページ（日づけ・しゃしん・遊んだ回数・シール・ことば一覧）。前の月は12か月前まで・今日より先の月には行かない。月の並びは `lib/calendar.ts`（`monthLayout` `monthCells` `addMonth`）。保存は id だけで、写真は毎回組み立てる。`diary[日]` は `{ words（最大30）, plays, mastered（その日 ☆1になった単語。☆を付ける）, sticker（0〜6）}`（古いデータは mastered・sticker がない）
+  - シール（`lib/stickers.ts`）: その日はじめて遊び終わったら（ふくしゅうでも）1枚。どうぶつ7種（cat・dog・rabbit・elephant・giraffe・giant-panda・lion）を順番に。`save.stickers` を増やし `diary[日].sticker = (stickers-1) % 7`。休んでも続きから（やり直さない・連続日数は数えない）。`applyResult` の `events.sticker = { kind, count, complete }`。結果の「シールを もらったよ！」カード（回りながら飛んできて ぺたっ。台紙に7枚）、7の倍数で「ぜんぶ そろったよ！」＋紙ふぶき多め
+  - バナナのやま（`lib/banana.ts` の `BANANA_STAGES`、演出 `banana:fusa|kago|nekoguruma|truck|fune|shima|hoshi`、絵は `shows/banana.ts` の `pileHtml` と `components/BananaPile.tsx`）: 合計バナナ（`save.coins`）が 0・600・1500・3500・8000・18000・40000 で ひとふさ → かご → ねこぐるま → トラック → ふね → しま → バナナのほし。しきい値は 1回のプレイでもらえる量（3歳が10問前後で 150〜500）から、最初は2〜3回・あとは約2〜2.5倍ずつ。解放は `UnlockCtx.coins`。段階が上がったプレイは `events.bananaUp`（新しい段階）→ 結果に「バナナが 〇〇いっぱいに なったよ！」のカード。タイトルのバナナの数の横に今の段階（`.pile-mini`）。ねこぐるま・ふねは絵文字がないか、端末で絵が切れるので SVG
+  - 新しいセリフ: 「はい、ちーず！」「シールを、もらったよ！」「シールが、ぜんぶ、そろったよ！」と バナナのやま各段階の `say`（`banana.test.ts` が voice_lines.py にあるか確かめる）
+  - 目で確かめる: smoke の `12-*`（シール・きねんしゃしん）`13-*`（えにっき）`14-*`（7枚そろう・バナナのやま・タイトル）。バナナのやまは localStorage の coins をしきい値の手前に書きかえてから遊ぶ
 - のこり5秒からは時間の進みが半分（5→0 を10秒かけて大きくカウントダウン）。`Quiz.tsx` の `COUNTDOWN_MS`
 
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/fit_illust.mjs <id…>`（描いた範囲を測って中央・同じ大きさにそろえる。何度実行しても同じ）→ `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
 - コード変更後: `npm run check`（問題JSON再生成 + 単体テスト + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
-- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・演出の解放と選び方。設定は `vitest.config.ts`）
+- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・シール・バナナの段階・えにっきの月の並び・ひな壇・演出の解放と選び方。設定は `vitest.config.ts`）
 - テスト用のURLパラメータ（`src/lib/testflags.ts`）
   - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
   - `?show=<id>` `?demo` 保存もランキングへの送信もしない

@@ -1,12 +1,14 @@
 // 演出の一覧と、どれを使うかの選び方
 import type { Rng } from '../lib/rng'
 import type { Show, ShowCat, UnlockCtx } from './types'
+import { BANANA_SHOWS } from './banana'
+import { FINALE_SHOWS } from './finale'
 import { MICHI_SHOWS } from './michi'
 import { ONGAKU_SHOWS } from './ongaku'
 import { UGOKU_SHOWS } from './ugoku'
 import { ZUKKOKE_SHOWS } from './zukkoke'
 
-export const SHOWS: Show[] = [...UGOKU_SHOWS, ...ZUKKOKE_SHOWS, ...MICHI_SHOWS, ...ONGAKU_SHOWS]
+export const SHOWS: Show[] = [...UGOKU_SHOWS, ...ZUKKOKE_SHOWS, ...MICHI_SHOWS, ...ONGAKU_SHOWS, ...FINALE_SHOWS, ...BANANA_SHOWS]
 
 export const getShow = (id: string): Show | undefined => SHOWS.find((s) => s.id === id)
 

@@ -5,8 +5,11 @@ const KEY = 'saru-quiz/v1'
 export type WordStat = { ok: number; ng: number; last: number; box?: number; boxAt?: number; due?: number; firstOkAt?: number }
 /** 直前のプレイの記録（「まえより のびたよ」用） */
 export type LastResult = { correct: number; bestCombo: number; clearMs?: number; level: number; at: number }
-/** えにっきの1日ぶん（単語は最大30） */
-export type DiaryDay = { words: string[]; plays: number }
+/**
+ * えにっきの1日ぶん。words: その日あてた単語（最大30）、mastered: その日 ☆1になった単語（古いデータにはない）、
+ * sticker: その日もらったシールの種類 0〜6（もらっていなければなし）
+ */
+export type DiaryDay = { words: string[]; plays: number; mastered?: string[]; sticker?: number }
 /** 演出図鑑（段階4で使う）。got: 手に入れた時刻、seen: 見たハプニング、pick: カテゴリごとの選択 */
 export type ShowsSave = { got: Record<string, number>; seen: Record<string, number>; pick: Record<string, string> }
 export type Save = {
@@ -24,7 +27,7 @@ export type Save = {
   lastResult?: LastResult
   /** コースごとの直前の結果（「まえより のびたよ」で比べる相手）。古いデータは normalizeSave で移す */
   lastByLevel: Record<number, LastResult>
-  /** もらったシールの数（段階3で使う） */
+  /** もらったシールの数（1日1枚。休んでも続きから） */
   stickers: number
   shows: ShowsSave
 }

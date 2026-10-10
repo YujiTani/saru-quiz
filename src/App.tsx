@@ -12,6 +12,7 @@ import { now } from './lib/day'
 import { applyResult, type ResultEvents } from './lib/progress'
 import { isTestRun } from './lib/testflags'
 import { flushPending } from './lib/ranking'
+import { Diary } from './screens/Diary'
 import { Quiz, type QuizResult } from './screens/Quiz'
 import { Ranking } from './screens/Ranking'
 import { Result } from './screens/Result'
@@ -28,6 +29,7 @@ type Screen =
   | { name: 'settings' }
   | { name: 'player'; edit: boolean; first?: boolean; back: 'title' | 'settings' }
   | { name: 'ranking'; course: number }
+  | { name: 'diary' }
   | { name: 'quiz'; mode: Mode; level: number; questions: Question[]; key: number }
   | { name: 'result'; mode: Mode; level: number; result: QuizResult; events: ResultEvents }
 
@@ -111,6 +113,7 @@ export default function App() {
           onReview={() => startQuiz('review')}
           onSettings={() => setScreen({ name: 'settings' })}
           onRanking={() => setScreen({ name: 'ranking', course: 1 })}
+          onDiary={() => setScreen({ name: 'diary' })}
           onSwitch={(id) => {
             selectPlayer(id)
             const p = getCurrent()
@@ -129,6 +132,7 @@ export default function App() {
         />
       )}
       {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} />}
+      {screen.name === 'diary' && player && <Diary player={player} />}
       {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
         <Quiz key={screen.key} mode={screen.mode} level={screen.level} questions={screen.questions} save={data} onFinish={(r) => finish(screen.mode, screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />

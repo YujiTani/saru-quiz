@@ -9,7 +9,7 @@ const stat = (box: number) => ({ ok: 1, ng: 0, last: 1000, box })
 describe('unlockCtx', () => {
   it('空のデータは全部ゼロ', () => {
     const u = unlockCtx(emptySave(), 0, catOf)
-    expect(u).toEqual({ masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {} })
+    expect(u).toEqual({ masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {}, coins: 0 })
   })
 
   it('おぼえた数（☆1以上）をカテゴリごとに数える。箱0は数えない', () => {
@@ -47,5 +47,6 @@ describe('unlockCtx', () => {
     expect(u.plays).toBe(7)
     expect(u.clears).toBe(2)
     expect(u.seen).toEqual({ ufo: 123 })
+    expect(unlockCtx({ ...save, coins: 777 }, 0, catOf).coins).toBe(777) // バナナのやま
   })
 })

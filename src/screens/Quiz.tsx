@@ -10,8 +10,9 @@ import { chooseShow, chooseUgoku, chooseZukkoke, layer, makeCtx, peekaboo, play,
 import { songOf } from '../lib/bgm'
 import { getMotion } from '../lib/settings'
 import { getCurrent } from '../lib/players'
+import { photoWords } from '../lib/riser'
 import { startParam } from '../lib/testflags'
-import { COURSE, MODE_RULES, hintFor, makeRound, type Mode, type Question, type Round } from '../lib/quiz'
+import { COURSE, MODE_RULES, hintFor, makeRound, questionById, type Mode, type Question, type Round } from '../lib/quiz'
 import { pauseBgm, resumeBgm, setBgmKey, setBgmLevel, sfx, startBgm, stopBgm } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
@@ -279,6 +280,15 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feverLv])
 
+  // 画面を離れたあと（✕で戻った）に、フィナーレのあとで結果へ進まないための印
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
   useEffect(
     () => () => {
       document.body.classList.remove('fever', ...FEVER_CLASSES)
@@ -496,9 +506,16 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
     rain('star', 150)
     rain('confetti', 200)
     void speak(mode === 'review' ? 'ふくしゅう、くりあー！' : 'くりあー！')
-    setTimeout(() => {
-      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: true, clearMs })
-    }, 2800)
+    const result: QuizResult = { correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: true, clearMs }
+    // 「くりあー！」のあとにフィナーレ（きねんしゃしん）。うまく動かなくても結果へ進む
+    const today = photoWords(stats.current.answers, 30).flatMap((id) => questionById(id) ?? [])
+    setTimeout(async () => {
+      if (!mounted.current) return
+      setBanner(null)
+      const ctx = makeCtx({ E: 1, today })
+      await Promise.race([play(chooseShow('finale', save.shows.pick, unlock.current), ctx), wait(5000)])
+      if (mounted.current) onFinish(result)
+    }, 2400)
   }
 
   function next() {

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { BANANA_STAGES } from '../lib/banana'
 import { categories } from '../lib/quiz'
 import { seeded } from '../lib/rng'
 import { SHOWS, getShow, isUnlocked, ownedIn, pickShow, ugokuFor } from './registry'
 import type { UnlockCtx } from './types'
 
-const u0: UnlockCtx = { masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {} }
+const u0: UnlockCtx = { masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {}, coins: 0 }
 const withU = (p: Partial<UnlockCtx>): UnlockCtx => ({ ...u0, ...p })
 const ids = (l: { id: string }[]) => l.map((s) => s.id)
 
@@ -120,5 +121,37 @@ describe('ugokuFor', () => {
     const got = cats.map((c) => ugokuFor(c, withU({ masteredByCat: { [c]: 3 } })).id)
     expect(new Set(got).size).toBe(8)
     expect(got).not.toContain('ugoku:pika')
+  })
+})
+
+describe('バナナのやま（banana:*）', () => {
+  const bs = () => SHOWS.filter((s) => s.cat === 'banana')
+
+  it('7段階。ひとふさは はじめから、あとは 合計バナナで手に入る', () => {
+    expect(ids(bs())).toEqual(BANANA_STAGES.map((s) => `banana:${s.id}`))
+    expect(getShow('banana:fusa')?.base).toBe(true)
+    expect(ids(ownedIn('banana', u0))).toEqual(['banana:fusa'])
+  })
+
+  it('しきい値ちょうどで手に入る。ひとつ前までは持っていない', () => {
+    BANANA_STAGES.slice(1).forEach((st, k) => {
+      const s = getShow(`banana:${st.id}`)!
+      expect(isUnlocked(s, withU({ coins: st.need - 1 })), st.id).toBe(false)
+      expect(isUnlocked(s, withU({ coins: st.need })), st.id).toBe(true)
+      expect(ownedIn('banana', withU({ coins: st.need })), `${k}`).toHaveLength(k + 2)
+    })
+  })
+
+  it('親向けの説明にバナナの数が入る', () => {
+    for (const st of BANANA_STAGES.slice(1)) expect(getShow(`banana:${st.id}`)!.hint).toContain(String(st.need))
+  })
+})
+
+describe('ふぃなーれ（finale:*）', () => {
+  it('きねんしゃしんは はじめから。pickShow で選べる', () => {
+    const s = getShow('finale:photo')!
+    expect(s.cat).toBe('finale')
+    expect(s.base).toBe(true)
+    expect(pickShow('finale', {}, u0, seeded('1'))?.id).toBe('finale:photo')
   })
 })

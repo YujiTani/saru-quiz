@@ -1118,3 +1118,98 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .word-tile .emoji { font-size: 40px; line-height: 1; }
 .word-tile .badge { position: absolute; right: -6px; top: -8px; min-width: 24px; padding: 0 5px; border: 2px solid var(--ink); border-radius: 12px; background: var(--yellow); font-size: 15px; line-height: 20px; }
 .learn-more { font-size: 22px; color: var(--ink); }
+
+/* ---------- きねんしゃしん（フィナーレ）と えにっきの しゃしん ---------- */
+.photo-scene { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.photo-dim { position: absolute; inset: 0; background: rgba(12, 6, 30, 0.88); }
+.photo-card { position: relative; width: min(76vw, 300px); margin-bottom: 40px; }
+.photo-card.still { width: min(74vw, 280px); margin: 18px 0 46px; }
+.photo-pic { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 4px; background: linear-gradient(180deg, #bfe6ff 0%, #fff0c8 62%, #ffe0cc 100%); }
+/* ひな壇（奥ほど高い） */
+.photo-step { position: absolute; left: 0; right: 0; bottom: 0; border-top: 3px solid rgba(91, 58, 41, 0.55); }
+.photo-step.s1 { top: 36%; background: #f6dcae; }
+.photo-step.s2 { top: 62%; background: #efc48f; }
+.photo-step.s3 { top: 87%; background: #e5aa76; }
+.photo-word { position: absolute; transform: translate(-50%, -50%); aspect-ratio: 1; padding: 3%; display: grid; place-items: center; background: #fff; border: 3px solid var(--ink); border-radius: 16%; box-shadow: 0 3px 0 rgba(43, 26, 46, 0.35); }
+.photo-word img { width: 100%; height: 100%; object-fit: contain; }
+.photo-word .emoji { font-size: 30px; line-height: 1; }
+.photo-star { position: absolute; right: -8%; top: -8%; min-width: 18px; height: 18px; padding: 0 3px; border: 2px solid var(--ink); border-radius: 9px; background: var(--yellow); font-size: 11px; line-height: 14px; }
+.photo-monkey { position: absolute; transform: translate(-50%, -50%); height: auto; }
+.photo-count { position: absolute; left: 50%; top: -86px; transform: translate(-50%, -50%); opacity: 0; font-family: 'DotGothic16', monospace; font-size: 120px; line-height: 1; color: #fff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); }
+/* 写真の枠（白い縁と日づけ、すみにテープ） */
+.photo-frame { position: absolute; inset: -14px -14px -50px -14px; border: solid #fffdf5; border-width: 14px 14px 50px 14px; border-radius: 6px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); pointer-events: none; }
+.photo-cap { position: absolute; left: 0; right: 0; bottom: -46px; text-align: center; font-size: 24px; line-height: 42px; color: #7a5a4a; }
+.photo-tape { position: absolute; width: 70px; height: 24px; background: rgba(255, 224, 130, 0.82); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+.photo-tape.t1 { left: -34px; top: -20px; transform: rotate(-38deg); }
+.photo-tape.t2 { right: -34px; top: -20px; transform: rotate(38deg); }
+.photo-flash { position: absolute; inset: 0; background: #fff; pointer-events: none; }
+
+/* ---------- シール ---------- */
+.sticker { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: #fff6c8; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px rgba(43, 26, 46, 0.3); vertical-align: middle; }
+.sticker img { width: 82%; height: 82%; object-fit: contain; }
+.sticker.fly { animation: sticker-fly 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) 0.1s both; }
+@keyframes sticker-fly {
+  0% { transform: translate(110px, -190px) rotate(0deg) scale(2.3); opacity: 0; }
+  12% { opacity: 1; }
+  68% { transform: translate(0, 0) rotate(700deg) scale(1.15); }
+  84% { transform: translate(0, 2px) rotate(714deg) scale(1.08, 0.88); }
+  100% { transform: translate(0, 0) rotate(712deg) scale(1); }
+}
+.sticker-card.pop, .banana-card.pop { animation: pop-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.sticker-card.complete { background: linear-gradient(180deg, #fff8d0, #ffe3f0); box-shadow: 0 6px 0 var(--ink), 0 0 22px 6px rgba(255, 214, 60, 0.75); }
+.sticker-hero { display: flex; justify-content: center; padding: 6px 0 10px; }
+.sticker-sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.sticker-slot { width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 50%; border: 3px dashed #cdbba2; }
+.sticker-slot.got { border: 3px solid var(--ink); background: #fff6c8; }
+.sticker-slot img { width: 78%; height: 78%; object-fit: contain; }
+.sticker-slot.new { animation: slot-new 0.5s 0.75s both; }
+@keyframes slot-new { from { transform: scale(0); } 70% { transform: scale(1.3); } to { transform: scale(1); } }
+
+/* ---------- バナナのやま ---------- */
+.pile-wrap { display: inline-block; line-height: 0; flex: none; }
+.pile { position: relative; display: block; }
+.pile-base { position: absolute; left: 50%; transform: translateX(-50%); display: block; width: max-content; white-space: nowrap; line-height: 1; }
+.pile-base-svg { display: block; width: 100%; height: auto; }
+.pile-b, .pile-spark { position: absolute; line-height: 1; }
+.pile-pop .pile { animation: pile-pop 0.8s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes pile-pop { from { transform: scale(0.2) rotate(-12deg); opacity: 0; } }
+.pile-show { filter: drop-shadow(0 6px 0 rgba(43, 26, 46, 0.25)); }
+.banana-card { text-align: center; }
+.banana-card .pile-wrap { margin: 2px 0 4px; }
+.coin-row { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- えにっき ---------- */
+.diary { gap: 10px; overflow-y: auto; -webkit-overflow-scrolling: touch; justify-content: flex-start; }
+.diary > * { flex-shrink: 0; }
+.diary-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.diary-nav { --c: #fff; width: 56px; height: 50px; font-size: 22px; }
+.diary-nav:disabled { opacity: 0.3; pointer-events: none; }
+.diary-month { margin: 0; font-size: 26px; color: #fff; text-shadow: 0 3px 0 var(--ink); }
+.diary-dow { width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.diary-dow .sun { color: #ffb0b8; }
+.diary-dow .sat { color: #b8dcff; }
+.diary-grid { width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 6px; background: var(--card); border: 4px solid var(--ink); border-radius: 16px; box-shadow: 0 6px 0 var(--ink); }
+.diary-cell { position: relative; display: block; aspect-ratio: 1 / 1.3; background: #fff; border: 2px solid #e9dfd0; border-radius: 8px; }
+.diary-cell.blank { background: transparent; border-color: transparent; }
+.diary-cell.today { border-color: #e0407a; box-shadow: inset 0 0 0 2px #e0407a; }
+.diary-cell .n { position: absolute; left: 3px; top: 1px; font-size: 11px; line-height: 1.2; color: #9a8a7a; }
+.diary-cell.played { background: #fffbe8; border-color: var(--ink); }
+.diary-cell.played:active { transform: translateY(2px); }
+.cell-sticker { position: absolute; left: 3px; top: 15px; width: 28px !important; height: 28px !important; transform: rotate(-8deg); box-shadow: 0 0 0 1.5px var(--ink); border-width: 2px; }
+.cell-word { position: absolute; right: 1px; bottom: 1px; width: 21px; height: 21px; display: grid; place-items: center; }
+.cell-word img { width: 100%; height: 100%; object-fit: contain; }
+.cell-word .emoji { font-size: 16px; line-height: 1; }
+.diary-foot { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 20px; text-shadow: 0 2px 0 var(--ink); }
+.diary-foot b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 26px; color: var(--yellow); }
+.diary-bar { width: 100%; display: flex; }
+.diary-back { --c: #fff; height: 46px; padding: 0 18px; font-size: 20px; }
+.diary-date { margin: 0; font-size: 32px; color: #fff; text-shadow: 0 3px 0 var(--ink); }
+.diary-stats { display: flex; align-items: center; justify-content: center; gap: 22px; font-size: 22px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.diary-stats b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 32px; color: var(--yellow); }
+.diary-sticker { display: inline-flex; align-items: center; gap: 8px; }
+.diary-words { width: 100%; max-width: 360px; padding: 8px 10px 12px; background: var(--card); border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); text-align: center; }
+.diary-words-title { font-size: 16px; color: #8a6a5a; margin-bottom: 6px; }
+.sub-btns { width: 100%; display: flex; gap: 12px; }
+.sub-btns .btn { flex: 1; min-width: 0; height: 54px; font-size: 19px; white-space: nowrap; }
+.diary-btn { --c: #ffd6ec; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.diary-count { font-size: 13px; color: #8a4a6a; }

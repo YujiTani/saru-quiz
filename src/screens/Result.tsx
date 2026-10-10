@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
+import { BananaPile } from '../components/BananaPile'
+import { Sticker } from '../components/Sticker'
+import { WordTile } from '../components/WordTile'
+import { BANANA_STAGES } from '../lib/banana'
 import { burst, fountain, rain, shake } from '../lib/effects'
 import { rankingEnabled, submitScore, type SubmitResult } from '../lib/ranking'
 import { getPlayerName } from '../lib/players'
 import type { ResultEvents } from '../lib/progress'
-import { MODE_RULES, questionById, type Mode } from '../lib/quiz'
+import { MODE_RULES, type Mode } from '../lib/quiz'
+import { STICKER_KINDS, stickerImg, stickerInSet } from '../lib/stickers'
 import { isTestRun } from '../lib/testflags'
 import { sfx } from '../lib/sound'
 import { speak } from '../lib/speech'
@@ -15,28 +20,16 @@ type Stage = 0 | 1 | 2 | 3 | 4
 
 type Props = { mode: Mode; level: number; result: QuizResult; events?: ResultEvents; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
 
-const NO_EVENTS: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, growth: [] }
+const NO_EVENTS: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, sticker: null, bananaUp: null, growth: [] }
 const TILES_MAX = 6
 
-/** 単語の絵（なければ絵文字）。さわると読み上げる。badge は絵のすみに付く ☆ など */
-function WordTile({ id, badge }: { id: string; badge: string }) {
-  const q = questionById(id)
-  if (!q) return null
-  return (
-    <button className="word-tile" onClick={() => { sfx.tap(); void speak(q.a) }} aria-label={q.a}>
-      {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
-      <span className="badge">{badge}</span>
-    </button>
-  )
-}
-
-type Tail = { grow: boolean; mastered: boolean; stars: boolean; polish: boolean }
+type Tail = { grow: boolean; mastered: boolean; stars: boolean; polish: boolean; sticker: boolean; banana: boolean }
 
 export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, onAgain, onHome, onRanking }: Props) {
   const rules = MODE_RULES[mode]
   const review = mode === 'review'
   // 「まえより のびたよ」と「おぼえたよ」のカード（結果発表の最後に1つずつ出す）
-  const [tail, setTail] = useState<Tail>({ grow: false, mastered: false, stars: false, polish: false })
+  const [tail, setTail] = useState<Tail>({ grow: false, mastered: false, stars: false, polish: false, sticker: false, banana: false })
   const mastered = events.newMastered.slice(0, TILES_MAX)
   const starUps = events.starUps.filter(([id]) => !events.newMastered.includes(id)).slice(0, TILES_MAX)
   const polished = events.polished.slice(0, TILES_MAX)
@@ -153,6 +146,29 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
             if (!alive) return
             await sleep(400)
           }
+          // シール（その日はじめて）。回りながら飛んできて、ぺたっと貼られる。7枚そろったら紙ふぶきを多めに
+          if (events.sticker) {
+            show('sticker')
+            at(650, () => {
+              sfx.paste()
+              burst(innerWidth / 2, innerHeight * 0.55, 'star', 16, 0.9)
+            })
+            if (events.sticker.complete) {
+              rain('confetti', 320)
+              fountain('star', 80)
+            }
+            await speak(events.sticker.complete ? ['シールを、もらったよ！', 'シールが、ぜんぶ、そろったよ！'] : 'シールを、もらったよ！')
+            if (!alive) return
+            await sleep(500)
+          }
+          // バナナのやま（段階が上がったとき）
+          if (events.bananaUp !== null) {
+            show('banana')
+            rain('banana', 40)
+            await speak(BANANA_STAGES[events.bananaUp].say)
+            if (!alive) return
+            await sleep(500)
+          }
           setAsk(true)
           sfx.coin()
           const r = rankRef.current
@@ -170,7 +186,7 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
   // カードが出たら、見えるところまでスクロール
   const tailRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (tail.grow || tail.mastered) tailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    if (Object.values(tail).some(Boolean)) tailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [tail])
 
   // 「まだ、あそぶー？」が出たら一番下までスクロール（上に戻せば結果も見られる）
@@ -232,7 +248,7 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
         </div>
       )}
       {stage >= 4 && <div className="result-total">ぜんぶで 🍌 {totalCoins}</div>}
-      {(tail.grow || tail.mastered || tail.stars || tail.polish) && (
+      {Object.values(tail).some(Boolean) && (
       <div className="result-tail" ref={tailRef}>
         {tail.grow && (
           <div className="learn-card grow-card pop">
@@ -273,6 +289,41 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
                 <WordTile key={id} id={id} badge="✨" />
               ))}
             </div>
+          </div>
+        )}
+        {tail.sticker && events.sticker && (
+          <div className={`learn-card sticker-card pop ${events.sticker.complete ? 'complete' : ''}`}>
+            <div className="learn-title">
+              {events.sticker.complete ? (
+                <>
+                  🎉 シールが
+                  <br />
+                  ぜんぶ そろったよ！
+                </>
+              ) : (
+                '🌟 シールを もらったよ！'
+              )}
+            </div>
+            <div className="sticker-hero">
+              <Sticker kind={events.sticker.kind} size={104} className="fly" />
+            </div>
+            <div className="sticker-sheet" aria-hidden>
+              {Array.from({ length: STICKER_KINDS }, (_, i) => (
+                <span key={i} className={`sticker-slot ${i < stickerInSet(events.sticker!.count) ? 'got' : ''} ${i === stickerInSet(events.sticker!.count) - 1 ? 'new' : ''}`}>
+                  {i < stickerInSet(events.sticker!.count) && <img src={stickerImg(i)} alt="" draggable={false} />}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {tail.banana && events.bananaUp !== null && (
+          <div className="learn-card banana-card pop">
+            <div className="learn-title">
+              🍌 バナナが
+              <br />
+              {BANANA_STAGES[events.bananaUp].card}に なったよ！
+            </div>
+            <BananaPile stage={events.bananaUp} size={170} className="pile-pop" />
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { BANANA_STAGES } from './banana'
 import { applyResult, firstAnswers, growthLines } from './progress'
 import { emptySave, normalizeSave } from './storage'
 import type { LastResult, Save } from './storage'
@@ -74,11 +75,11 @@ describe('progress 記録', () => {
   it('diary: その日の単語（重複なし・最大30）と回数。firstPlayToday は1回目だけ', () => {
     const first = applyResult(emptySave(), res([['a', true], ['b', false], ['a', true]]), T0, 1)
     expect(first.events.firstPlayToday).toBe(true)
-    expect(first.save.diary['2026-01-01']).toEqual({ words: ['a'], plays: 1 })
+    expect(first.save.diary['2026-01-01']).toEqual({ words: ['a'], plays: 1, mastered: ['a'], sticker: 0 })
 
     const second = applyResult(first.save, res([['a', true], ['c', true]]), T0 + 3600_000, 1)
     expect(second.events.firstPlayToday).toBe(false)
-    expect(second.save.diary['2026-01-01']).toEqual({ words: ['a', 'c'], plays: 2 })
+    expect(second.save.diary['2026-01-01']).toEqual({ words: ['a', 'c'], plays: 2, mastered: ['a', 'c'], sticker: 0 })
 
     const nextDay = applyResult(second.save, res([['d', true]]), at(2026, 1, 2), 1)
     expect(nextDay.events.firstPlayToday).toBe(true)
@@ -185,5 +186,110 @@ describe('lastByLevel コースごとの前回', () => {
     expect(save.lastByLevel).toEqual({})
     expect(events.growth).toEqual([])
     expect(save.review).toEqual([]) // 最初に正解したので外れる
+  })
+})
+
+describe('diary の mastered（☆1になった日）', () => {
+  it('その日 ☆1になった単語だけ入る。同じ日の2回目で足される（重複なし）', () => {
+    const a = applyResult(emptySave(), res([['a', true], ['b', false]]), T0, 1)
+    expect(a.save.diary['2026-01-01'].mastered).toEqual(['a'])
+    const b = applyResult(a.save, res([['a', true], ['c', true]]), T0 + 3600_000, 1)
+    expect(b.events.newMastered).toEqual(['c']) // a はもう☆1
+    expect(b.save.diary['2026-01-01'].mastered).toEqual(['a', 'c'])
+  })
+
+  it('前の日に☆1になった単語は、次の日の mastered には入らない（words には入る）', () => {
+    const a = applyResult(emptySave(), res([['a', true]]), at(2026, 1, 1), 1)
+    const b = applyResult(a.save, res([['a', true], ['b', true]]), at(2026, 1, 2), 1)
+    expect(b.save.diary['2026-01-02'].words).toEqual(['a', 'b'])
+    expect(b.save.diary['2026-01-02'].mastered).toEqual(['b'])
+    expect(b.save.diary['2026-01-01'].mastered).toEqual(['a'])
+  })
+
+  it('古いデータ（mastered がない日）でも足せる', () => {
+    const old: Save = { ...emptySave(), diary: { '2026-01-01': { words: ['x'], plays: 1 } } }
+    const r = applyResult(old, res([['a', true]]), T0, 1)
+    expect(r.save.diary['2026-01-01']).toEqual({ words: ['x', 'a'], plays: 2, mastered: ['a'] })
+  })
+
+  it('ふくしゅうでも、その日の mastered に入る', () => {
+    const base: Save = { ...emptySave(), review: ['a'] }
+    expect(applyResult(base, res([['a', true]]), T0, 1, true).save.diary['2026-01-01'].mastered).toEqual(['a'])
+  })
+})
+
+describe('シール（applyResult）', () => {
+  it('その日はじめて遊び終わったら1枚。diary に種類が残る', () => {
+    const { save, events } = applyResult(emptySave(), res([['a', true]]), T0, 1)
+    expect(save.stickers).toBe(1)
+    expect(save.diary['2026-01-01'].sticker).toBe(0)
+    expect(events.sticker).toEqual({ kind: 0, count: 1, complete: false })
+  })
+
+  it('同じ日の2回目はもらえない（枚数も種類も変わらない）', () => {
+    const a = applyResult(emptySave(), res([['a', true]]), T0, 1)
+    const b = applyResult(a.save, res([['b', true]]), T0 + 60_000, 1)
+    expect(b.events.sticker).toBeNull()
+    expect(b.save.stickers).toBe(1)
+    expect(b.save.diary['2026-01-01'].sticker).toBe(0)
+  })
+
+  it('休んでも続きから（日がとんでも 次の種類）。やり直さない', () => {
+    let save = emptySave()
+    const days = [1, 2, 10, 11, 25] // とびとびの日
+    const kinds: number[] = []
+    for (const d of days) {
+      const r = applyResult(save, res([['a', true]]), at(2026, 1, d), 1)
+      save = r.save
+      kinds.push(r.events.sticker!.kind)
+    }
+    expect(kinds).toEqual([0, 1, 2, 3, 4])
+    expect(save.stickers).toBe(5)
+  })
+
+  it('7枚そろったら complete。8枚目は最初の種類にもどる', () => {
+    let save = emptySave()
+    const out: boolean[] = []
+    let last = -1
+    for (let d = 1; d <= 8; d++) {
+      const r = applyResult(save, res([['a', true]]), at(2026, 1, d), 1)
+      save = r.save
+      out.push(r.events.sticker!.complete)
+      last = r.events.sticker!.kind
+    }
+    expect(out).toEqual([false, false, false, false, false, false, true, false])
+    expect(last).toBe(0)
+    expect(save.stickers).toBe(8)
+  })
+
+  it('ふくしゅうでも、その日はじめてならもらえる', () => {
+    const base: Save = { ...emptySave(), review: ['a'] }
+    expect(applyResult(base, res([['a', true]]), T0, 1, true).events.sticker?.count).toBe(1)
+  })
+
+  it('古い日（シールなしの diary）しかない日に遊んでも、2回目扱いでシールは増えない', () => {
+    const old: Save = { ...emptySave(), diary: { '2026-01-01': { words: [], plays: 1 } } }
+    const r = applyResult(old, res([['a', true]]), T0, 1)
+    expect(r.events.sticker).toBeNull()
+    expect(r.save.diary['2026-01-01'].sticker).toBeUndefined()
+  })
+})
+
+describe('バナナのやま（applyResult）', () => {
+  it('段階が上がったプレイで events.bananaUp に新しい段階が入る', () => {
+    const base: Save = { ...emptySave(), coins: BANANA_STAGES[1].need - 5 }
+    const r = applyResult(base, res([['a', true]], { coins: 10 }), T0, 1)
+    expect(r.events.bananaUp).toBe(1)
+    expect(r.save.coins).toBe(BANANA_STAGES[1].need + 5)
+  })
+
+  it('同じ段階のままなら null', () => {
+    const r = applyResult({ ...emptySave(), coins: 100 }, res([['a', true]], { coins: 10 }), T0, 1)
+    expect(r.events.bananaUp).toBeNull()
+  })
+
+  it('一度に何段か上がったら いちばん上の段階', () => {
+    const r = applyResult(emptySave(), res([['a', true]], { coins: BANANA_STAGES[3].need + 1 }), T0, 1)
+    expect(r.events.bananaUp).toBe(3)
   })
 })

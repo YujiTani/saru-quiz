@@ -1,4 +1,6 @@
+import { BananaPile } from '../components/BananaPile'
 import { PixelMonkey } from '../components/PixelMonkey'
+import { bananaStage } from '../lib/banana'
 import { getPlayers, MAX_PLAYERS, type Player } from '../lib/players'
 import { sfx } from '../lib/sound'
 
@@ -16,13 +18,14 @@ type Props = {
   onReview: () => void
   onSettings: () => void
   onRanking: () => void
+  onDiary: () => void
   onSwitch: (id: string) => void
   onNewPlayer: () => void
 }
 
 /** タイトル（メニュー）。選んでいるキャラの見た目・なまえ・色で表示が変わる */
-export function Title({ player, onStart, onReview, onSettings, onRanking, onSwitch, onNewPlayer }: Props) {
-  const { cleared, coins, review } = player.save
+export function Title({ player, onStart, onReview, onSettings, onRanking, onDiary, onSwitch, onNewPlayer }: Props) {
+  const { cleared, coins, review, stickers } = player.save
   // ひとつ前のコースをクリアすると解放。むずかしいは解放されるまで出さない
   const open = (level: number) => UNLOCK_ALL || level === 1 || cleared.includes(level - 1)
   const levels = LEVELS.filter((l) => l.level < 3 || open(l.level))
@@ -35,7 +38,11 @@ export function Title({ player, onStart, onReview, onSettings, onRanking, onSwit
           <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
           <button className="gear-btn" onClick={() => { sfx.tap(); onRanking() }} aria-label="らんきんぐ">🏆</button>
         </div>
-        <div className="coin-badge">🍌 {coins}</div>
+        <div className="coin-row">
+          {/* ためたバナナの合計が「もの」の大きさで分かる（バナナのやま） */}
+          <BananaPile stage={bananaStage(coins)} size={52} className="pile-mini" />
+          <div className="coin-badge">🍌 {coins}</div>
+        </div>
       </div>
       <h1 className="logo small">
         <span>おさるの</span>
@@ -96,12 +103,18 @@ export function Title({ player, onStart, onReview, onSettings, onRanking, onSwit
             </button>
           ),
         )}
-        {/* まちがえた単語がたまっていたら、ふくしゅう（時間なし・ぜんぶ当てたらクリア） */}
-        {review.length > 0 && (
-          <button className="btn review-btn" onClick={() => { sfx.tap(); onReview() }}>
-            🔁 ふくしゅう（{review.length}）
+        {/* ふくしゅう（まちがえた単語がたまっていたら。時間なし・ぜんぶ当てたらクリア）と えにっき（シールの枚数つき）は 1行に並べる */}
+        <div className="sub-btns">
+          {review.length > 0 && (
+            <button className="btn review-btn" onClick={() => { sfx.tap(); onReview() }}>
+              🔁 ふくしゅう（{review.length}）
+            </button>
+          )}
+          <button className="btn diary-btn" onClick={() => { sfx.tap(); onDiary() }}>
+            📔 えにっき
+            {stickers > 0 && <small className="diary-count">シール {stickers}まい</small>}
           </button>
-        )}
+        </div>
       </div>
       <p className="credit">VOICEVOX:ずんだもん / 四国めたん / 春日部つむぎ / もち子(cv 明日葉よもぎ) / ナースロボ＿タイプＴ</p>
     </div>

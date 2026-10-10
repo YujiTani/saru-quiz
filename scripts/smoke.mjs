@@ -6,6 +6,8 @@
 //  5. みちのり（E=0 / 0.5 / 0.9）・おさるバンド・リーチ（?goal=3 で 画面のふちのおさる → ぷはーっ！）（10-*.png）
 //  6. まなび: 手がかり（まちがえた単語が もう一度出たら 選択肢が減る → 3回目は正解が光る）→ おぼえたよ → ふくしゅう（時間ゲージなし・
 //     ぜんぶ正解で review が空に）→ 2回目のプレイで「まえより のびたよ」→ くもりの絵（拭きとって ぴかぴか）（11-*.png）
+//  7. 毎日の楽しみ: 1回目のあとにシールのカード（12-sticker）→ ?goal=3 のクリアで きねんしゃしん（12-finale-*）→ えにっき（月・日のページ。13-diary-*）
+//     → 7枚そろう＋バナナのやま（トラック）のカード（14-*）
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -85,6 +87,7 @@ async function start(page, query) {
 
 const server = await createServer({ server: { port: 5199 }, logLevel: 'error' })
 await server.listen()
+const { BANANA_STAGES } = await server.ssrLoadModule('/src/lib/banana.ts')
 const browser = await launch()
 const errors = []
 try {
@@ -135,9 +138,27 @@ try {
   await page.screenshot({ path: `${OUT}/3a-countdown.png` })
   await page.waitForSelector('.banner.end', { timeout: 60000 })
   await page.screenshot({ path: `${OUT}/3b-end.png` })
+  await sleep(2600)
+  if (await page.$('.photo-scene')) errors.push('時間切れなのに きねんしゃしん（フィナーレ）が出ています')
   await page.waitForSelector('.again-pop', { timeout: 40000 })
   await page.screenshot({ path: `${OUT}/4-result.png` })
   if (await page.$('.result-cleartime')) errors.push('時間切れなのにクリアタイムが出ています')
+  // その日はじめてのプレイ: シールのカード（シールが飛んできて貼られる）。7枚はそろっていない
+  if (!(await page.$('.sticker-card'))) errors.push('1日のはじめてのプレイなのに「シールを もらったよ！」が出ていません')
+  else {
+    if (await page.$('.sticker-card.complete')) errors.push('1枚目なのに「ぜんぶ そろったよ」になっています')
+    if ((await page.$$('.sticker-card .sticker-slot.got')).length !== 1) errors.push('1枚目なのに シールの台紙に1枚だけ貼られていません')
+    await page.$eval('.sticker-card', (el) => el.scrollIntoView({ block: 'center' }))
+    await sleep(1500)
+    await page.screenshot({ path: `${OUT}/12-sticker.png` })
+  }
+  const saved1 = await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    return p.list.find((x) => x.id === p.current).save
+  })
+  const today1 = Object.values(saved1.diary)
+  if (saved1.stickers !== 1 || today1.length !== 1 || today1[0].sticker !== 0) errors.push(`シールが保存されていません: stickers=${saved1.stickers} diary=${JSON.stringify(saved1.diary)}`)
+  if (!Array.isArray(today1[0]?.mastered)) errors.push('diary に mastered がありません')
   console.log(`1. 時間切れ: ${answered}問回答`)
 
   // 2. 3問クリアで終わる（ランキングに送る中身も確かめる）
@@ -162,6 +183,28 @@ try {
   }
   await page.waitForSelector('.banner.clear', { timeout: 20000 })
   await page.screenshot({ path: `${OUT}/5-clear.png` })
+  // きねんしゃしん: 暗くなる → ひな壇に並ぶ → 3・2・1 → フラッシュ（1回だけ）→ 枠が貼られる。全体で4秒以内
+  await page.waitForSelector('.photo-scene', { timeout: 20000 })
+  const photoAt = Date.now()
+  const phaseShot = { arranged: 100, count: 300, flash: 200, framed: 150 }
+  for (const [ph, wait] of Object.entries(phaseShot)) {
+    await page.waitForSelector(`.photo-scene[data-phase="${ph}"]`, { timeout: 8000 })
+    await sleep(wait)
+    if (ph === 'arranged') {
+      const words = (await page.$$('.photo-scene .photo-word')).length
+      if (words < 1 || words > 3) errors.push(`きねんしゃしんの ことばの絵が ${words}個です（3問正解）`)
+      if (!(await page.$('.photo-scene .photo-monkey'))) errors.push('きねんしゃしんに おさるがいません')
+      if ((await page.$$('.photo-scene .photo-flash')).length !== 1) errors.push('フラッシュの要素が1つではありません')
+    }
+    if (ph === 'count') {
+      const n = await page.$eval('.photo-count', (el) => el.textContent)
+      if (!['3', '2', '1'].includes(n)) errors.push(`カウントが 3・2・1 ではありません: ${n}`)
+    }
+    await page.screenshot({ path: `${OUT}/12-finale-${ph}.png` })
+  }
+  await page.waitForFunction(() => !document.querySelector('.photo-scene'), { timeout: 8000 })
+  const photoMs = Date.now() - photoAt
+  if (photoMs > 4300) errors.push(`きねんしゃしんが ${photoMs}ms かかっています（4秒以内）`)
   await page.waitForSelector('.result-cleartime', { timeout: 20000 })
   await sleep(600)
   await page.screenshot({ path: `${OUT}/6-cleartime.png` })
@@ -172,7 +215,68 @@ try {
   // 前回（時間切れの1回目）よりせいかい数が少ないので「まえより のびたよ」は出ない
   await page.waitForSelector('.again-pop', { timeout: 90000 })
   if (await page.$('.grow-card')) errors.push('のびていないのに「まえより のびたよ」が出ています')
-  console.log('2. クリア: OK')
+  if (await page.$('.sticker-card')) errors.push('同じ日の2回目なのに シールのカードが出ています')
+  console.log(`2. クリア・きねんしゃしん（${photoMs}ms）: OK`)
+
+  // 2b. えにっき: 月のページ（今日のマスにシール）→ 日のページ → 前の月・次の月
+  const mySave0 = () =>
+    page.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+      return p.list.find((x) => x.id === p.current).save
+    })
+  await start(page, '')
+  const diaryBtn = await page.$('.diary-btn')
+  if (!diaryBtn) errors.push('タイトルに えにっきボタンがありません')
+  else {
+    if (!(await diaryBtn.evaluate((el) => el.textContent)).includes('シール 1')) errors.push('えにっきボタンに シールの枚数（1）が出ていません')
+    await page.screenshot({ path: `${OUT}/13-title.png` })
+    await diaryBtn.click()
+    await sleep(500)
+    if (!(await page.$('.diary-cell.today.played .sticker'))) errors.push('えにっきの今日のマスに シールがありません')
+    if (!(await page.$('.diary-cell.today.played .cell-word'))) errors.push('えにっきの今日のマスに 小さい絵がありません')
+    const blank = await page.$$eval('.diary-cell:not(.played):not(.blank)', (els) => els.filter((e) => e.children.length !== 1).length)
+    if (blank) errors.push('遊んでいない日のマスに、日にち以外のものが描かれています')
+    const wk = await page.$$eval('.diary-dow span', (els) => els.length)
+    const cellsN = await page.$$eval('.diary-grid .diary-cell', (els) => els.length)
+    if (wk !== 7 || cellsN % 7 !== 0) errors.push(`えにっきの月が 7列ではありません（曜日${wk}・マス${cellsN}）`)
+    if (!(await page.$eval('.diary-nav.next', (el) => el.disabled))) errors.push('今の月なのに「つぎの月」が押せます')
+    await page.screenshot({ path: `${OUT}/13-diary-month.png` })
+    // 日をタップすると、その日の絵日記
+    await page.click('.diary-cell.today.played')
+    await sleep(500)
+    const dateText = await page.$eval('.diary-date', (el) => el.textContent)
+    const nowD = await page.evaluate(() => new Date().getDate())
+    const nowM = await page.evaluate(() => new Date().getMonth() + 1)
+    if (dateText !== `${nowM}がつ ${nowD}にち`) errors.push(`日のページの日付がちがう: ${dateText}`)
+    const sv = await mySave0()
+    const day0 = Object.values(sv.diary)[0]
+    const nWords = (await page.$$('.diary-day .photo-card .photo-word')).length
+    if (nWords < 1 || nWords !== Math.min(8, day0.words.length)) errors.push(`日のページの しゃしんの絵が ${nWords}個（words ${day0.words.length}）`)
+    if (!(await page.$('.diary-day .photo-monkey'))) errors.push('日のページの しゃしんに おさるがいません')
+    const plays = await page.$eval('.diary-stats b', (el) => el.textContent)
+    if (plays !== String(day0.plays)) errors.push(`遊んだ回数がちがう: ${plays} / ${day0.plays}`)
+    if (!(await page.$('.diary-stats .sticker'))) errors.push('日のページに シールがありません')
+    const stars = (await page.$$('.diary-words .badge')).length
+    if (stars !== day0.mastered.length) errors.push(`日のページの ☆ が ${stars}個（その日 ☆1になった単語は ${day0.mastered.length}個）`)
+    await page.screenshot({ path: `${OUT}/13-diary-day.png` })
+    await page.click('.diary-day .photo-word')
+    await sleep(300)
+    await page.click('.diary-back')
+    await sleep(300)
+    // 前の月へ → 次の月へ（今日より先には行けない）
+    const label0 = await page.$eval('.diary-month', (el) => el.textContent)
+    await page.click('.diary-nav.prev')
+    await sleep(300)
+    const label1 = await page.$eval('.diary-month', (el) => el.textContent)
+    if (label1 === label0) errors.push('「まえの月」を押しても月が変わりません')
+    if (await page.$('.diary-cell.played')) errors.push('遊んでいない前の月に 遊んだ日のマスがあります')
+    await page.screenshot({ path: `${OUT}/13-diary-prev.png` })
+    await page.click('.diary-nav.next')
+    await sleep(300)
+    if ((await page.$eval('.diary-month', (el) => el.textContent)) !== label0) errors.push('「つぎの月」で もとの月にもどれません')
+    if (!(await page.$eval('.diary-nav.next', (el) => el.disabled))) errors.push('今の月で「つぎの月」が押せます')
+  }
+  console.log('2b. えにっき: OK')
 
   // 3. かんたんクリアで ふつうが解放 → せってい
   await start(page, '')
@@ -469,6 +573,62 @@ try {
   await sleep(600)
   if (!(await page.$('.picture.wrong.is-cloudy'))) errors.push('まちがえたのに くもりが消えています')
   console.log('8. くもり・ぴかぴか: OK')
+
+  // 9. 7枚そろう＋バナナのやま。今日の えにっきを消して、シールを6枚・バナナを トラックの手前にしてから遊ぶ
+  const truck = BANANA_STAGES[3]
+  await start(page, '')
+  await page.evaluate((need) => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    const me = p.list.find((x) => x.id === p.current)
+    const d = new Date()
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    delete me.save.diary[key]
+    me.save.stickers = 6
+    me.save.coins = need - 5
+    localStorage.setItem('saru-quiz/players', JSON.stringify(p))
+  }, truck.need)
+  await start(page, '?goal=3&time=60')
+  if (!(await page.$('.title .pile-mini .pile-base-svg'))) errors.push('タイトルの バナナのやま（ねこぐるま）が出ていません')
+  await page.screenshot({ path: `${OUT}/14-title-nekoguruma.png` })
+  await page.click('.level-btn')
+  await sleep(1200)
+  for (let i = 0; i < 3; i++) {
+    await answer(page, i + 30)
+    await sleep(400)
+    if (i < 2) await settle(page)
+  }
+  await page.waitForSelector('.sticker-card', { timeout: 90000 })
+  if (!(await page.$('.sticker-card.complete'))) errors.push('7枚目なのに「ぜんぶ そろったよ」になっていません')
+  if ((await page.$$('.sticker-card .sticker-slot.got')).length !== 7) errors.push('7枚そろったのに 台紙が7枚うまっていません')
+  await sleep(1800)
+  await page.screenshot({ path: `${OUT}/14-sticker-complete.png` })
+  await page.waitForSelector('.banana-card', { timeout: 30000 })
+  const bt = await page.$eval('.banana-card .learn-title', (el) => el.textContent)
+  if (!bt.includes('トラックいっぱい')) errors.push(`バナナのやまのカードが トラックではありません: ${bt}`)
+  if (!(await page.$('.banana-card .pile .pile-b'))) errors.push('バナナのやまの絵が出ていません')
+  await sleep(1200)
+  await page.screenshot({ path: `${OUT}/14-banana-card.png` })
+  await page.waitForSelector('.again-pop', { timeout: 30000 })
+  const sv9 = await mySave0()
+  const d9 = Object.values(sv9.diary).find((d) => d.sticker !== undefined)
+  if (sv9.stickers !== 7 || d9?.sticker !== 6) errors.push(`7枚目のシールが保存されていません: stickers=${sv9.stickers} sticker=${d9?.sticker}`)
+  if (sv9.coins < truck.need) errors.push(`バナナが トラックに届いていません: ${sv9.coins}`)
+  await start(page, '')
+  if (!(await page.$eval('.title .pile-mini', (el) => el.textContent)).includes('🚚')) errors.push('タイトルの バナナのやまが トラックになっていません')
+  await page.screenshot({ path: `${OUT}/14-title-truck.png` })
+  // 段階が変わらないプレイでは、バナナのカードは出ない（同じ日の2回目はシールも出ない）
+  await start(page, '?goal=3&time=60')
+  await page.click('.level-btn')
+  await sleep(1200)
+  for (let i = 0; i < 3; i++) {
+    await answer(page, i + 40)
+    await sleep(400)
+    if (i < 2) await settle(page)
+  }
+  await page.waitForSelector('.again-pop', { timeout: 90000 })
+  if (await page.$('.banana-card')) errors.push('段階が変わっていないのに バナナのやまのカードが出ています')
+  if (await page.$('.sticker-card')) errors.push('同じ日の2回目なのに シールのカードが出ています（9）')
+  console.log('9. 7枚そろう・バナナのやま: OK')
 } finally {
   await browser.close()
   await server.close()

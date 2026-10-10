@@ -21,6 +21,8 @@ export type UnlockCtx = {
   polishedTotal: number
   /** 見たハプニング */
   seen: Record<string, number>
+  /** ためたバナナの合計（バナナのやま） */
+  coins: number
 }
 
 export type ShowCtx = {
@@ -43,6 +45,8 @@ export type ShowCtx = {
   at?: { x: number; y: number }
   /** いまの れんぞく数 */
   combo?: number
+  /** このプレイで正解した単語（重複なし。新しいほうが後ろ）。フィナーレなどが使う */
+  today?: Question[]
 }
 
 export type Show = {

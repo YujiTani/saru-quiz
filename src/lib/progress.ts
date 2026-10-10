@@ -1,8 +1,10 @@
 // 1回遊んだ結果を進捗データに反映する（純粋な関数。保存は呼ぶ側）
 import { dayKey } from './day'
+import { stageUp } from './banana'
 import { applyAnswer, migrate } from './leitner'
+import { stickerComplete, stickerKind } from './stickers'
 import type { QuizResult } from '../screens/Quiz'
-import { normalizeSave, type LastResult, type Save, type WordStat } from './storage'
+import { normalizeSave, type DiaryDay, type LastResult, type Save, type WordStat } from './storage'
 
 const DIARY_MAX = 30
 const REVIEW_MAX = 30
@@ -19,6 +21,10 @@ export type ResultEvents = {
   polished: string[]
   /** その日はじめて遊び終わった */
   firstPlayToday: boolean
+  /** その日はじめて遊び終わってもらったシール。kind: 種類 0〜6、count: もらった枚数（今回ぶんを含む）、complete: 7枚そろった */
+  sticker: { kind: number; count: number; complete: boolean } | null
+  /** バナナの段階が上がったとき、新しい段階（0〜6）。変わらなければ null */
+  bananaUp: number | null
   /** 同じコースの前回より のびた項目（最大3行。のびていなければ空） */
   growth: GrowthLine[]
 }
@@ -52,7 +58,7 @@ const addUnique = (list: string[], ids: string[]) => [...list, ...ids.filter((id
 /** 結果を反映した新しい Save と、今回あったこと。review はふくしゅうモードか */
 export function applyResult(input: Save, result: QuizResult, nowMs: number, level: number, review = false): { save: Save; events: ResultEvents } {
   const save = normalizeSave(input) // 古いデータ（lastByLevel がない）でも同じに扱う
-  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, growth: [] }
+  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, sticker: null, bananaUp: null, growth: [] }
   const first = firstAnswers(result.answers)
 
   // 単語ごとの記録（ok/ng は全部の答えを数える。箱は最初の答えだけ）
@@ -80,7 +86,16 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
   events.firstPlayToday = !today
   const got = [...new Set(result.answers.filter((a) => a.ok).map((a) => a.id))]
   const words = addUnique(today?.words ?? [], got).slice(0, DIARY_MAX)
-  const diary = { ...save.diary, [day]: { words, plays: (today?.plays ?? 0) + 1 } }
+  const mastered = addUnique(today?.mastered ?? [], events.newMastered).slice(0, DIARY_MAX) // ☆1になった日がその日のもの
+  const day1: DiaryDay = { words, plays: (today?.plays ?? 0) + 1, mastered }
+  // シール: その日はじめて遊び終わったら1枚（ふくしゅうでも）。種類は もらった枚数で順番に決まる（休んでも続きから）
+  let stickers = save.stickers
+  if (events.firstPlayToday) {
+    stickers++
+    day1.sticker = stickerKind(stickers)
+    events.sticker = { kind: day1.sticker, count: stickers, complete: stickerComplete(stickers) }
+  } else if (today?.sticker !== undefined) day1.sticker = today.sticker
+  const diary = { ...save.diary, [day]: day1 }
 
   // ふくしゅう: 最初の答えでまちがえた単語。ふくしゅうモードで最初に正解したら外す
   const missed = [...first].filter(([, ok]) => !ok).map(([id]) => id)
@@ -94,6 +109,7 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
   const next: Save = {
     ...save,
     coins: save.coins + result.coins,
+    stickers,
     bestCombo: Math.max(save.bestCombo, result.bestCombo),
     plays: save.plays + 1,
     cleared,
@@ -102,5 +118,6 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
     review: reviewList,
     ...(review ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
   }
+  events.bananaUp = stageUp(save.coins, next.coins)
   return { save: next, events }
 }

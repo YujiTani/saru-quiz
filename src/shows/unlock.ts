@@ -32,5 +32,6 @@ export function unlockCtx(save: Save, _now: number, catOf: (id: string) => strin
     clears: save.cleared.length,
     polishedTotal: 0,
     seen: save.shows.seen,
+    coins: save.coins,
   }
 }
