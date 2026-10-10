@@ -663,3 +663,7 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) {
   .fever-frame.lv3 { animation: none; }
 }
+
+/* ---------- フィーバー9段階（背景の回る速さはレベルで変わる） ---------- */
+body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
+.fever-frame.lv9 { animation-duration: 0.5s; border-width: 22px; }

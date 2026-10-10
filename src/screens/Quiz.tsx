@@ -15,9 +15,19 @@ type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
 const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow']
 // フィーバーのレベル（1〜3）。「ねつ」で決まる
-const FEVER_TEXT = ['', 'ふぃーばー！', 'すーぱーふぃーばー！', 'めがふぃーばー！']
-const FEVER_BADGE = ['', 'ふぃーばー ×2', 'すーぱー ×3', 'めが ×4']
-const feverLevelOf = (h: number) => (h >= 80 ? 3 : h >= 50 ? 2 : h >= 25 ? 1 : 0)
+const FEVER_MAX = 9
+const FEVER_TEXT = ['', 'ふぃーばー！', 'すーぱーふぃーばー！', 'めがふぃーばー！', 'ぱわーふぃーばー！', 'うるとらふぃーばー！', 'ごっどふぃーばー！', 'はいぱーふぃーばー！', 'おーばーふぃーばー！', 'まっくすふぃーばー！']
+const FEVER_BADGE = ['', 'ふぃーばー ×2', 'すーぱー ×3', 'めが ×4', 'ぱわー ×5', 'うるとら ×6', 'ごっど ×7', 'はいぱー ×8', 'おーばー ×9', 'まっくす ×10']
+// 各レベルに必要なねつ（0〜9）
+const FEVER_THRESH = [0, 25, 50, 80, 110, 140, 170, 200, 230, 260]
+const feverLevelOf = (h: number) => {
+  let lv = 0
+  for (let k = 1; k <= FEVER_MAX; k++) if (h >= FEVER_THRESH[k]) lv = k
+  return lv
+}
+// BGMは3レベルごとに変わる（1〜3 / 4〜6 / 7〜9）
+const feverGroup = (lv: number) => (lv <= 3 ? 1 : lv <= 6 ? 2 : 3)
+const FEVER_CLASSES = Array.from({ length: FEVER_MAX - 1 }, (_, i) => `fever-${i + 2}`)
 const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
 // 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
 // テスト用に ?time=秒 で短くできる
@@ -29,8 +39,8 @@ const TICK = 100
 
 /** 画面の四辺をぐるっと囲むおさる。フィーバーのレベルが上がるほど数も大きさも増える */
 function FeverRing({ level }: { level: number }) {
-  const n = 4 + level * 4 // レベル1: 8匹 / 2: 12匹 / 3: 16匹
-  const size = 26 + level * 4
+  const n = Math.min(40, 4 + level * 4) // レベル1: 8匹 … 9: 40匹
+  const size = Math.max(24, 34 - level)
   return (
     <div className="fever-ring">
       {Array.from({ length: n }, (_, i) => {
@@ -134,31 +144,46 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   }, [])
 
   const prevLv = useRef(0)
+  const prevGroup = useRef(0)
   useEffect(() => {
     const prev = prevLv.current
     prevLv.current = feverLv
-    document.body.classList.remove('fever', 'fever-2', 'fever-3')
-    sfx.stopFever()
-    if (feverLv === 0) return
+    document.body.classList.remove('fever', ...FEVER_CLASSES)
+    if (feverLv === 0) {
+      sfx.stopFever()
+      prevGroup.current = 0
+      return
+    }
     document.body.classList.add('fever')
     if (feverLv > 1) document.body.classList.add(`fever-${feverLv}`)
-    sfx.startFever(feverLv)
+    // 背景の虹のまわる速さ（レベルが高いほど速い）
+    document.body.style.setProperty('--fever-speed', `${Math.max(0.5, 2.4 - feverLv * 0.2)}s`)
+    // BGMは3レベルごとに切り替え
+    const grp = feverGroup(feverLv)
+    if (grp !== prevGroup.current) {
+      sfx.startFever(feverLv)
+      prevGroup.current = grp
+    }
     if (feverLv > prev) {
       sfx.feverStart(feverLv)
       celebrateFever(feverLv)
     }
-    // レベルが高いほど、コインや紙吹雪がずっと降り続ける
-    const id = setInterval(() => {
-      if (feverLv >= 2) fountain('coin', feverLv === 3 ? 45 : 25)
-      if (feverLv === 3) rain('star', 40)
-    }, feverLv === 3 ? 2200 : 3000)
-    return () => clearInterval(id)
+    // レベルが上がるほど、演出が増えていく
+    const timers: ReturnType<typeof setInterval>[] = []
+    if (feverLv >= 2) timers.push(setInterval(() => fountain('coin', 20 + feverLv * 3), Math.max(1100, 3000 - feverLv * 170)))
+    if (feverLv >= 3) timers.push(setInterval(() => rain('star', 40), 2200))
+    if (feverLv >= 5) timers.push(setInterval(() => shake('small'), 1400))
+    if (feverLv >= 7) timers.push(setInterval(() => burst(Math.random() * innerWidth, innerHeight * (0.2 + Math.random() * 0.6), 'star', 24, 1.4), 1200))
+    if (feverLv >= 8) timers.push(setInterval(() => rain('banana', 10), 2000))
+    if (feverLv >= 9) timers.push(setInterval(() => flash(), 4000))
+    return () => timers.forEach((t) => clearInterval(t))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feverLv])
 
   useEffect(
     () => () => {
-      document.body.classList.remove('fever', 'fever-2', 'fever-3')
+      document.body.classList.remove('fever', ...FEVER_CLASSES)
+      document.body.style.removeProperty('--fever-speed')
       sfx.stopFever()
     },
     [],
@@ -204,7 +229,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       const c = combo + 1
       const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (feverLv ? feverLv + 1 : 1)
       setCombo(c)
-      const nh = Math.min(100, heatRef.current + 15 + feverLv * 3)
+      const nh = Math.min(300, heatRef.current + 15 + feverLv * 3)
       const nlv = feverLevelOf(nh)
       const levelUp = nlv > feverLv ? FEVER_TEXT[nlv] : null
       setHeatBoth(nh)
@@ -284,17 +309,20 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     return text
   }
 
-  function celebrateFever(lv: 1 | 2 | 3) {
-    celebrate(FEVER_TEXT[lv], 'fever', lv === 3 ? 'rainbow' : 'gorilla', innerWidth / 2, innerHeight * 0.35)
+  function celebrateFever(lv: number) {
+    celebrate(FEVER_TEXT[lv], 'fever', lv >= 6 ? 'rainbow' : 'gorilla', innerWidth / 2, innerHeight * 0.35)
     if (lv >= 2) {
       fountain('coin', 60)
       rain('confetti', 120)
     }
-    if (lv === 3) {
+    if (lv >= 3) {
       flash()
       shake('big')
       rain('banana', 40)
       burst(innerWidth / 2, innerHeight * 0.4, 'star', 60, 1.6)
+    }
+    if (lv >= 6) {
+      for (let i = 0; i < 3; i++) setTimeout(() => burst(Math.random() * innerWidth, innerHeight * 0.5, 'coin', 30, 1.2), i * 400)
     }
   }
 

@@ -264,20 +264,26 @@ export const sfx = {
       for (let i = 0; i < 8; i++) noise(1.5 + i * 0.06, 0.05, 0.3, 6000, 9000, 'highpass')
     }
   },
-  /** フィーバー中のBGM（レベルでテンポと厚みが上がる） */
+  /** フィーバー中のBGM。3レベルごとに曲が変わる（1〜3 / 4〜6 / 7〜9） */
   startFever(level = 1) {
     if (!ctx) return
     if (feverTimer) clearInterval(feverTimer)
     feverStep = 0
-    const beat = 60 / ([150, 172, 196][level - 1] ?? 150) / 2
+    const group = level <= 3 ? 1 : level <= 6 ? 2 : 3
+    const beat = 60 / [150, 180, 212][group - 1] / 2
     feverTimer = setInterval(() => {
       const i = feverStep++ % 16
-      tone(note(FEVER_BASS[i] + (level === 3 && i % 4 === 3 ? 12 : 0)), 0, beat * 0.9, 'triangle', 0.9)
-      if (FEVER_LEAD[i]) tone(note(FEVER_LEAD[i]), 0, beat * 0.8, 'square', 0.22)
-      if (level >= 2 && i % 2 === 1) tone(note((FEVER_LEAD[(i + 4) % 16] || 79) + 12), 0, beat * 0.5, 'square', 0.12)
+      tone(note(FEVER_BASS[i] + (group >= 2 && i % 4 === 3 ? 12 : 0)), 0, beat * 0.9, 'triangle', 0.9)
+      if (FEVER_LEAD[i]) tone(note(FEVER_LEAD[i]), 0, beat * 0.8, group === 1 ? 'square' : 'sawtooth', group === 1 ? 0.22 : 0.16)
+      // 2つめの曲から、裏拍のアルペジオ
+      if (group >= 2 && i % 2 === 1) tone(note((FEVER_LEAD[(i + 4) % 16] || 79) + 12), 0, beat * 0.5, 'square', 0.12)
+      // 3つめの曲は、さらに高い音と細かいハイハット
+      if (group === 3) {
+        tone(note((FEVER_LEAD[(i + 8) % 16] || 84) + 24), 0, beat * 0.3, 'square', 0.1)
+        noise(0, 0.02, 0.2, 9000, 12000, 'highpass')
+      }
       if (i % 4 === 0) tone(120, 0, 0.12, 'sine', 0.9, 50)
       if (i % 4 === 2) noise(0, 0.08, 0.4, 2000, 6000)
-      if (level === 3) noise(0, 0.02, 0.2, 9000, 12000, 'highpass')
       noise(0, 0.03, 0.15, 7000, 9000, 'highpass')
     }, beat * 1000)
   },
