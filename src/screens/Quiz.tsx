@@ -37,6 +37,8 @@ const GOAL_OVERRIDE = Number(new URLSearchParams(location.search).get('goal')) |
 const TIME_BONUS = 3_000 // 正解で +3秒
 const TIME_PENALTY = 3_000 // まちがいで -3秒
 const TICK = 100
+// のこり5秒からは時間の進みを半分に（5→0 を 実際は10秒かけて大きくカウントする）
+const COUNTDOWN_MS = 5_000
 
 /** 画面の四辺をぐるっと囲むおさる。フィーバーのレベルが上がるほど数も大きさも増える */
 function FeverRing({ level }: { level: number }) {
@@ -137,7 +139,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     const id = setInterval(() => {
       const p = phaseRef.current
       if (p !== 'reading' && p !== 'answering') return
-      const t = Math.max(0, timeRef.current - TICK)
+      const t = Math.max(0, timeRef.current - (timeRef.current <= COUNTDOWN_MS ? TICK / 2 : TICK))
       if (t <= 10_000 && t % 1000 === 0 && t > 0) sfx.tick(t <= 5_000)
       timeRef.current = t
       setTimeLeft(t)
@@ -376,6 +378,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const mood: Mood = phase === 'correct' ? 'happy' : phase === 'wrong' ? 'sad' : 'normal'
   const q = round.q
   const pct = (timeLeft / TIME_MAX) * 100
+  const countdown = timeLeft > 0 && timeLeft <= COUNTDOWN_MS ? Math.ceil(timeLeft / 1000) : 0
 
   return (
     <div className={`screen quiz ${feverLv ? `is-fever lv${feverLv}` : ''}`}>
@@ -395,6 +398,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
           {gain && <span key={gain.key} className="gain">+{gain.n}</span>}
         </div>
       </header>
+
+      {countdown > 0 && (
+        <div className="countdown" aria-live="assertive">
+          <span key={countdown}>{countdown}</span>
+        </div>
+      )}
 
       <div className="stage">
         <div className="host">

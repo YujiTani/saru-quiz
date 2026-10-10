@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects, burst } from './lib/effects'
 import { COURSE, pickSession, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
-import { load, save, type Save } from './lib/storage'
+import { getCurrent, onPlayersChange, savePlayerData, selectPlayer } from './lib/players'
+import { emptySave } from './lib/storage'
 import { flushPending } from './lib/ranking'
 import { Quiz, type QuizResult } from './screens/Quiz'
 import { Ranking } from './screens/Ranking'
 import { Result } from './screens/Result'
+import { PlayerEdit } from './screens/PlayerEdit'
 import { Settings } from './screens/Settings'
 import { Title } from './screens/Title'
 
@@ -19,13 +21,18 @@ type Screen =
   | { name: 'tap' }
   | { name: 'title' }
   | { name: 'settings' }
+  | { name: 'player'; edit: boolean; first?: boolean; back: 'title' | 'settings' }
   | { name: 'ranking'; course: number }
   | { name: 'quiz'; level: number; questions: Question[]; key: number }
   | { name: 'result'; level: number; result: QuizResult }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
-  const [data, setData] = useState<Save>(load)
+  // キャラ（プレイヤー）が変わったら描き直す。進捗データは選んでいるキャラのもの
+  const [, refresh] = useReducer((x: number) => x + 1, 0)
+  useEffect(() => onPlayersChange(refresh), [])
+  const player = getCurrent()
+  const data = player?.save ?? emptySave()
   const fx = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -54,8 +61,7 @@ export default function App() {
     }
     const cleared = result.cleared && !data.cleared.includes(level) ? [...data.cleared, level] : data.cleared
     const next = { coins: data.coins + result.coins, bestCombo: Math.max(data.bestCombo, result.bestCombo), plays: data.plays + 1, cleared, stats }
-    setData(next)
-    save(next)
+    if (player) savePlayerData(player.id, next)
     setScreen({ name: 'result', level, result })
   }
 
@@ -63,6 +69,12 @@ export default function App() {
     <>
       <header className="app-header">
         <span className="app-title">おさるのなあに？クイズ</span>
+        {/* タイトルにもどる（はじめてのキャラづくり中は出さない） */}
+        {screen.name !== 'tap' && screen.name !== 'title' && player && (
+          <button className="home-btn" onClick={() => { sfx.tap(); setScreen({ name: 'title' }) }} aria-label="タイトルにもどる">
+            🏠 たいとる
+          </button>
+        )}
       </header>
       {screen.name === 'tap' && (
         <button
@@ -73,17 +85,38 @@ export default function App() {
             unlockSpeech()
             sfx.coin()
             void speak('おさるの、なあにクイズ！')
-            setScreen({ name: 'title' })
+            // はじめてなら、まずキャラをつくる
+            setScreen(getCurrent() ? { name: 'title' } : { name: 'player', edit: false, first: true, back: 'title' })
           }}
         >
           <PixelMonkey char="monchan" size={140} anim="jump" />
           <span className="tap-text">タップしてね</span>
         </button>
       )}
-      {screen.name === 'title' && (
-        <Title coins={data.coins} cleared={data.cleared} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} onRanking={() => setScreen({ name: 'ranking', course: 1 })} />
+      {screen.name === 'title' && player && (
+        <Title
+          player={player}
+          onStart={startQuiz}
+          onSettings={() => setScreen({ name: 'settings' })}
+          onRanking={() => setScreen({ name: 'ranking', course: 1 })}
+          onSwitch={(id) => {
+            selectPlayer(id)
+            const p = getCurrent()
+            if (p) void speak(`${p.name}、がんばろう！`)
+          }}
+          onNewPlayer={() => setScreen({ name: 'player', edit: false, back: 'title' })}
+        />
       )}
-      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} />}
+      {screen.name === 'player' && (
+        <PlayerEdit
+          key={`${screen.edit}-${player?.id}`}
+          player={screen.edit && player ? player : undefined}
+          first={screen.first}
+          onDone={() => setScreen(getCurrent() ? ({ name: screen.back } as Screen) : { name: 'player', edit: false, first: true, back: 'title' })}
+          onBack={() => setScreen({ name: screen.back } as Screen)}
+        />
+      )}
+      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} />}
       {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
         <Quiz key={screen.key} level={screen.level} questions={screen.questions} onFinish={(r) => finish(screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />

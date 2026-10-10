@@ -1,8 +1,7 @@
 import { PixelMonkey } from '../components/PixelMonkey'
+import { getPlayers, MAX_PLAYERS, type Player } from '../lib/players'
 import { sfx } from '../lib/sound'
-import type { CharId } from '../sprites/monkeys'
 
-const PARADE: CharId[] = ['mandrill', 'sora', 'orangutan', 'monchan', 'gorilla', 'mint', 'kinshikou', 'choco', 'rainbow']
 const LEVELS = [
   { level: 1, stars: '⭐', label: 'かんたん', color: '#3ee07a' },
   { level: 2, stars: '⭐⭐', label: 'ふつう', color: '#38b6ff' },
@@ -11,15 +10,25 @@ const LEVELS = [
 // テスト用: ?unlock=all で全部あそべる
 const UNLOCK_ALL = new URLSearchParams(location.search).get('unlock') === 'all'
 
-type Props = { coins: number; cleared: number[]; onStart: (level: number) => void; onSettings: () => void; onRanking: () => void }
+type Props = {
+  player: Player
+  onStart: (level: number) => void
+  onSettings: () => void
+  onRanking: () => void
+  onSwitch: (id: string) => void
+  onNewPlayer: () => void
+}
 
-export function Title({ coins, cleared, onStart, onSettings, onRanking }: Props) {
+/** タイトル（メニュー）。選んでいるキャラの見た目・なまえ・色で表示が変わる */
+export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewPlayer }: Props) {
+  const { cleared, coins } = player.save
   // ひとつ前のコースをクリアすると解放。むずかしいは解放されるまで出さない
   const open = (level: number) => UNLOCK_ALL || level === 1 || cleared.includes(level - 1)
   const levels = LEVELS.filter((l) => l.level < 3 || open(l.level))
+  const others = getPlayers().filter((p) => p.id !== player.id)
 
   return (
-    <div className="screen title">
+    <div className="screen title" style={{ '--theme': player.color } as React.CSSProperties}>
       <div className="title-top">
         <div className="title-btns">
           <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
@@ -27,16 +36,40 @@ export function Title({ coins, cleared, onStart, onSettings, onRanking }: Props)
         </div>
         <div className="coin-badge">🍌 {coins}</div>
       </div>
-      <h1 className="logo">
+      <h1 className="logo small">
         <span>おさるの</span>
         <span className="big">なあに？</span>
         <span>くいず</span>
       </h1>
-      <div className="parade">
-        {PARADE.map((c, i) => (
-          <PixelMonkey key={c} char={c} size={c === 'monchan' ? 64 : 38} anim="dance" style={{ animationDelay: `${i * 0.12}s` }} />
-        ))}
+
+      <div className="player-hero">
+        <PixelMonkey key={player.id} char={player.char} mood="happy" size={88} anim="jump" />
+        <span className="player-plate big">{player.name}</span>
       </div>
+
+      {/* キャラのきりかえ（ほかのキャラ・あたらしいキャラ） */}
+      <div className="player-switch">
+        {others.map((p) => (
+          <button
+            key={p.id}
+            className="player-chip"
+            style={{ '--theme': p.color } as React.CSSProperties}
+            onClick={() => {
+              sfx.select()
+              onSwitch(p.id)
+            }}
+          >
+            <PixelMonkey char={p.char} size={34} anim="none" />
+            <span>{p.name}</span>
+          </button>
+        ))}
+        {getPlayers().length < MAX_PLAYERS && (
+          <button className="player-chip add" onClick={() => { sfx.tap(); onNewPlayer() }} aria-label="キャラを ふやす">
+            ＋
+          </button>
+        )}
+      </div>
+
       <div className="levels">
         {levels.map((l) =>
           open(l.level) ? (

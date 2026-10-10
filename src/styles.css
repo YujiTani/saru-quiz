@@ -796,3 +796,115 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .new-best { display: block; color: #ff3a5a; font-size: 22px; animation: pop 0.5s; }
 .again-note { margin: 0; font-size: 14px; color: #6a4a6a; text-align: center; }
 .again-card .rank-link { height: 52px; font-size: 20px; --c: #e0f4ff; }
+
+/* ---------- キャラ（プレイヤー） ---------- */
+.home-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+/* 選んでいるキャラの色で、画面のまんなかをうっすら光らせる */
+.title, .player-edit { --theme: #ff6a8a; }
+.title::before, .player-edit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--theme) 55%, transparent), transparent 62%);
+  pointer-events: none;
+}
+.logo.small { font-size: 22px; margin: 0; }
+.logo.small .big { font-size: 42px; }
+.player-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.player-plate {
+  padding: 2px 18px;
+  border: 4px solid var(--ink);
+  border-radius: 16px;
+  background: var(--theme, #ff6a8a);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  text-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  white-space: nowrap;
+}
+.player-plate.big { font-size: 40px; padding: 4px 26px; border-radius: 22px; box-shadow: 0 6px 0 var(--ink); }
+.player-switch { display: flex; gap: 8px; justify-content: center; min-height: 52px; }
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 6px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 -6px 0 var(--theme, #ddd), 0 3px 0 var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+.player-chip.add { width: 52px; justify-content: center; padding: 0; font-size: 28px; background: rgba(255, 255, 255, 0.85); box-shadow: 0 3px 0 var(--ink); }
+.player-edit { justify-content: flex-start; gap: 10px; overflow-y: auto; }
+.player-edit .settings-card { padding: 10px 14px 12px; gap: 6px; }
+.player-edit .settings-label { font-size: 20px; }
+.player-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+.char-btn {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 58px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: #fff;
+}
+.char-btn.is-on { background: color-mix(in srgb, var(--theme) 35%, #fff); outline: 4px solid var(--theme); }
+.color-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.color-btn { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--ink); }
+.color-btn.is-on { outline: 4px solid var(--ink); outline-offset: 2px; transform: scale(1.1); }
+.player-edit .name-input { width: 100%; }
+.player-edit .name-save { width: 100%; height: 62px; font-size: 30px; flex-shrink: 0; }
+.player-edit .settings-foot { flex-direction: column; flex-shrink: 0; }
+.player-edit .settings-foot .back-btn { width: 100%; }
+.delete-btn { --c: #ffd0d4; width: 100%; height: 46px; font-size: 16px; color: #c0303a; }
+.delete-btn.is-confirm { --c: #ff5a6a; color: #fff; }
+.settings-player { display: flex; align-items: center; gap: 10px; width: 100%; }
+.settings-player .player-plate { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.edit-player-btn { --c: var(--yellow); height: 46px; padding: 0 14px; font-size: 18px; }
+.title, .player-edit { isolation: isolate; }
+
+/* ---------- のこり5秒のカウントダウン（2秒ごとに1つずつ。点滅はしない） ---------- */
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.countdown span {
+  font-family: 'DotGothic16', monospace;
+  font-size: 220px;
+  line-height: 1;
+  color: #ff3a4a;
+  -webkit-text-stroke: 10px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 10px 0 var(--ink);
+  opacity: 0.85;
+  animation: countdown-pop 2s ease-out both;
+}
+@keyframes countdown-pop {
+  0% { transform: scale(2.2); opacity: 0; }
+  12% { transform: scale(1); opacity: 0.8; }
+  80% { transform: scale(0.95); opacity: 0.65; }
+  100% { transform: scale(0.7); opacity: 0.15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown span { animation: none; }
+}
+.player-edit .settings-title { font-size: 30px; text-align: center; }

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
-import { checkName, getPlayerName, getVoice, getVolume, isMuted, onSettingsChange, setMuted, setPlayerName, setVoice, setVolume, VOICES, type VoiceId } from '../lib/settings'
+import { getCurrent } from '../lib/players'
+import { getVoice, getVolume, isMuted, onSettingsChange, setMuted, setVoice, setVolume, VOICES, type VoiceId } from '../lib/settings'
 import { sfx } from '../lib/sound'
 import { speak, stopSpeaking } from '../lib/speech'
 
-/** せってい画面（なまえ・こえ・おと・おんりょう）。音の設定は子どもが押さないようにここだけに置く */
-export function Settings({ onBack }: { onBack: () => void }) {
-  const [name, setName] = useState(getPlayerName)
-  const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null)
+/** せってい画面（キャラ・こえ・おと・おんりょう）。音の設定は子どもが押さないようにここだけに置く */
+export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditPlayer: () => void }) {
+  const player = getCurrent()
   const [voice, setVoiceState] = useState<VoiceId>(getVoice)
   const [muted, setMutedState] = useState(isMuted)
   const [volume, setVolumeState] = useState(getVolume)
@@ -22,20 +22,6 @@ export function Settings({ onBack }: { onBack: () => void }) {
     [],
   )
 
-  // 入力中（変換中）ははじかず、「きめる」で確かめる（iPhone のかな入力を邪魔しないため）
-  function saveName() {
-    const v = name.trim()
-    const err = checkName(v)
-    if (err) {
-      sfx.boing()
-      setNameMsg({ ok: false, text: err })
-      return
-    }
-    setPlayerName(v)
-    sfx.select()
-    setNameMsg({ ok: true, text: `「${v}」に したよ！` })
-  }
-
   function chooseVoice(id: VoiceId) {
     setVoice(id)
     sfx.select()
@@ -47,29 +33,19 @@ export function Settings({ onBack }: { onBack: () => void }) {
     <div className="screen settings">
       <h1 className="settings-title">せってい</h1>
 
-      <section className="settings-card">
-        <h2 className="settings-label">🏷️ なまえ</h2>
-        <p className="settings-note">ランキングに のるよ（ひらがな 8もじまで）</p>
-        <div className="name-row">
-          <input
-            className="name-input"
-            value={name}
-            maxLength={8}
-            inputMode="text"
-            autoComplete="off"
-            placeholder="れい：ゆうちゃん"
-            onChange={(e) => {
-              setName(e.target.value)
-              setNameMsg(null)
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && saveName()}
-          />
-          <button className="btn name-save" onClick={saveName}>
-            きめる
-          </button>
-        </div>
-        {nameMsg && <p className={`name-msg ${nameMsg.ok ? 'ok' : 'ng'}`}>{nameMsg.text}</p>}
-      </section>
+      {player && (
+        <section className="settings-card">
+          <h2 className="settings-label">🐵 キャラ</h2>
+          <div className="settings-player" style={{ '--theme': player.color } as React.CSSProperties}>
+            <PixelMonkey char={player.char} mood="happy" size={52} anim="idle" />
+            <span className="player-plate">{player.name}</span>
+            <button className="btn edit-player-btn" onClick={() => { sfx.tap(); onEditPlayer() }}>
+              なおす
+            </button>
+          </div>
+          <p className="settings-note">なまえ・みため・いろ を かえられるよ</p>
+        </section>
+      )}
 
       <section className="settings-card">
         <h2 className="settings-label">🗣️ こえ</h2>
