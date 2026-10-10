@@ -1,6 +1,8 @@
 // 1回遊んだ結果を進捗データに反映する（純粋な関数。保存は呼ぶ側）
 import { dayKey } from './day'
 import { stageUp } from './banana'
+import { grantShows } from '../shows/book'
+import { unlockCtx } from '../shows/unlock'
 import { applyAnswer, migrate } from './leitner'
 import { stickerComplete, stickerKind } from './stickers'
 import type { QuizResult } from '../screens/Quiz'
@@ -25,6 +27,8 @@ export type ResultEvents = {
   sticker: { kind: number; count: number; complete: boolean } | null
   /** バナナの段階が上がったとき、新しい段階（0〜6）。変わらなければ null */
   bananaUp: number | null
+  /** 新しく手に入れた演出の id（プレゼントで見せる。はじめから持っているものは入れない） */
+  newShows: string[]
   /** 同じコースの前回より のびた項目（最大3行。のびていなければ空） */
   growth: GrowthLine[]
 }
@@ -58,7 +62,7 @@ const addUnique = (list: string[], ids: string[]) => [...list, ...ids.filter((id
 /** 結果を反映した新しい Save と、今回あったこと。review はふくしゅうモードか */
 export function applyResult(input: Save, result: QuizResult, nowMs: number, level: number, review = false): { save: Save; events: ResultEvents } {
   const save = normalizeSave(input) // 古いデータ（lastByLevel がない）でも同じに扱う
-  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, sticker: null, bananaUp: null, growth: [] }
+  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, sticker: null, bananaUp: null, newShows: [], growth: [] }
   const first = firstAnswers(result.answers)
 
   // 単語ごとの記録（ok/ng は全部の答えを数える。箱は最初の答えだけ）
@@ -119,5 +123,9 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
     ...(review ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
   }
   events.bananaUp = stageUp(save.coins, next.coins)
+  // えんしゅつ図鑑: 前と後で比べて、新しく手に入れたものを記録する（はじめから持っているものも まとめて記録）
+  const g = grantShows(save.shows.got, unlockCtx(save, nowMs), unlockCtx(next, nowMs), nowMs)
+  next.shows = { ...save.shows, got: g.got }
+  events.newShows = g.newShows
   return { save: next, events }
 }

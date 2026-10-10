@@ -87,6 +87,32 @@ export function bubbleText(ctx: ShowCtx, text: string, x: number, y: number, ms 
   return ctx.layer.go(el, [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1.15)', offset: 0.2 }, { opacity: 1, transform: 'scale(1)', offset: 0.8 }, { opacity: 0, transform: 'scale(1)' }], { duration: ms }, true)
 }
 
+/** 吹き出し＋（図鑑の「ためす」のときだけ）読み上げ。voice_lines.py に同じ言葉を足しておく */
+export function say(ctx: ShowCtx, text: string, x: number, y: number, ms = 900): Promise<void> {
+  if (ctx.preview) void ctx.speak(text)
+  return bubbleText(ctx, text, x, y, ms)
+}
+
+/** 土けむり（茶色の丸） */
+export function dust(ctx: ShowCtx, x: number, y: number, size: number) {
+  const el = document.createElement('div')
+  el.className = 'show-puff dust'
+  Object.assign(el.style, { width: `${size}px`, height: `${size}px` })
+  ctx.layer.add(el, { x, y })
+  void ctx.layer.go(el, [{ opacity: 0.85, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(1.7) translateY(-12px)' }], { duration: 700, easing: 'ease-out' }, true)
+}
+
+/** 画面全体にうすく色をかける（天気など）。ms のあいだに出て、消える。動きの強さ 0 のときは かけない */
+export function tint(ctx: ShowCtx, color: string, ms: number, peak = 1) {
+  if (ctx.motion <= 0) return // 動きの強さ 0 のときは かけない
+  const el = document.createElement('div')
+  el.className = 'show-tint'
+  el.style.background = color
+  ctx.layer.add(el)
+  el.style.inset = '0'
+  void ctx.layer.go(el, [{ opacity: 0 }, { opacity: peak, offset: 0.2 }, { opacity: peak, offset: 0.8 }, { opacity: 0 }], { duration: ms, easing: 'ease-in-out' }, true)
+}
+
 /** 白いけむりの丸 */
 export function puff(ctx: ShowCtx, x: number, y: number, size: number) {
   const el = document.createElement('div')

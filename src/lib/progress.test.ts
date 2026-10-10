@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BANANA_STAGES } from './banana'
+import { allQuestions } from './quiz'
+import { SHOWS } from '../shows/registry'
 import { applyResult, firstAnswers, growthLines } from './progress'
 import { emptySave, normalizeSave } from './storage'
 import type { LastResult, Save } from './storage'
@@ -291,5 +293,57 @@ describe('バナナのやま（applyResult）', () => {
   it('一度に何段か上がったら いちばん上の段階', () => {
     const r = applyResult(emptySave(), res([['a', true]], { coins: BANANA_STAGES[3].need + 1 }), T0, 1)
     expect(r.events.bananaUp).toBe(3)
+  })
+})
+
+describe('えんしゅつ図鑑の記録（applyResult）', () => {
+  const dobutsu = allQuestions.filter((q) => q.c === 'どうぶつ').slice(0, 3).map((q) => q.id)
+  const box1 = (n = 1) => ({ ok: n, ng: 0, last: T0, box: 1, boxAt: T0, due: T0 + 86400000, firstOkAt: T0 })
+
+  it('はじめてのプレイ: はじめから持っている演出（base）をまとめて got に入れる。newShows には出さない', () => {
+    const r = applyResult(emptySave(), res([['zzz', true]]), T0, 1)
+    const base = SHOWS.filter((s) => s.base).map((s) => s.id)
+    expect(base.length).toBeGreaterThan(5)
+    for (const id of base) expect(r.save.shows.got[id], id).toBe(T0)
+    expect(r.events.newShows).toEqual([])
+    expect(Object.keys(r.save.shows.got).sort()).toEqual([...base].sort())
+  })
+
+  it('そのカテゴリを3つおぼえたプレイで、うごくえが newShows に出て got に入る（2つ目までは出ない）', () => {
+    const save: Save = { ...emptySave(), stats: { [dobutsu[0]]: box1(), [dobutsu[1]]: box1() } }
+    const first = applyResult(save, res([[dobutsu[2], true]]), T0, 1)
+    expect(first.events.newShows).toEqual(['ugoku:doubutsu'])
+    expect(first.save.shows.got['ugoku:doubutsu']).toBe(T0)
+    // 2つしかおぼえていなければ出ない
+    const none = applyResult({ ...emptySave(), stats: { [dobutsu[0]]: box1() } }, res([[dobutsu[1], true]]), T0, 1)
+    expect(none.events.newShows).toEqual([])
+    expect(none.save.shows.got['ugoku:doubutsu']).toBeUndefined()
+  })
+
+  it('あとのプレイでは同じものが また出ない', () => {
+    const save: Save = { ...emptySave(), stats: { [dobutsu[0]]: box1(), [dobutsu[1]]: box1() } }
+    const a = applyResult(save, res([[dobutsu[2], true]]), T0, 1)
+    const b = applyResult(a.save, res([[dobutsu[2], true]]), T0 + 3600000, 1)
+    expect(b.events.newShows).toEqual([])
+    expect(b.save.shows.got['ugoku:doubutsu']).toBe(T0)
+  })
+
+  it('遊んだ日が2日になったプレイで ずっこけ ぐるぐる が出る。同時に2つ手に入れたら両方', () => {
+    const save: Save = { ...emptySave(), diary: { '2025-12-31': { words: [], plays: 1 } }, stats: { [dobutsu[0]]: box1(), [dobutsu[1]]: box1() } }
+    const r = applyResult(save, res([[dobutsu[2], true]]), T0, 1)
+    expect(r.events.newShows.sort()).toEqual(['ugoku:doubutsu', 'zukkoke:guruguru'])
+  })
+
+  it('バナナのやまが上がったプレイで、そのやまの演出も newShows に出る', () => {
+    const base: Save = { ...emptySave(), coins: BANANA_STAGES[1].need - 5 }
+    const r = applyResult(base, res([['a', true]], { coins: 10 }), T0, 1)
+    expect(r.events.newShows).toEqual([`banana:${BANANA_STAGES[1].id}`])
+  })
+
+  it('記録をつける前から手に入れていた演出は、だまって got に入る（newShows には出さない）', () => {
+    const old: Save = { ...emptySave(), stats: { [dobutsu[0]]: box1(), [dobutsu[1]]: box1(), [dobutsu[2]]: box1() } } // すでに3つおぼえていた
+    const r = applyResult(old, res([['zzz', true]]), T0, 1)
+    expect(r.save.shows.got['ugoku:doubutsu']).toBe(T0)
+    expect(r.events.newShows).toEqual([])
   })
 })

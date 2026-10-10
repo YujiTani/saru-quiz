@@ -1,6 +1,7 @@
 // ファミコン風の効果音を WebAudio で合成（音声ファイル不要）
 import { getVolume, isMuted, onSettingsChange } from './settings'
 import { bpmAt, layersAt, stepSec, type Song, type Step } from './bgm'
+import { PHRASES, type Instrument } from './instruments'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
@@ -487,6 +488,73 @@ export const sfx = {
   paste() {
     tone(180, 0, 0.09, 'sine', 0.7, 90)
     noise(0, 0.05, 0.3, 1200, 600, 'lowpass')
+  },
+  /** うごくえ「がっき」: 楽器の短いフレーズ（たいこ ドンドン / ぴあの ドレミ / らっぱ パパーン / すず シャンシャン / 木琴） */
+  instrument(kind: Instrument) {
+    for (const p of PHRASES[kind]) {
+      if (kind === 'drum') {
+        tone(150, p.t, p.len, 'sine', 0.9, 55)
+        noise(p.t, 0.05, 0.22, 1500, 600, 'bandpass')
+      } else if (kind === 'piano') {
+        tone(note(p.n), p.t, p.len, 'triangle', 0.55)
+        tone(note(p.n + 12), p.t, p.len * 0.5, 'sine', 0.15)
+      } else if (kind === 'trumpet') {
+        tone(note(p.n), p.t, p.len, 'sawtooth', 0.28)
+        tone(note(p.n + 12), p.t, p.len * 0.8, 'square', 0.08)
+      } else if (kind === 'bell') {
+        tone(note(p.n), p.t, p.len, 'sine', 0.3)
+        tone(note(p.n + 12), p.t, p.len * 0.6, 'sine', 0.1)
+        noise(p.t, 0.04, 0.12, 8000, 9000, 'highpass')
+      } else {
+        tone(note(p.n), p.t, p.len, 'sine', 0.5)
+        tone(note(p.n) * 4, p.t, 0.07, 'sine', 0.12)
+      }
+    }
+  },
+  /** 天気: あめ（やさしいザーッ）・かぜ（ひゅーっ） */
+  rain() {
+    noise(0, 1.6, 0.1, 7000, 5000, 'highpass')
+  },
+  wind() {
+    noise(0, 1.6, 0.18, 500, 1800, 'bandpass')
+  },
+  /** はずむ「ぽよん」 */
+  bound() {
+    tone(220, 0, 0.14, 'sine', 0.7, 420)
+  },
+  /** 「ずずーん」（地面から生えてくる。小さめの低い音） */
+  rumble() {
+    noise(0, 0.55, 0.3, 320, 80, 'lowpass')
+    tone(70, 0, 0.5, 'sine', 0.35, 42)
+  },
+  /** トンカン。i=0 は「トン」（低い）、i=1 は「カン」（高い） */
+  tonkan(i: number) {
+    if (i % 2 === 0) {
+      tone(240, 0, 0.1, 'square', 0.45, 130)
+      noise(0, 0.05, 0.3, 1800, 700, 'bandpass')
+    } else {
+      tone(1500, 0, 0.14, 'triangle', 0.4, 1000)
+      tone(2250, 0, 0.08, 'sine', 0.12)
+    }
+  },
+  /** 花がふわっと咲く（やさしい上りの音） */
+  bloom() {
+    ;[72, 76, 79, 84].forEach((n, i) => tone(note(n), 0.1 + i * 0.12, 0.3, 'triangle', 0.35))
+  },
+  /** ねこの「にゃー」（やさしく） */
+  meow() {
+    tone(620, 0, 0.12, 'sine', 0.3, 880)
+    tone(880, 0.12, 0.28, 'sine', 0.3, 560)
+  },
+  /** 「ぽんっ」（栓がぬける） */
+  pon() {
+    tone(260, 0, 0.1, 'sine', 0.8, 760)
+    noise(0, 0.05, 0.3, 3000, 1200, 'bandpass')
+  },
+  /** プレゼントの箱が「パカッ」と開く */
+  openBox() {
+    noise(0, 0.08, 0.4, 2500, 900, 'bandpass')
+    ;[76, 80, 83, 88].forEach((n, i) => tone(note(n), 0.08 + i * 0.07, 0.25, 'triangle', 0.4))
   },
   /** ひよこの「ぴよっ」 */
   peep() {

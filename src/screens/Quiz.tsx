@@ -387,7 +387,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       if (c >= 2) sfx.comboUp(c)
       flash()
       // 正解のうごくえ（はじける・コインもここ）。進み具合 E は せいかい数 ÷ クリアの数
-      void play(chooseUgoku(q.c, unlock.current), makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current, at: { x, y }, combo: c }))
+      const ugokuDone = play(chooseUgoku(q.c, unlock.current), makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current, at: { x, y }, combo: c }))
       if (c === 3) shout = celebrate('すごい！', 'combo', 'mandrill', x, y)
       if (c === 8 || (c > 8 && c % 5 === 3)) shout = celebrate('でんせつ！', 'legend', 'rainbow', x, y)
       if (feverLv > 0) rain('banana', 8)
@@ -405,6 +405,8 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       ;(async () => {
         await speak(levelUp ? [shout, q.a, levelUp] : [shout, q.a])
         await wait(350)
+        // 長めのうごくえは、終わるまで少し待つ（最大1.2秒。次の問題に入ると片づけられるので）
+        await Promise.race([ugokuDone, wait(1200)])
         if (clearMs !== null) return clearGame(clearMs)
         // のこり3問・1問になったら、お知らせしてから次の問題へ
         const rem = GOAL - stats.current.correct

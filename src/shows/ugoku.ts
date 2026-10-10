@@ -2,9 +2,7 @@
 import { drift } from '../lib/effects'
 import type { Show } from './types'
 import { bubbleText, centerOf, ease, every, hostRect, monkeyOf, pop, puff, track, wait, withClone } from './util'
-
-const own = (cat: string) => (u: { masteredByCat: Record<string, number> }) => (u.masteredByCat[cat] ?? 0) >= 3
-const hint = (cat: string) => `${cat}の ことばを 3つ おぼえる`
+import { dougu, fuku, gakki, hana, hito, ie, karada, katachi, kisetsu, machi, omocha, own, hint, sports, tenki } from './ugokuMore'
 const sin = Math.sin
 const PI = Math.PI
 
@@ -238,14 +236,28 @@ function eat(id: string, cat: string, name: string, icon: string, chew: string):
   }
 }
 
+// questions.json の categories の順（図鑑にもこの順で並ぶ）
 export const UGOKU_SHOWS: Show[] = [
   pika,
+  eat('ugoku:kudamono', 'くだもの', 'ぱくっ くだもの', '🍎', 'もぐもぐ'),
+  eat('ugoku:yasai', 'やさい', 'ぱくっ やさい', '🥕', 'しゃりしゃり'),
+  eat('ugoku:tabemono', 'たべもの', 'ぱくっ たべもの', '🍙', 'むしゃむしゃ'),
   doubutsu,
   tori,
   umi,
   mushi,
   norimono,
-  eat('ugoku:kudamono', 'くだもの', 'ぱくっ くだもの', '🍎', 'もぐもぐ'),
-  eat('ugoku:yasai', 'やさい', 'ぱくっ やさい', '🥕', 'しゃりしゃり'),
-  eat('ugoku:tabemono', 'たべもの', 'ぱくっ たべもの', '🍙', 'むしゃむしゃ'),
+  ie,
+  fuku,
+  karada,
+  katachi,
+  tenki,
+  hana,
+  omocha,
+  gakki,
+  dougu,
+  machi,
+  hito,
+  sports,
+  kisetsu,
 ]

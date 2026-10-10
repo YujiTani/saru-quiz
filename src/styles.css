@@ -140,13 +140,13 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 @keyframes rainbow-text { to { background-position: 200% 0; } }
 @keyframes wobble { 50% { transform: rotate(-3deg) scale(1.05); } }
 .parade { display: flex; align-items: flex-end; justify-content: center; gap: 2px; flex-wrap: nowrap; }
-.levels { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.levels { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .level-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  height: 76px;
+  height: 70px;
   font-size: 32px;
 }
 .level-btn .stars { font-size: 26px; }
@@ -364,6 +364,14 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .show-water { position: fixed; inset: 0; background: linear-gradient(180deg, rgba(150, 215, 255, 0.28), rgba(90, 175, 235, 0.42)); }
 .show-puff { border-radius: 50%; background: rgba(255, 255, 255, 0.9); box-shadow: inset -3px -3px 0 rgba(180, 190, 210, 0.5); }
 .show-bubble { padding: 4px 14px; background: #fff; border: 3px solid var(--ink); border-radius: 16px; font-size: 20px; white-space: nowrap; box-shadow: 0 3px 0 var(--ink); }
+.show-puff.dust { background: rgba(176, 138, 98, 0.9); box-shadow: inset -3px -3px 0 rgba(120, 88, 58, 0.5); }
+.show-tint { position: absolute; inset: 0; }
+.show-halo { border-radius: 50%; }
+.show-ring { width: 130px; height: 130px; border-radius: 50%; border: 8px solid rgba(255, 214, 70, 0.85); box-shadow: 0 0 18px rgba(255, 230, 120, 0.8); }
+.show-rainbow { filter: drop-shadow(0 3px 0 rgba(43, 26, 46, 0.18)); }
+.show-ground { height: 14px; border-radius: 8px; background: #8a5a36; border: 3px solid var(--ink); }
+.show-sweep { position: absolute; overflow: hidden; border-radius: 28px; }
+.sweep-band { position: absolute; top: -10%; left: 0; width: 34%; height: 120%; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0)); transform: translateX(-140%) skewX(-18deg); }
 .host-monkey.host-front { z-index: 26; }
 .fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 30; }
 #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 29; }
@@ -383,7 +391,7 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
   .choice { height: 46px; }
   .decide { height: 60px; font-size: 32px; }
   .logo .big { font-size: 52px; }
-  .level-btn { height: 64px; }
+  .level-btn { height: 60px; }
 }
 
 /* ---------- ミュート ---------- */
@@ -590,16 +598,7 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 }
 
 /* ---------- タイトル上部・せってい ---------- */
-.title-top { width: 100%; display: flex; align-items: center; justify-content: space-between; }
-.gear-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  border: 3px solid var(--ink);
-  font-size: 24px;
-  line-height: 1;
-}
+.title-top { width: 100%; display: flex; align-items: center; justify-content: flex-end; }
 .settings { justify-content: center; gap: 22px; }
 .settings-title { margin: 0; font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 44px; color: #fff; text-shadow: 3px 3px 0 var(--ink); }
 .settings-card {
@@ -734,7 +733,6 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .result-cleartime .time b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 60px; color: #7ff0ff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; margin: 0 4px; }
 
 /* ---------- ランキング ---------- */
-.title-btns { display: flex; gap: 8px; }
 .ranking { justify-content: flex-start; gap: 10px; }
 .rank-tabs { width: 100%; display: flex; gap: 8px; }
 .rank-tab { --c: #fff; flex: 1; height: 46px; font-size: 18px; padding: 0 4px; }
@@ -832,7 +830,7 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 }
 .logo.small { font-size: 22px; margin: 0; }
 .logo.small .big { font-size: 42px; }
-.player-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.player-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 16px; } /* おさるが跳ねても ロゴに重ならないように、上にすき間 */
 .player-plate {
   padding: 2px 18px;
   border: 4px solid var(--ink);
@@ -1104,7 +1102,6 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 /* ふくしゅう */
 .mode-chip { flex: 1; text-align: center; font-size: 22px; color: #fff; text-shadow: 0 3px 0 var(--ink); }
 .result-mode { flex: none; padding: 2px 16px; background: rgba(255, 255, 255, 0.2); border: 3px solid var(--ink); border-radius: 20px; font-size: 20px; }
-.review-btn { --c: #ffe9a8; height: 54px; font-size: 24px; }
 
 /* けっか: 「まえより のびたよ」と「おぼえたよ」のカード */
 .result-tail { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: center; }
@@ -1209,7 +1206,85 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .diary-sticker { display: inline-flex; align-items: center; gap: 8px; }
 .diary-words { width: 100%; max-width: 360px; padding: 8px 10px 12px; background: var(--card); border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); text-align: center; }
 .diary-words-title { font-size: 16px; color: #8a6a5a; margin-bottom: 6px; }
-.sub-btns { width: 100%; display: flex; gap: 12px; }
-.sub-btns .btn { flex: 1; min-width: 0; height: 54px; font-size: 19px; white-space: nowrap; }
-.diary-btn { --c: #ffd6ec; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
-.diary-count { font-size: 13px; color: #8a4a6a; }
+/* ---------- タイトルの アイコンボタンの1行 ---------- */
+.icon-row { width: 100%; display: flex; justify-content: space-between; gap: 4px; }
+.icon-btn { position: relative; flex: 1; min-width: 0; max-width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.icon-btn .ic { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, 0.92); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); font-size: 26px; line-height: 1; transition: transform 0.08s, box-shadow 0.08s; }
+.icon-btn:active .ic { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.icon-btn .lb { font-size: 11px; line-height: 1.1; color: #fff; text-shadow: 0 2px 0 var(--ink); white-space: nowrap; }
+.icon-btn .n { position: absolute; top: -6px; right: 2px; min-width: 22px; height: 22px; padding: 0 5px; display: grid; place-items: center; border-radius: 11px; background: #ff3a5a; border: 2px solid var(--ink); color: #fff; font-size: 13px; line-height: 1; }
+.icon-btn .n.sticker-n { background: #e0407a; }
+.review-btn .ic { background: #ffe9a8; }
+.diary-btn .ic { background: #ffd6ec; }
+.book-btn .ic { background: #d8f0ff; }
+
+/* ---------- ためす舞台（図鑑・プレゼント） ---------- */
+.pv-stage { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.pv-stage .stage { min-height: 66px; }
+.pv-stage .picture-wrap { flex: none; height: 150px; }
+.pv-stage .picture-wrap .picture { max-height: none; }
+.pv-stage .picture img { position: absolute; inset: 0; }
+.pv-stage .picture .emoji { font-size: 96px; }
+.pv-stage .road { margin-bottom: 4px; }
+.pv-label { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 8px; font-size: 24px; color: #fff; text-shadow: 0 3px 0 var(--ink); }
+.pv-label .pv-icon { font-size: 54px; line-height: 1.1; }
+
+/* ---------- えんしゅつ図鑑 ---------- */
+.book { gap: 8px; justify-content: flex-start; }
+.book > * { flex-shrink: 0; }
+.book-stage { padding: 8px; background: rgba(255, 255, 255, 0.14); border: 3px solid rgba(255, 255, 255, 0.4); border-radius: 20px; }
+.book-tabs { width: 100%; display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 7px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.book-tabs::-webkit-scrollbar { display: none; }
+.book-tab { flex: none; min-width: 66px; display: flex; flex-direction: column; align-items: center; padding: 3px 8px 4px; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 3px 0 var(--ink); font-size: 12px; line-height: 1.15; white-space: nowrap; }
+.book-tab.is-on { background: var(--yellow); }
+.book-tab.is-soon { opacity: 0.75; }
+.tab-icon { font-size: 20px; line-height: 1.1; }
+.tab-n { font-size: 10px; color: #7a6a5a; font-weight: 700; }
+.book-sum { width: 100%; display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.book-sum b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 22px; color: var(--yellow); }
+.book-pin { width: 100%; height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 16px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.book-pin.is-empty { justify-content: center; font-size: 13px; opacity: 0.9; }
+.pin-btn { --c: #fff; color: var(--ink); height: 40px; padding: 0 12px; font-size: 15px; border-width: 3px; border-radius: 14px; box-shadow: 0 4px 0 var(--ink); text-shadow: none; }
+.pin-btn.is-on { --c: var(--green); }
+.book-grid { flex: 1; min-height: 0; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; align-content: start; padding: 8px 2px 8px; -webkit-overflow-scrolling: touch; }
+.book-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 94px; padding: 6px 4px 6px; background: #fffaf0; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); }
+.book-card:active { transform: translateY(2px); }
+.book-card.is-sel { outline: 4px solid var(--yellow); }
+.book-card.locked { background: #d9d2e2; }
+.card-icon { font-size: 34px; line-height: 1.15; }
+.book-card.locked .card-icon { filter: brightness(0); opacity: 0.6; }
+.card-name { font-size: 13px; line-height: 1.15; text-align: center; }
+.card-hint { font-size: 9px; line-height: 1.2; color: #4a4058; font-weight: 700; text-align: center; }
+.card-mark { position: absolute; top: -9px; right: -4px; padding: 1px 6px; background: #3ee07a; border: 2px solid var(--ink); border-radius: 9px; font-size: 10px; white-space: nowrap; }
+.card-mark.found { background: var(--yellow); }
+.book-card.is-picked { border-color: #1fa84a; box-shadow: 0 4px 0 #1fa84a; }
+.book-soon { flex: 1; min-height: 0; display: grid; place-content: center; justify-items: center; font-size: 30px; color: #fff; text-shadow: 0 3px 0 var(--ink); }
+.soon-icon { font-size: 54px; }
+.book-back { --c: #fff; width: 100%; height: 52px; font-size: 22px; }
+
+/* ---------- プレゼント ---------- */
+.gift-card { text-align: center; }
+.gift-scene { height: 134px; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+.gift-carrier { display: flex; align-items: flex-end; gap: 6px; animation: gift-in 0.8s ease-out; }
+@keyframes gift-in { from { transform: translateX(-140px); } to { transform: none; } }
+.gift-reveal { position: relative; display: flex; align-items: flex-end; }
+.gift-box { position: relative; width: 72px; height: 66px; transform-origin: 50% 100%; }
+.gift-body { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: #ff6a8a; border: 4px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.gift-ribbon { position: absolute; left: 50%; top: 0; bottom: 0; width: 14px; margin-left: -7px; background: #ffd400; border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); }
+.gift-lid { position: absolute; left: -5px; right: -5px; bottom: 36px; height: 24px; background: #ff3a70; border: 4px solid var(--ink); border-radius: 8px; transform-origin: 0 100%; transition: transform 0.3s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.gift-bow { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); font-size: 22px; line-height: 1; }
+.phase-shake .gift-box { animation: gift-shake 0.33s ease-in-out 3; }
+@keyframes gift-shake { 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+.gift-box.is-open .gift-lid { transform: rotate(-112deg) translate(-4px, -2px); }
+.gift-icon { position: absolute; left: 50%; bottom: 34px; font-size: 58px; line-height: 1; animation: gift-pop 0.7s ease-out forwards; }
+@keyframes gift-pop { 0% { transform: translateX(-50%) translateY(24px) scale(0.2); opacity: 0; } 60% { transform: translateX(-50%) translateY(-34px) scale(1.25); opacity: 1; } 100% { transform: translateX(-50%) translateY(-26px) scale(1); opacity: 1; } }
+.gift-name { font-size: 26px; color: #2b1a2e; margin: 0 0 8px; }
+.gift-name-icon { margin-right: 6px; }
+.gift-stage { margin-top: 2px; }
+.learn-card.more-card { font-size: 26px; color: #e0407a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gift-carrier, .gift-icon { animation: none; }
+  .gift-icon { transform: translateX(-50%) translateY(-26px); }
+  .phase-shake .gift-box { animation: none; }
+}

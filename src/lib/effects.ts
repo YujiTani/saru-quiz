@@ -1,12 +1,13 @@
 // 全画面パーティクル（紙吹雪・コイン・星・バナナ・羽根・泡・音符・花びら・雨・雪・絵）
 import { rng } from './rng'
 
-export type Kind = 'confetti' | 'coin' | 'star' | 'banana' | 'feather' | 'bubble' | 'note' | 'petal' | 'raindrop' | 'snow' | 'illust'
-type P = { kind: Kind; x: number; y: number; vx: number; vy: number; rot: number; vr: number; size: number; color: string; life: number; max: number; phase: number; img?: HTMLImageElement }
+export type Kind = 'confetti' | 'coin' | 'star' | 'banana' | 'feather' | 'bubble' | 'note' | 'petal' | 'leaf' | 'raindrop' | 'snow' | 'illust'
+type P = { kind: Kind; x: number; y: number; vx: number; vy: number; rot: number; vr: number; size: number; color: string; life: number; max: number; phase: number; img?: HTMLImageElement; drag?: number }
 
 const COLORS = ['#ff4f9a', '#ffd400', '#3ee07a', '#38b6ff', '#a066ff', '#ff8a1c']
 const FEATHER_COLORS = ['#ffffff', '#ffe27a', '#ffb3d1', '#9fd8ff']
 const PETAL_COLORS = ['#ffb3d1', '#ff8fb8', '#ffd1e3']
+const LEAF_COLORS = ['#e8913a', '#c9582a', '#f0b84a', '#9bb84a']
 /** 粒子の数の上限。あふれたら古いものから消す */
 export const MAX_PARTICLES = 400
 
@@ -23,6 +24,7 @@ const PHYS: Record<Kind, Phys> = {
   bubble: { g: -0.03, drag: 0.97, sway: 0.6, freq: 0.1, maxVy: 3, soft: true },
   note: { g: -0.02, drag: 0.97, sway: 0.9, freq: 0.12, maxVy: 3, soft: true },
   petal: { g: 0.03, drag: 0.96, sway: 1.4, freq: 0.07, maxVy: 2, soft: true },
+  leaf: { g: 0.03, drag: 0.96, sway: 1.4, freq: 0.07, maxVy: 2, soft: true },
   raindrop: { g: 0.5, drag: 1, sway: 0, freq: 0.1, maxVy: 16 },
   snow: { g: 0.02, drag: 0.97, sway: 0.8, freq: 0.06, maxVy: 1.6, soft: true },
 }
@@ -80,6 +82,7 @@ const SIZES: Record<Kind, [number, number]> = {
   bubble: [10, 26],
   note: [18, 28],
   petal: [10, 16],
+  leaf: [12, 18],
   raindrop: [10, 16],
   snow: [4, 8],
   illust: [30, 46],
@@ -88,7 +91,7 @@ const SIZES: Record<Kind, [number, number]> = {
 function spawn(kind: Kind, x: number, y: number, vx: number, vy: number, img?: HTMLImageElement) {
   const [a, b] = SIZES[kind]
   const long = PHYS[kind].soft ? [110, 170] : [70, 120]
-  const color = kind === 'feather' ? FEATHER_COLORS[(rng() * FEATHER_COLORS.length) | 0] : kind === 'petal' ? PETAL_COLORS[(rng() * PETAL_COLORS.length) | 0] : COLORS[(rng() * COLORS.length) | 0]
+  const color = kind === 'feather' ? FEATHER_COLORS[(rng() * FEATHER_COLORS.length) | 0] : kind === 'petal' ? PETAL_COLORS[(rng() * PETAL_COLORS.length) | 0] : kind === 'leaf' ? LEAF_COLORS[(rng() * LEAF_COLORS.length) | 0] : COLORS[(rng() * COLORS.length) | 0]
   parts.push({ kind, x, y, vx, vy, rot: rand(0, 6.28), vr: kind === 'raindrop' ? 0 : rand(-0.3, 0.3) * (PHYS[kind].soft ? 0.4 : 1), size: rand(a, b), color, life: 0, max: rand(long[0], long[1]), phase: rand(0, 6.28), img })
   // 上限をこえたら古いものから消す
   if (parts.length > MAX_PARTICLES) parts.splice(0, parts.length - MAX_PARTICLES)
@@ -127,6 +130,21 @@ export function drift(kind: Kind, x: number, y: number, count: number, spread = 
 /** 画面上から降らせる */
 export function rain(kind: Kind, count: number) {
   for (let i = 0; i < scaled(count); i++) spawn(kind, rand(0, innerWidth), rand(-200, -10), rand(-1, 1), rand(1, 4))
+  start()
+}
+
+/** 画面の上から下へ yFrom〜yTo（画面の高さに対する割合）の高さにまんべんなく出す（雪・泡・花びらなど、ゆっくりの粒子用） */
+export function scatter(kind: Kind, count: number, yFrom = -0.05, yTo = 0.45) {
+  for (let i = 0; i < scaled(count); i++) spawn(kind, rand(0, innerWidth), innerHeight * rand(yFrom, yTo), rand(-0.6, 0.6), PHYS[kind].g < 0 ? rand(-1.5, -0.5) : rand(0.3, 1.2))
+  start()
+}
+
+/** 左から右へ風にのって流れていく（葉っぱなど） */
+export function wind(kind: Kind, count: number) {
+  for (let i = 0; i < scaled(count); i++) {
+    spawn(kind, rand(-40, 0), innerHeight * rand(0.12, 0.8), rand(5, 9), rand(-0.4, 1.2))
+    parts[parts.length - 1].drag = 0.995
+  }
   start()
 }
 
@@ -199,7 +217,7 @@ function draw(p: P, g: CanvasRenderingContext2D) {
     g.textAlign = 'center'
     g.textBaseline = 'middle'
     g.fillText(p.phase > 3.14 ? '♪' : '♫', 0, 0)
-  } else if (p.kind === 'petal') {
+  } else if (p.kind === 'petal' || p.kind === 'leaf') {
     const w = Math.abs(Math.cos(p.life * 0.08 + p.phase)) * p.size * 0.5 + 2 // ひらひら裏返る
     g.fillStyle = p.color
     g.beginPath()
@@ -244,7 +262,7 @@ function start() {
       const ph = PHYS[p.kind]
       p.vy += ph.g
       if (ph.maxVy !== undefined) p.vy = Math.max(-ph.maxVy, Math.min(ph.maxVy, p.vy))
-      p.vx *= ph.drag
+      p.vx *= p.drag ?? ph.drag
       p.x += p.vx + (ph.sway ? Math.sin(p.life * ph.freq + p.phase) * ph.sway : 0)
       p.y += p.vy
       p.rot += p.vr

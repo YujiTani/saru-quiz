@@ -3,7 +3,7 @@ import { now } from './day'
 import { weight as stepWeight } from './leitner'
 import { rng, type Rng } from './rng'
 import type { WordStat } from './storage'
-import { catParam } from './testflags'
+import { catParam, wordParam } from './testflags'
 
 export type Question = { id: string; a: string; c: string; l: number; img?: string; e?: string }
 export type Round = { q: Question; choices: string[]; hint: Hint }
@@ -60,7 +60,8 @@ export const questionById = (id: string): Question | undefined => byId.get(id)
 export function pickSession(level: number, count: number, stats: Record<string, WordStat>, nowMs: number = now(), random: Rng = rng): Question[] {
   // ?cat=カテゴリ名 のときは、そのカテゴリだけ（テスト用）
   const cat = catParam()
-  const byCat = cat ? playable.filter((q) => q.c === cat) : []
+  const word = wordParam()
+  const byCat = word ? playable.filter((q) => q.id === word) : cat ? playable.filter((q) => q.c === cat) : []
   const pool = byCat.length > 0 ? byCat : playable.filter((q) => q.l <= level)
   const w = (q: Question) => {
     const s = stats[q.id]

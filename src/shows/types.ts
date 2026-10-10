@@ -47,6 +47,8 @@ export type ShowCtx = {
   combo?: number
   /** このプレイで正解した単語（重複なし。新しいほうが後ろ）。フィナーレなどが使う */
   today?: Question[]
+  /** 図鑑の「ためす」やプレゼントの再生か（吹き出しの言葉も読み上げる。ゲーム中は、ほめ言葉の読み上げとぶつかるので読まない） */
+  preview?: boolean
 }
 
 export type Show = {

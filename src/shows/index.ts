@@ -11,6 +11,7 @@ import { makeLayer } from './layer'
 export { attachLayer, layer } from './layer'
 export { SHOWS, getShow, isUnlocked, ownedIn, pickShow, ugokuFor } from './registry'
 export { unlockCtx } from './unlock'
+export { BOOK_CATS, bookCounts, grantShows, isOwned, newlyUnlocked, showsOf } from './book'
 export { peekaboo } from './peekaboo'
 export { LANDMARKS, crossed, roadX, skyStage, themeOf } from './michi'
 export type { MichiTheme, SkyStage } from './michi'
@@ -24,15 +25,15 @@ export function forcedShow(): Show | undefined {
   return id ? getShow(id) : undefined
 }
 
-/** 今の場面の材料から ShowCtx を作る（pic / host は画面から探す） */
-export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: number; y: number }; combo?: number; today?: Question[] }): ShowCtx {
+/** 今の場面の材料から ShowCtx を作る（pic / host は、渡されなければ画面から探す。図鑑の舞台は自分の要素を渡す） */
+export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: number; y: number }; combo?: number; today?: Question[]; pic?: HTMLElement | null; host?: HTMLElement | null; preview?: boolean }): ShowCtx {
   const motion = getMotion()
   const layer = makeLayer() // この演出ぶんの層（次の問題で clear されたら、あとから何も置かない）
   layer.motion = motion
   return {
     layer,
-    pic: document.querySelector<HTMLElement>('.picture'),
-    host: document.querySelector<HTMLElement>('.host-monkey'),
+    pic: p.pic !== undefined ? p.pic : document.querySelector<HTMLElement>('.picture'),
+    host: p.host !== undefined ? p.host : document.querySelector<HTMLElement>('.host-monkey'),
     q: p.q,
     E: p.E ?? 0,
     heat: p.heat ?? 0,
@@ -43,6 +44,7 @@ export function makeCtx(p: { q?: Question; E?: number; heat?: number; at?: { x: 
     at: p.at,
     combo: p.combo,
     today: p.today,
+    preview: p.preview,
   }
 }
 

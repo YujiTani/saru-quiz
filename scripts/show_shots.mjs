@@ -17,12 +17,35 @@ await server.listen()
 const { SHOWS } = await server.ssrLoadModule('/src/shows/registry.ts')
 // 撮る場面。answer: 'ok' 正解 / 'ng' まちがい / null 答えない。times は答えた（または開いた）あとのミリ秒
 const FRAMES = (from, to, step) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step)
+// 長めの演出は撮る時刻を変える
+const LONG = {
+  'ugoku:machi': [300, 800, 1300, 1800, 2300],
+  'ugoku:karada': [400, 900, 1500, 2100, 2700],
+  'ugoku:hito': [400, 900, 1400, 1900, 2400],
+  'ugoku:fuku': [300, 800, 1300, 1900, 2400],
+  'zukkoke:hanabanana': [400, 800, 1200, 1600, 2100],
+  'zukkoke:gunya': [400, 800, 1200, 1600, 2100],
+  'zukkoke:puri': [400, 800, 1200, 1700, 2200],
+  'zukkoke:neko': [400, 900, 1500, 2100, 2700, 3300],
+}
 const targets = SHOWS.filter((s) => s.cat === 'ugoku' || s.cat === 'zukkoke').map((s) => ({
   id: s.id,
   query: `show=${encodeURIComponent(s.id)}&cat=${encodeURIComponent(s.forCat ?? 'どうぶつ')}`,
   answer: s.cat === 'zukkoke' ? 'ng' : 'ok',
-  times: s.cat === 'zukkoke' ? [500, 1000, 1600, 2600, 3400] : [300, 700, 1100, 1600, 2200],
+  times: LONG[s.id] ?? (s.cat === 'zukkoke' ? [500, 1000, 1600, 2600, 3400] : [300, 700, 1100, 1600, 2200]),
 }))
+// 単語や月で変わるうごくえ: てんき（あめ・ゆき・にじ・たいよう・かみなり・かぜ・きらきら）、がっき（5種）、きせつ（4つの季節）
+const VARIANTS = [
+  ['tenki', 'rain', 'ugoku:tenki', 'rain'], ['tenki', 'snow', 'ugoku:tenki', 'snow'], ['tenki', 'rainbow', 'ugoku:tenki', 'rainbow'], ['tenki', 'sun', 'ugoku:tenki', 'sun'],
+  ['tenki', 'thunder', 'ugoku:tenki', 'lightning'], ['tenki', 'wind', 'ugoku:tenki', 'wind'], ['tenki', 'sparkle', 'ugoku:tenki', 'cloud'],
+  ['gakki', 'drum', 'ugoku:gakki', 'drum'], ['gakki', 'piano', 'ugoku:gakki', 'piano'], ['gakki', 'trumpet', 'ugoku:gakki', 'trumpet'], ['gakki', 'bell', 'ugoku:gakki', 'jingle-bell'], ['gakki', 'marimba', 'ugoku:gakki', 'guitar'],
+]
+for (const [name, v, show, word] of VARIANTS) {
+  targets.push({ id: `${name}-${v}`, query: `show=${encodeURIComponent(show)}&word=${word}`, answer: 'ok', times: [300, 700, 1100, 1600, 2200] })
+}
+for (const [v, month] of [['spring', 4], ['summer', 7], ['autumn', 10], ['winter', 1]]) {
+  targets.push({ id: `kisetsu-${v}`, query: `show=ugoku:kisetsu&cat=${encodeURIComponent('きせつ・ぎょうじ')}&month=${month}`, answer: 'ok', times: [400, 900, 1400, 1900] })
+}
 // いないいない…ばあ！ を細かく（まちがえたあと）
 targets.push({ id: 'peekaboo', query: 'show=zukkoke:slip&cat=どうぶつ', answer: 'ng', times: FRAMES(1500, 4500, 300) })
 // みちのり: 4種類 × E=0 / 0.5 / 0.9（goal=20 に start=0 / 10 / 18）
@@ -50,6 +73,14 @@ try {
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && errors.push(m.text()))
+  // ?month=N のときは、今を その月の15日にする（きせつのうごくえの確認用）
+  await page.evaluateOnNewDocument(() => {
+    const m = Number(new URLSearchParams(location.search).get('month'))
+    if (m) {
+      const fixed = new Date(2026, m - 1, 15, 12).getTime()
+      Date.now = () => fixed
+    }
+  })
   if (MOTION !== undefined) await page.evaluateOnNewDocument((m) => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: Number(m) })), MOTION)
   for (const s of shows) {
     await page.goto(`http://localhost:${PORT}/?${s.query}&seed=1&time=60`, { waitUntil: 'networkidle0' })

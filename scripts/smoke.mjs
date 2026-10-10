@@ -8,6 +8,8 @@
 //     ぜんぶ正解で review が空に）→ 2回目のプレイで「まえより のびたよ」→ くもりの絵（拭きとって ぴかぴか）（11-*.png）
 //  7. 毎日の楽しみ: 1回目のあとにシールのカード（12-sticker）→ ?goal=3 のクリアで きねんしゃしん（12-finale-*）→ えにっき（月・日のページ。13-diary-*）
 //     → 7枚そろう＋バナナのやま（トラック）のカード（14-*）
+//  8. えんしゅつ図鑑: タイトルの並び（アイコンの1行・ロゴと重ならない）→ ずかん（タブ9つ・集計・影のカード・もうすぐ）→ ためす → こてい/おまかせ（15-*.png）
+//  9. プレゼント: 解放の直前から遊んで、箱が開く →「あたらしい えんしゅつ！」→ ためす（3つまで・ほかにも N こ）。ふつうに遊んで got の保存も（16-*.png）
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -88,6 +90,7 @@ async function start(page, query) {
 const server = await createServer({ server: { port: 5199 }, logLevel: 'error' })
 await server.listen()
 const { BANANA_STAGES } = await server.ssrLoadModule('/src/lib/banana.ts')
+const { SHOWS } = await server.ssrLoadModule('/src/shows/registry.ts')
 const browser = await launch()
 const errors = []
 try {
@@ -228,7 +231,7 @@ try {
   const diaryBtn = await page.$('.diary-btn')
   if (!diaryBtn) errors.push('タイトルに えにっきボタンがありません')
   else {
-    if (!(await diaryBtn.evaluate((el) => el.textContent)).includes('シール 1')) errors.push('えにっきボタンに シールの枚数（1）が出ていません')
+    if ((await page.$eval('.diary-btn .n', (el) => el.textContent).catch(() => '')) !== '1') errors.push('えにっきボタンに シールの枚数（1）が出ていません')
     await page.screenshot({ path: `${OUT}/13-title.png` })
     await diaryBtn.click()
     await sleep(500)
@@ -283,7 +286,7 @@ try {
   if (await page.$('.level-btn.is-locked')) errors.push('かんたんをクリアしても ふつう が解放されません')
   if ((await page.$$('.level-btn')).length !== 2) errors.push('むずかしい が早く出ています')
   await page.screenshot({ path: `${OUT}/6b-unlocked.png` })
-  await page.click('.gear-btn')
+  await page.click('.settings-btn')
   await sleep(400)
   await page.click('.edit-player-btn')
   await sleep(400)
@@ -328,7 +331,7 @@ try {
   if ((await page.$eval('.player-plate.big', (e) => e.textContent)) !== 'ゆうちゃん') errors.push('キャラの切りかえができません')
   if (await page.$('.level-btn.is-locked')) errors.push('もとのキャラの ふつう解放が消えています')
   // けすときは3回たしかめる（とちゅうで やめられる）
-  await page.click('.gear-btn')
+  await page.click('.settings-btn')
   await sleep(300)
   await page.click('.edit-player-btn')
   await sleep(300)
@@ -348,7 +351,7 @@ try {
   console.log('3b. キャラ切りかえ・けす確認: OK')
 
   // 4. ランキング画面（接続先が未設定なら「じゅんびちゅう」、設定済みなら一覧かメッセージ）
-  await page.click('.title-btns .gear-btn:nth-child(2)')
+  await page.click('.rank-btn')
   await page.waitForSelector('.rank-list', { timeout: 5000 })
   await page.click('.rank-tabs:nth-of-type(2) .rank-tab:nth-child(2)')
   await sleep(800)
@@ -490,8 +493,8 @@ try {
   const btn = await page.$('.review-btn')
   if (!btn) errors.push('review があるのに タイトルに「ふくしゅう」ボタンが出ていません')
   else {
-    const label = await btn.evaluate((el) => el.textContent)
-    if (!label.includes(`（${reviewIds.length}）`)) errors.push(`ふくしゅうボタンの数がちがう: ${label} / review ${reviewIds.length}`)
+    const label = await page.$eval('.review-btn .n', (el) => el.textContent)
+    if (label !== String(reviewIds.length)) errors.push(`ふくしゅうボタンの数がちがう: ${label} / review ${reviewIds.length}`)
     await page.screenshot({ path: `${OUT}/11-title-review.png` })
     await btn.click()
     await sleep(1500)
@@ -629,6 +632,168 @@ try {
   if (await page.$('.banana-card')) errors.push('段階が変わっていないのに バナナのやまのカードが出ています')
   if (await page.$('.sticker-card')) errors.push('同じ日の2回目なのに シールのカードが出ています（9）')
   console.log('9. 7枚そろう・バナナのやま: OK')
+
+  // 10. えんしゅつ図鑑。どうぶつ・しぜん・がっき を3語ずつおぼえた状態にしてから開く
+  const tab3 = (c) => data.questions.filter((q) => q.c === c && q.img).slice(0, 3).map((q) => q.id)
+  await start(page, '')
+  await page.evaluate((ids) => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    const me = p.list.find((x) => x.id === p.current)
+    const t = Date.now()
+    for (const id of ids) me.save.stats[id] = { ok: 3, ng: 0, last: t, box: 1, boxAt: t, due: t + 86400000, firstOkAt: t }
+    me.save.review = ['red-apple']
+    me.save.cleared = [1, 2] // むずかしいも出る（ボタンが最大まで並ぶ）
+    // キャラも3人にする
+    for (const [id, name, char] of [['x2', 'ぷりん', 'sora'], ['x3', 'らてぃ', 'mint']]) if (!p.list.some((x) => x.id === id)) p.list.push({ id, name, char, color: '#38b6ff', save: JSON.parse(JSON.stringify(me.save)) })
+    localStorage.setItem('saru-quiz/players', JSON.stringify(p))
+  }, [...tab3('どうぶつ'), ...tab3('しぜん・てんき'), ...tab3('がっき・おと')])
+  await start(page, '')
+  await sleep(500)
+  // タイトル: ボタンが最大まで並んでも、アイコンは1行・ロゴとおさるが重ならない・全部が画面に入る
+  const tops = await page.$$eval('.icon-row .icon-btn', (els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
+  if (tops.length !== 5 || new Set(tops).size !== 1) errors.push(`タイトルのアイコンが1行に5つ並んでいません: ${JSON.stringify(tops)}`)
+  const lay = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s)?.getBoundingClientRect()
+    const hero = r('.player-hero img')
+    return { logoBottom: r('.logo')?.bottom, heroTop: hero?.top, heroBox: r('.player-hero')?.top, iconsBottom: r('.icon-row')?.bottom, creditBottom: r('.credit')?.bottom, vh: innerHeight, levels: document.querySelectorAll('.level-btn').length }
+  })
+  if (lay.levels !== 3) errors.push(`ボタンが最大まで並んでいません（コース ${lay.levels}）`)
+  if (lay.heroBox < lay.logoBottom) errors.push(`タイトルで ロゴとおさるが重なっています: logo ${lay.logoBottom} / hero ${lay.heroBox}`)
+  if (lay.creditBottom > lay.vh) errors.push(`タイトルが画面からはみ出しています: ${lay.creditBottom} > ${lay.vh}`)
+  await page.screenshot({ path: `${OUT}/15-title.png` })
+  await page.click('.book-btn')
+  await sleep(700)
+  if ((await page.$$('.book-tab')).length !== 9) errors.push('ずかんのタブが9つではありません')
+  const owned0 = await page.evaluate(() => document.querySelectorAll('.book-card.own').length)
+  const total = SHOWS.length
+  const sumAll = await page.$eval('.sum-all', (el) => el.parentElement.textContent.replace(/\s+/g, ''))
+  if (!sumAll.endsWith(`/${total}`)) errors.push(`ずかんの全体の数がちがう: ${sumAll} / ${total}`)
+  const ugokuTab = await page.$eval('.book-tab[data-cat="ugoku"] .tab-n', (el) => el.textContent)
+  if (ugokuTab !== `${owned0}/22`) errors.push(`うごくえタブの集計がちがう: ${ugokuTab} / 手に入れたカード ${owned0}`)
+  if (!(await page.$('.book-card.own[data-id="ugoku:doubutsu"]')) || !(await page.$('.book-card.own[data-id="ugoku:tenki"]')) || !(await page.$('.book-card.own[data-id="ugoku:gakki"]'))) errors.push('3語おぼえたカテゴリの うごくえが ずかんで手に入っていません')
+  // まだのもの: 影（brightness(0)）と「？？？」・親向けのヒント
+  const lock = await page.$eval('.book-card.locked', (el) => ({ name: el.querySelector('.card-name').textContent, hint: el.querySelector('.card-hint')?.textContent ?? '', filter: getComputedStyle(el.querySelector('.card-icon')).filter }))
+  if (lock.name !== '？？？' || !lock.hint || !lock.filter.includes('brightness(0)')) errors.push(`まだのカードが 影＋？？？＋ヒントになっていません: ${JSON.stringify(lock)}`)
+  // 0件のタブは「もうすぐ」
+  await page.click('.book-tab[data-cat="deteku"]')
+  await sleep(300)
+  if (!(await page.$eval('.book-soon', (el) => el.textContent.includes('もうすぐ')).catch(() => false))) errors.push('0件のタブに「もうすぐ」が出ていません')
+  await page.screenshot({ path: `${OUT}/15-book-soon.png` })
+  await page.click('.book-tab[data-cat="ugoku"]')
+  await sleep(300)
+  if (await page.$('.pin-btn')) errors.push('うごくえに「こてい」ボタンが出ています')
+  // ためす: 手に入れたカードをタップ → 舞台で再生される（絵の複製が動く）
+  await page.click('.book-card.own[data-id="ugoku:doubutsu"]')
+  await page.waitForSelector('#show-layer .show-clone', { timeout: 8000 }).catch(() => errors.push('ずかんで「ためす」を押しても 演出が再生されません'))
+  await sleep(500)
+  await page.screenshot({ path: `${OUT}/15-book-try.png` })
+  await page.click('.book-card.own[data-id="ugoku:tenki"]')
+  await sleep(1500)
+  await page.screenshot({ path: `${OUT}/15-book-tenki.png` })
+  // こてい / おまかせ（ずっこけ）
+  const myPick = () => page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    return p.list.find((x) => x.id === p.current).save.shows.pick
+  })
+  await page.click('.book-tab[data-cat="zukkoke"]')
+  await sleep(300)
+  await page.click('.book-card.own[data-id="zukkoke:hakushon"]')
+  await sleep(300)
+  await page.click('.pin-btn')
+  await sleep(300)
+  if ((await myPick()).zukkoke !== 'zukkoke:hakushon') errors.push(`「こてい」が保存されていません: ${JSON.stringify(await myPick())}`)
+  if (!(await page.$('.book-card[data-id="zukkoke:hakushon"].is-picked .card-mark'))) errors.push('固定したカードに「えらんでる」の印が出ていません')
+  await page.screenshot({ path: `${OUT}/15-book-pinned.png` })
+  await page.click('.pin-btn')
+  await sleep(300)
+  if ((await myPick()).zukkoke !== 'auto') errors.push(`もう一度押しても「おまかせ」にもどりません: ${JSON.stringify(await myPick())}`)
+  if (await page.$('.book-card.is-picked')) errors.push('おまかせにもどしたのに「えらんでる」が残っています')
+  // みちのり・おんがくは 舞台が変わる（Road / おさるバンド）
+  await page.click('.book-tab[data-cat="michi"]')
+  await sleep(300)
+  await page.click('.book-card.own[data-id="michi:jungle"]')
+  await sleep(1200)
+  if (!(await page.$('.pv-stage .road'))) errors.push('みちのりの「ためす」に Road が出ていません')
+  await page.screenshot({ path: `${OUT}/15-book-michi.png` })
+  await page.click('.book-tab[data-cat="ongaku"]')
+  await sleep(300)
+  await page.click('.book-card.own[data-id="ongaku:march"]')
+  await sleep(2500)
+  if (!(await page.$('.pv-stage .band-mk'))) errors.push('おんがくの「ためす」に おさるバンドが出ていません')
+  await page.click('.book-back')
+  await sleep(400)
+  if (!(await page.$('.title'))) errors.push('ずかんの「もどる」でタイトルにもどりません')
+  console.log('10. えんしゅつ図鑑: OK')
+
+  // 11. プレゼント。解放の直前の状態（どうぶつ2語・☆19・遊んだ日1日・バナナ590）から ?cat=どうぶつ で3問クリア
+  //   → ugoku:doubutsu・zukkoke:guruguru・ongaku:komoriuta の3つ ＋「ほかにも 1こ！」（banana:kago）
+  const nearUnlock = (dob, birds) =>
+    page.evaluate((dob, birds) => {
+      const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+      const me = p.list.find((x) => x.id === p.current)
+      const t = Date.now()
+      me.save.stats = {}
+      me.save.diary = { '2020-01-01': { words: [], plays: 1 } }
+      me.save.coins = 590
+      me.save.shows = { got: {}, seen: {}, pick: {} }
+      dob.forEach((id) => (me.save.stats[id] = { ok: 3, ng: 0, last: t, box: 1, boxAt: t, due: t + 86400000, firstOkAt: t }))
+      birds.forEach((id, i) => (me.save.stats[id] = { ok: 3, ng: 0, last: t, box: i < 3 ? 5 : 2, boxAt: t, due: t + 86400000, firstOkAt: t }))
+      localStorage.setItem('saru-quiz/players', JSON.stringify(p))
+    }, dob, birds)
+  const dob2 = data.questions.filter((q) => q.c === 'どうぶつ' && q.img).slice(0, 2).map((q) => q.id)
+  const birds4 = data.questions.filter((q) => q.c === 'とり' && q.img).slice(0, 4).map((q) => q.id)
+  await nearUnlock(dob2, birds4)
+  await start(page, `?cat=${encodeURIComponent('どうぶつ')}&goal=3&time=60&seed=3`)
+  await page.click('.level-btn')
+  await sleep(1200)
+  for (let i = 0; i < 3; i++) {
+    await answer(page, i + 50)
+    await sleep(400)
+    if (i < 2) await settle(page)
+  }
+  const seenGifts = []
+  let shotOpen = false
+  let shotShow = false
+  const deadline = Date.now() + 150000
+  while (Date.now() < deadline && !(await page.$('.again-pop'))) {
+    const g = await page.$eval('.gift-card', (el) => ({ id: el.dataset.show, phase: [...el.classList].find((c) => c.startsWith('phase-')) })).catch(() => null)
+    if (g) {
+      if (!seenGifts.includes(g.id)) seenGifts.push(g.id)
+      if (g.phase === 'phase-open' && !shotOpen) {
+        shotOpen = true
+        await page.screenshot({ path: `${OUT}/16-gift-open.png` })
+      }
+      if (g.phase === 'phase-show' && !shotShow) {
+        shotShow = true
+        if (!(await page.$('.gift-card .gift-name'))) errors.push('プレゼントに 演出の名前が出ていません')
+        await sleep(1200)
+        await page.screenshot({ path: `${OUT}/16-gift-show.png` })
+      }
+    }
+    await sleep(250)
+  }
+  if (seenGifts.join() !== 'ugoku:doubutsu,zukkoke:guruguru,ongaku:komoriuta') errors.push(`プレゼントの順番・数がちがう（3つまで）: ${seenGifts}`)
+  const more = await page.$eval('.more-card', (el) => el.textContent).catch(() => '')
+  if (!more.includes('ほかにも 1こ')) errors.push(`「ほかにも 1こ！」が出ていません: ${more}`)
+  await page.screenshot({ path: `${OUT}/16-gift-end.png` })
+  console.log(`11a. プレゼント: ${seenGifts.join(' ')}`)
+
+  // 11b. ふつうに遊ぶ（テスト用URLなし）と、手に入れた記録が保存される。遊んだ日が2日になって ずっこけ ぐるぐる が出る
+  await nearUnlock([], [])
+  await start(page, '?goal=3&time=60')
+  await page.click('.level-btn')
+  await sleep(1200)
+  for (let i = 0; i < 3; i++) {
+    await answer(page, i + 60)
+    await sleep(400)
+    if (i < 2) await settle(page)
+  }
+  await page.waitForSelector('.gift-card[data-show="zukkoke:guruguru"]', { timeout: 120000 })
+  await page.waitForSelector('.again-pop', { timeout: 120000 })
+  const sv11 = await mySave0()
+  if (!sv11.shows.got['zukkoke:guruguru']) errors.push(`手に入れた記録（shows.got）が保存されていません: ${JSON.stringify(sv11.shows.got)}`)
+  for (const id of ['ugoku:pika', 'zukkoke:slip', 'michi:jungle', 'ongaku:march', 'finale:photo', 'banana:fusa']) if (!sv11.shows.got[id]) errors.push(`はじめから持っている演出が got に入っていません: ${id}`)
+  console.log('11b. 手に入れた記録の保存: OK')
 } finally {
   await browser.close()
   await server.close()

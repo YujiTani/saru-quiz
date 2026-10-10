@@ -53,16 +53,26 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
   - バナナのやま（`lib/banana.ts` の `BANANA_STAGES`、演出 `banana:fusa|kago|nekoguruma|truck|fune|shima|hoshi`、絵は `shows/banana.ts` の `pileHtml` と `components/BananaPile.tsx`）: 合計バナナ（`save.coins`）が 0・600・1500・3500・8000・18000・40000 で ひとふさ → かご → ねこぐるま → トラック → ふね → しま → バナナのほし。しきい値は 1回のプレイでもらえる量（3歳が10問前後で 150〜500）から、最初は2〜3回・あとは約2〜2.5倍ずつ。解放は `UnlockCtx.coins`。段階が上がったプレイは `events.bananaUp`（新しい段階）→ 結果に「バナナが 〇〇いっぱいに なったよ！」のカード。タイトルのバナナの数の横に今の段階（`.pile-mini`）。ねこぐるま・ふねは絵文字がないか、端末で絵が切れるので SVG
   - 新しいセリフ: 「はい、ちーず！」「シールを、もらったよ！」「シールが、ぜんぶ、そろったよ！」と バナナのやま各段階の `say`（`banana.test.ts` が voice_lines.py にあるか確かめる）
   - 目で確かめる: smoke の `12-*`（シール・きねんしゃしん）`13-*`（えにっき）`14-*`（7枚そろう・バナナのやま・タイトル）。バナナのやまは localStorage の coins をしきい値の手前に書きかえてから遊ぶ
+- **えんしゅつ図鑑と解放の記録**（`screens/ShowBook.tsx`、タイトルの `.book-btn`「🎁 ずかん」）
+  - タイトルは まるいアイコンの1行（`.icon-row`: ふくしゅう `.review-btn`・えにっき `.diary-btn`・ずかん `.book-btn`・らんきんぐ `.rank-btn`・せってい `.settings-btn`。数のバッジは `.n`）。ボタンが最大まで並んでも ロゴとおさるが重ならない（smoke の `15-title`）
+  - 解放の記録: `applyResult` が 前後の `unlockCtx` を比べ（`shows/book.ts` の `grantShows` / `newlyUnlocked`）、新しく手に入れた演出の id を `save.shows.got[id] = 時刻` に入れて `events.newShows` に返す。はじめから持っているもの（base）や、記録をつける前から持っていたものは、だまって got に入れる（newShows には出さない）。ずかんの「手に入れた」は 解放条件をみたす or got にある（一度手に入れたものは なくならない）。ハプニングは `save.shows.seen` にあれば「みつけた！」
+  - プレゼント（`components/ShowGift.tsx`）: 結果の最後（「まだ あそぶー？」の前）。おさるが箱を持ってくる → ゆれる → パカッ → アイコンと名前＋「あたらしい、えんしゅつ！」→ その演出を1回ためす。1回のプレイで3つまで、あとは「ほかにも N こ！」。解放条件は読み上げない
+  - ずかん: 上は「ためす」の舞台（`components/ShowStage.tsx` ＋ `shows/preview.ts` の `runPreview`。司会のおさる・吹き出し・絵のカードに、その演出の `play` を `makeCtx({ pic, host, preview: true })` で流す。みちのりは Road を E 0→1、おんがくは `startBgm` → E を上げながら7秒 → `stopBgm`）。タブは `BOOK_CATS`（9つ。0件は「もうすぐ」）、集計は `bookCounts`。まだのカードは 黒い影（`filter: brightness(0)`）と「？？？」＋親向けの小さなヒント（読み上げない）。うごくえ以外は `.pin-btn` で「こてい」⇄「おまかせ」（`save.shows.pick[cat]` = id か 'auto'。固定中のカードに `.card-mark`「えらんでる」）
+  - `ShowCtx.preview` が true のとき、`say(ctx, 文, x, y)`（`shows/util.ts`）は吹き出しに加えて読み上げる（ゲーム中は ほめ言葉の読み上げと ぶつかるので 吹き出しだけ）。この言葉は voice_lines.py に足す（「にあう？」「ありがとう！」など）
+  - 4b のメモ: でてくる・おうえん・ハプニングは `Show` を登録（`registry.ts` の `SHOWS`）すれば、ずかんのタブ・集計・プレゼント・ためすに自動で出る。ためすの舞台は `.picture` と `.host-monkey` を `ctx.pic` / `ctx.host` で渡している（演出が `document.querySelector` で探すと舞台ではなく クイズ画面を見てしまう）
+- **うごくえ**（`shows/ugoku.ts` ＋ `shows/ugokuMore.ts`）: questions.json の21カテゴリすべてに専用の動き＋基本の「ぴかっ」。どれも そのカテゴリの単語を3つおぼえたら。単語や月で変わるもの: てんき `weatherOf`（id → あめ・ゆき・にじ・たいよう・かみなり・かぜ・きらきら）、がっき `lib/instruments.ts` の `instrumentOf` / `PHRASES`（たいこ・ぴあの・らっぱ・すず・木琴）、きせつ `seasonOf(月)`（はる 花びら・なつ 泡・あき 葉っぱ・ふゆ 雪）、ふく `wearsOnHead`（頭のものは頭に重なる）。長い動きは次の問題に入ると片づけられるので、Quiz は 読み上げのあと 最大1.2秒だけ うごくえの終わりを待つ。確かめるのは `node scripts/show_shots.mjs <id>`（単語・月の見分けも `tenki-rain` `gakki-drum` `kisetsu-winter` などで撮れる。`?word=<単語id>` で その1語だけ出題、`?month=N` は show_shots 用）
+- **ずっこけ**（8種。`zukkoke:slip|hakushon|guruguru|hiyoko|hanabanana|gunya|puri|neko`）: playDays が 0・0・2・4・6・8・10・12 で手に入る。おさるが自分で変なことをするだけ（痛い・こわい表現なし）
 - のこり5秒からは時間の進みが半分（5→0 を10秒かけて大きくカウントダウン）。`Quiz.tsx` の `COUNTDOWN_MS`
 
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/fit_illust.mjs <id…>`（描いた範囲を測って中央・同じ大きさにそろえる。何度実行しても同じ）→ `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
 - コード変更後: `npm run check`（問題JSON再生成 + 単体テスト + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
-- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・シール・バナナの段階・えにっきの月の並び・ひな壇・演出の解放と選び方。設定は `vitest.config.ts`）
+- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・シール・バナナの段階・えにっきの月の並び・ひな壇・演出の解放と選び方・ずかんの集計と解放の記録・天気/楽器/季節の見分け。設定は `vitest.config.ts`）。出力の解析に失敗するときは `rtk proxy npx vitest run`（`npm run check` も `rtk proxy npm run check`）
 - テスト用のURLパラメータ（`src/lib/testflags.ts`）
   - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
   - `?show=<id>` `?demo` 保存もランキングへの送信もしない
   - `?cat=カテゴリ名` そのカテゴリだけ出題（保存もランキングもなし）
+  - `?word=<単語id>` その1語だけ出題（保存もランキングもなし。天気・楽器の見分けの確認用）
   - `?start=数` せいかい数をその数から始める（みちのり・リーチの確認用。記録しない）
   - `?time=秒` `?goal=問題数` は今までどおり（これらは記録する）
 - 進捗の更新は `src/lib/progress.ts` の `applyResult`（純粋）。単語の箱（☆・くもり）は `src/lib/leitner.ts`。日付は `src/lib/day.ts`（テストでは `setNow`）
