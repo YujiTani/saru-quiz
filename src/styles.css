@@ -561,3 +561,14 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .result-count .num { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 72px; color: var(--yellow); -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; animation: pop 0.25s; }
 .result-stars span { animation: pop 0.3s; }
 .result-combo.pop { animation: pop 0.5s; }
+
+/* ---------- フィーバーのレベル（1〜3） ---------- */
+body.fever-2::before { animation-duration: 1.4s; opacity: 0.7; }
+body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
+.fever-frame.lv2 { animation: fever-glow 0.5s ease-in-out infinite alternate; box-shadow: inset 0 0 50px 22px rgba(255, 90, 40, 0.85), inset 0 0 110px 40px rgba(255, 200, 0, 0.55); }
+.fever-frame.lv3 { animation: fever-glow 0.28s ease-in-out infinite alternate; box-shadow: inset 0 0 60px 26px rgba(255, 60, 160, 0.9), inset 0 0 120px 46px rgba(60, 200, 255, 0.6), inset 0 0 0 10px rgba(255, 230, 60, 0.9); }
+.fever-badge.lv3 { font-size: 26px; animation-duration: 0.3s; }
+.quiz.lv3 .host-monkey { transform: scale(1.15); }
+@media (prefers-reduced-motion: reduce) {
+  .fever-frame.lv2, .fever-frame.lv3 { animation: none; }
+}

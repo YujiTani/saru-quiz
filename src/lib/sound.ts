@@ -247,23 +247,37 @@ export const sfx = {
     ;[0, 4, 7, 12, 16].forEach((s, i) => tone(note(b + s), 0.55 + i * 0.045, 0.09, 'square', 0.35))
   },
   /** フィーバー突入（サイレン＋ドーン） */
-  feverStart() {
+  /** フィーバー突入（レベルが高いほど派手） */
+  feverStart(level = 1) {
     tone(300, 0, 0.6, 'sawtooth', 0.35, 1800)
     tone(450, 0.05, 0.6, 'square', 0.25, 2400)
     tone(110, 0.62, 0.7, 'sine', 1, 40)
     noise(0.62, 0.6, 0.6, 3000, 200, 'lowpass')
-    ;[72, 76, 79, 84, 88, 91, 96].forEach((n, i) => tone(note(n), 0.7 + i * 0.05, 0.12, 'square', 0.4))
+    ;[72, 76, 79, 84, 88, 91, 96].forEach((n, i) => tone(note(n), 0.7 + i * (level === 3 ? 0.035 : 0.05), 0.12, 'square', 0.4))
+    if (level >= 2) {
+      ;[60, 64, 67, 72, 76, 79, 84, 88].forEach((n, i) => tone(note(n), 1.1 + i * 0.04, 0.2, 'triangle', 0.4))
+      noise(1.1, 0.5, 0.5, 400, 6000)
+    }
+    if (level === 3) {
+      ;[72, 76, 79, 84].forEach((n) => tone(note(n), 1.5, 0.9, 'square', 0.3))
+      tone(note(96), 1.5, 0.9, 'triangle', 0.4)
+      for (let i = 0; i < 8; i++) noise(1.5 + i * 0.06, 0.05, 0.3, 6000, 9000, 'highpass')
+    }
   },
-  startFever() {
-    if (feverTimer || !ctx) return
+  /** フィーバー中のBGM（レベルでテンポと厚みが上がる） */
+  startFever(level = 1) {
+    if (!ctx) return
+    if (feverTimer) clearInterval(feverTimer)
     feverStep = 0
-    const beat = 60 / 150 / 2
+    const beat = 60 / ([150, 172, 196][level - 1] ?? 150) / 2
     feverTimer = setInterval(() => {
       const i = feverStep++ % 16
-      tone(note(FEVER_BASS[i]), 0, beat * 0.9, 'triangle', 0.9)
+      tone(note(FEVER_BASS[i] + (level === 3 && i % 4 === 3 ? 12 : 0)), 0, beat * 0.9, 'triangle', 0.9)
       if (FEVER_LEAD[i]) tone(note(FEVER_LEAD[i]), 0, beat * 0.8, 'square', 0.22)
+      if (level >= 2 && i % 2 === 1) tone(note((FEVER_LEAD[(i + 4) % 16] || 79) + 12), 0, beat * 0.5, 'square', 0.12)
       if (i % 4 === 0) tone(120, 0, 0.12, 'sine', 0.9, 50)
       if (i % 4 === 2) noise(0, 0.08, 0.4, 2000, 6000)
+      if (level === 3) noise(0, 0.02, 0.2, 9000, 12000, 'highpass')
       noise(0, 0.03, 0.15, 7000, 9000, 'highpass')
     }, beat * 1000)
   },

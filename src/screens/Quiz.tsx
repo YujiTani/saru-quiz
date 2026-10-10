@@ -13,6 +13,10 @@ type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 
 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
 const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow']
+// フィーバーのレベル（1〜3）。「ねつ」で決まる
+const FEVER_TEXT = ['', 'ふぃーばー！', 'すーぱーふぃーばー！', 'めがふぃーばー！']
+const FEVER_BADGE = ['', 'ふぃーばー ×2', 'すーぱー ×3', 'めが ×4']
+const feverLevelOf = (h: number) => (h >= 80 ? 3 : h >= 50 ? 2 : h >= 25 ? 1 : 0)
 const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
 // 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
 // テスト用に ?time=秒 で短くできる
@@ -38,7 +42,14 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   coinsRef.current = coins
   const [gain, setGain] = useState<{ n: number; key: number } | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
-  const [fever, setFever] = useState(false)
+  // フィーバーは「ねつ」(heat) で決まる。まちがえても0にはならず、少しずつ下がる
+  const [heat, setHeat] = useState(0)
+  const heatRef = useRef(0)
+  const setHeatBoth = (v: number) => {
+    heatRef.current = v
+    setHeat(v)
+  }
+  const feverLv = feverLevelOf(heat)
   const [helper, setHelper] = useState<CharId | null>(null)
   const [bubble, setBubble] = useState('これ なあに？')
   const [peeker, setPeeker] = useState<{ char: CharId; key: number } | null>(null)
@@ -99,18 +110,36 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const prevLv = useRef(0)
+  useEffect(() => {
+    const prev = prevLv.current
+    prevLv.current = feverLv
+    document.body.classList.remove('fever', 'fever-2', 'fever-3')
+    sfx.stopFever()
+    if (feverLv === 0) return
+    document.body.classList.add('fever')
+    if (feverLv > 1) document.body.classList.add(`fever-${feverLv}`)
+    sfx.startFever(feverLv)
+    if (feverLv > prev) {
+      sfx.feverStart(feverLv)
+      celebrateFever(feverLv)
+    }
+    // レベルが高いほど、コインや紙吹雪がずっと降り続ける
+    const id = setInterval(() => {
+      if (feverLv >= 2) fountain('coin', feverLv === 3 ? 45 : 25)
+      if (feverLv === 3) rain('star', 40)
+    }, feverLv === 3 ? 2200 : 3000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feverLv])
+
   useEffect(
     () => () => {
-      document.body.classList.remove('fever')
+      document.body.classList.remove('fever', 'fever-2', 'fever-3')
       sfx.stopFever()
     },
     [],
   )
-  useEffect(() => {
-    document.body.classList.toggle('fever', fever)
-    if (fever) sfx.startFever()
-    else sfx.stopFever()
-  }, [fever])
 
   function center(el: Element) {
     const r = el.getBoundingClientRect()
@@ -150,8 +179,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
     if (choice === q.a) {
       const c = combo + 1
-      const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (fever ? 2 : 1)
+      const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (feverLv ? feverLv + 1 : 1)
       setCombo(c)
+      const nh = Math.min(100, heatRef.current + 15 + feverLv * 3)
+      const nlv = feverLevelOf(nh)
+      const levelUp = nlv > feverLv ? FEVER_TEXT[nlv] : null
+      setHeatBoth(nh)
       setCoins((v) => v + add)
       setGain({ n: add, key: Date.now() })
       timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
@@ -171,12 +204,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       burst(x, y, 'confetti', 60)
       burst(x, y, 'coin', 8 + Math.min(c, 10) * 2, 0.9)
       if (c === 3) shout = celebrate('すごい！', 'combo', 'mandrill', x, y)
-      if (c === 5) {
-        shout = celebrate('ふぃーばー！', 'fever', 'gorilla', x, y)
-        setFever(true)
-      }
       if (c === 8 || (c > 8 && c % 5 === 3)) shout = celebrate('でんせつ！', 'legend', 'rainbow', x, y)
-      if (fever) rain('banana', 8)
+      if (feverLv > 0) rain('banana', 8)
       if (isBonus) {
         fountain('coin', 50)
         sfx.bonus()
@@ -188,13 +217,14 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       }
 
       ;(async () => {
-        await speak([shout, q.a])
+        await speak(levelUp ? [shout, q.a, levelUp] : [shout, q.a])
         await wait(350)
         next()
       })()
     } else {
       setCombo(0)
-      setFever(false)
+      // ねつは少しだけ下がる（すぐには止まらない）
+      setHeatBoth(Math.max(0, heatRef.current - 20))
       timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
       setTimeLeft(timeRef.current)
       setTimeGain({ key: Date.now(), plus: false })
@@ -220,8 +250,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     setHelper(who)
     setTimeout(() => setHelper(null), 2600)
     setTimeout(() => setBanner(null), 1800)
-    if (kind === 'fever') sfx.feverStart()
-    else sfx.combo(kind === 'combo' ? 1 : 6)
+    if (kind !== 'fever') sfx.combo(kind === 'combo' ? 1 : 6)
     shake(kind === 'combo' ? 'small' : 'big')
     burst(x, y, 'star', 30, 1.3)
     if (kind !== 'combo') {
@@ -232,13 +261,27 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     return text
   }
 
+  function celebrateFever(lv: 1 | 2 | 3) {
+    celebrate(FEVER_TEXT[lv], 'fever', lv === 3 ? 'rainbow' : 'gorilla', innerWidth / 2, innerHeight * 0.35)
+    if (lv >= 2) {
+      fountain('coin', 60)
+      rain('confetti', 120)
+    }
+    if (lv === 3) {
+      flash()
+      shake('big')
+      rain('banana', 40)
+      burst(innerWidth / 2, innerHeight * 0.4, 'star', 60, 1.6)
+    }
+  }
+
   function endGame() {
     if (phaseRef.current === 'end') return
     phaseRef.current = 'end'
     setPhase('end')
     token.current++
     stopSpeaking()
-    setFever(false)
+    setHeatBoth(0)
     setBanner({ text: 'しゅうりょうー！', kind: 'end', key: Date.now() })
     sfx.whistle()
     void speak('しゅうりょうー！')
@@ -261,7 +304,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const pct = (timeLeft / TIME_MAX) * 100
 
   return (
-    <div className={`screen quiz ${fever ? 'is-fever' : ''}`}>
+    <div className={`screen quiz ${feverLv ? `is-fever lv${feverLv}` : ''}`}>
       <header className="quiz-top">
         <button className="quit" onClick={onQuit} aria-label="もどる">✕</button>
         <div className={`gauge ${pct < 17 ? 'low' : pct < 40 ? 'mid' : ''}`}>
@@ -282,12 +325,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       <div className="stage">
         <div className="host">
           <div className="host-monkey">
-            <PixelMonkey char={fever ? 'rainbow' : 'monchan'} mood={mood} size={60} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
+            <PixelMonkey char={feverLv ? 'rainbow' : 'monchan'} mood={mood} size={60} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
             {phase === 'wrong' && <span className="peel">🍌</span>}
           </div>
           <div className={`bubble ${phase}`}>{bubble}</div>
         </div>
-        {fever && <div className="fever-badge">ふぃーばー ×2</div>}
+        {feverLv > 0 && <div className={`fever-badge lv${feverLv}`}>{FEVER_BADGE[feverLv]}</div>}
         {combo >= 2 && (
           <div className="combo" key={combo}>
             <span className="num">{combo}</span>
@@ -328,12 +371,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
         </button>
       </div>
 
-      {fever && (
+      {feverLv > 0 && (
         <>
-          <div className="fever-frame" />
+          <div className={`fever-frame lv${feverLv}`} />
           <div className="fever-dancers">
-            {DANCERS.map((c, i) => (
-              <PixelMonkey key={c} char={c} mood="happy" size={34} anim="dance" style={{ animationDelay: `${i * 0.1}s` }} />
+            {(feverLv === 3 ? [...DANCERS, ...DANCERS] : DANCERS).map((c, i) => (
+              <PixelMonkey key={`${c}${i}`} char={c} mood="happy" size={34} anim="dance" style={{ animationDelay: `${i * 0.1}s` }} />
             ))}
           </div>
         </>
