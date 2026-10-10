@@ -22,6 +22,16 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
 - 3歳児が一目で分かる形を最優先（特徴を誇張してよい）。似たものと区別できる特徴を必ず入れる
 - 1ファイル 3KB 程度まで
 
+## 読み上げ音声（VOICEVOX:ずんだもん）
+- セリフ一覧は `scripts/voice_lines.py`、単語は wordlist から。`public/voice/*.mp3` と `src/data/voices.json` を生成
+- エンジン: `~/voicevox_engine/macos-arm64/run`（127.0.0.1:50021）を起動してから `python3 scripts/generate_voices.py`（不足分だけ作る）
+- 新しいセリフをコードで `speak()` するときは voice_lines.py にも追加して生成する（無いと端末の合成音声になる）
+- タイトル画面のクレジット「VOICEVOX:ずんだもん」は消さない（利用規約）
+
+## ゲームの流れ
+- 時間ゲージ制（60秒、出題・回答中だけ減る、正解で+3秒）。`?time=秒` でテスト用に短くできる
+- 0になったら ピピーッ →「しゅうりょうー！」→ 結果発表（けっかはっぴょうー！→せいかい数→れんぞく→バナナ）
+
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
 - コード変更後: `npm run check`（問題JSON再生成 + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
