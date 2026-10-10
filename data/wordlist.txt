@@ -289,8 +289,8 @@
 やもり | gecko | 3 |
 さんしょううお | giant salamander | 3 |
 うーぱーるーぱー | axolotl | 3 |
-とりけらとぷす | triceratops | 3 |
-ぷてらのどん | pteranodon | 3 |
+かものはし | platypus | 3 |
+えりまきとかげ | frilled-neck lizard | 3 |
 ばっふぁろー | bison | 3 | 🦬
 へらじか | moose | 3 |
 まんどりる | mandrill | 3 |
