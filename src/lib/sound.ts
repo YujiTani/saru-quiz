@@ -62,6 +62,26 @@ export const sfx = {
       tone(note(n - 12), s, d, 'triangle', 0.5)
     })
   },
+  /** 出題時の「じゃじゃーん」 */
+  jajan() {
+    tone(note(67), 0, 0.1, 'square', 0.5)
+    tone(note(72), 0.12, 0.35, 'square', 0.5)
+    tone(note(76), 0.12, 0.35, 'triangle', 0.5)
+  },
+  /** ボーナス（スロット風） */
+  bonus() {
+    for (let i = 0; i < 12; i++) tone(note(72 + (i % 4) * 4 + Math.floor(i / 4) * 2), i * 0.06, 0.08, 'square', 0.45)
+    tone(note(96), 0.75, 0.4, 'triangle', 0.6)
+  },
+  /** まちがい時の「ぽよよん」 */
+  boing() {
+    tone(260, 0.1, 0.18, 'sine', 0.8, 520)
+    tone(520, 0.28, 0.25, 'sine', 0.6, 200)
+  },
+  /** タップしたときの小さい音 */
+  sparkle() {
+    tone(note(96 + Math.floor(Math.random() * 5)), 0, 0.05, 'triangle', 0.15)
+  },
   drumroll(dur = 1.2) {
     for (let t = 0; t < dur; t += 0.05) tone(80 + Math.random() * 40, t, 0.04, 'sawtooth', 0.3)
   },

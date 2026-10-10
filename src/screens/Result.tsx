@@ -9,6 +9,7 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
   const [shown, setShown] = useState(0)
   const [done, setDone] = useState(false)
   const firstTry = result.answers.filter((a, i, arr) => a.ok && arr.findIndex((b) => b.id === a.id) === i).length
+  const perfect = result.answers.length > 0 && result.answers.every((a) => a.ok)
 
   useEffect(() => {
     let alive = true
@@ -28,7 +29,11 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
           sfx.fanfare()
           fountain('coin', 60)
           rain('confetti', 160)
-          void speak(`${firstTry}こ、せいかい！ よくできました！`)
+          if (perfect) {
+            rain('star', 120)
+            rain('banana', 30)
+            void speak('ぱーふぇくと！ ぜんぶ、せいかい！ すごーい！')
+          } else void speak(`${firstTry}こ、せいかい！ よくできました！`)
         }
       }, 60)
     }, 1200)
@@ -36,11 +41,11 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
       alive = false
       clearTimeout(start)
     }
-  }, [result, firstTry])
+  }, [result, firstTry, perfect])
 
   return (
     <div className="screen result">
-      <h2 className={`result-title ${done ? 'pop' : ''}`}>{done ? 'よくできました！' : 'けっか は…'}</h2>
+      <h2 className={`result-title ${done ? 'pop' : ''} ${done && perfect ? 'perfect' : ''}`}>{done ? (perfect ? 'ぱーふぇくと！' : 'よくできました！') : 'けっか は…'}</h2>
       <div className="result-monkeys">
         <PixelMonkey char="mandrill" mood="happy" size={64} anim={done ? 'dance' : 'idle'} />
         <PixelMonkey char="monchan" mood="happy" size={110} anim={done ? 'jump' : 'idle'} />

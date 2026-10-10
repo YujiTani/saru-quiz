@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MuteButton } from './components/MuteButton'
 import { PixelMonkey } from './components/PixelMonkey'
-import { attachEffects } from './lib/effects'
+import { attachEffects, burst } from './lib/effects'
 import { pickSession, type Question } from './lib/quiz'
 import { unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
@@ -21,6 +21,13 @@ export default function App() {
 
   useEffect(() => {
     if (fx.current) attachEffects(fx.current)
+    // どこをタップしてもキラキラ
+    const onDown = (e: PointerEvent) => {
+      burst(e.clientX, e.clientY, 'star', 7, 0.45)
+      sfx.sparkle()
+    }
+    addEventListener('pointerdown', onDown)
+    return () => removeEventListener('pointerdown', onDown)
   }, [])
 
   function startQuiz(level: number) {

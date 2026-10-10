@@ -156,6 +156,8 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .anim-jump { animation: jump 0.5s ease-out infinite alternate; }
 .anim-dance { animation: dance 0.6s steps(2) infinite; }
 .anim-fall { animation: fall 0.7s ease-out forwards; }
+.anim-slip { animation: slip 0.9s cubic-bezier(.3,.7,.4,1) forwards; }
+@keyframes slip { 0% { transform: none; } 25% { transform: translateX(10px) rotate(-20deg) translateY(-24px); } 55% { transform: translateX(14px) rotate(-200deg) translateY(-30px); } 80% { transform: translateX(16px) rotate(-340deg) translateY(4px); } 100% { transform: translateX(16px) rotate(-360deg) translateY(6px) scaleY(.9); } }
 @keyframes idle { 50% { transform: translateY(-3px); } }
 @keyframes jump { from { transform: translateY(0) scaleY(0.9); } to { transform: translateY(-26px) scaleY(1.05); } }
 @keyframes dance { 0% { transform: rotate(-10deg) translateY(0); } 100% { transform: rotate(10deg) translateY(-8px); } }
@@ -234,7 +236,7 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .picture .emoji { font-size: min(32dvh, 60vw); line-height: 1; }
 .picture.correct { animation: bounce-card 0.5s; border-color: #ff9d00; }
 .picture.wrong { animation: shake-x 0.4s; }
-@keyframes picture-in { from { transform: scale(0.2) rotate(-12deg); opacity: 0; } }
+@keyframes picture-in { 0% { transform: perspective(600px) rotateY(180deg) scale(0.4); opacity: 0; } 60% { transform: perspective(600px) rotateY(-12deg) scale(1.05); opacity: 1; } 100% { transform: none; } }
 @keyframes bounce-card { 40% { transform: scale(1.08) rotate(2deg); } }
 @keyframes shake-x { 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 
@@ -354,6 +356,7 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 @keyframes shake-b { 10%, 50%, 90% { transform: translate(-10px, 6px) rotate(-1deg); } 30%, 70% { transform: translate(10px, -6px) rotate(1deg); } }
 
 @media (prefers-reduced-motion: reduce) {
+  .sunburst, .picture.bonus::after { animation: none; }
   body.fever::before { animation: none; }
   #flash.on { animation: none; }
 }
@@ -379,3 +382,78 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
   line-height: 1;
 }
 .mute-btn.is-muted { background: #ffd0d8; }
+
+/* ---------- もっと楽しい演出 ---------- */
+.picture-wrap { position: relative; flex: 1; min-height: 0; width: 100%; max-height: 40dvh; display: flex; }
+.picture-wrap .picture { flex: 1; max-height: none; position: relative; z-index: 1; }
+.sunburst {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 180vmax; height: 180vmax;
+  margin: -90vmax 0 0 -90vmax;
+  background: repeating-conic-gradient(rgba(255, 228, 90, 0.55) 0 10deg, transparent 10deg 20deg);
+  border-radius: 50%;
+  mask-image: radial-gradient(circle, #000 18%, transparent 45%);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 45%);
+  animation: spin 6s linear infinite, fade-in 0.3s;
+  pointer-events: none;
+  z-index: 0;
+}
+.sunburst.gold { background: repeating-conic-gradient(rgba(255, 196, 0, 0.8) 0 8deg, rgba(255, 255, 255, 0.5) 8deg 16deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade-in { from { opacity: 0; } }
+.stamp {
+  position: absolute;
+  left: 50%; top: 50%;
+  z-index: 3;
+  font-size: 54px;
+  white-space: nowrap;
+  color: #ff3a5a;
+  background: #fff;
+  border: 6px solid #ff3a5a;
+  border-radius: 20px;
+  padding: 2px 18px;
+  box-shadow: 0 6px 0 var(--ink);
+  pointer-events: none;
+  animation: stamp 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+@keyframes stamp { 0% { transform: translate(-50%, -50%) scale(3) rotate(-30deg); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1) rotate(-12deg); opacity: 1; } }
+.picture.bonus { border-color: #e8a80a; box-shadow: 0 8px 0 var(--ink), 0 0 0 8px #ffd21c, 0 0 30px 10px rgba(255, 210, 28, 0.8); background: #fff8d8; }
+.picture.bonus::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.8) 45%, transparent 60%);
+  background-size: 250% 100%;
+  animation: shimmer 1.6s linear infinite;
+  pointer-events: none;
+}
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+.banner.bonus { color: #ffd21c; font-size: 76px; }
+.host-monkey { position: relative; }
+.peel { position: absolute; left: 30px; bottom: -6px; font-size: 30px; animation: peel 0.6s ease-out; }
+@keyframes peel { from { transform: translateX(-60px) rotate(-90deg); opacity: 0; } }
+.peeker {
+  position: fixed;
+  right: -10px;
+  bottom: 22%;
+  z-index: 21;
+  pointer-events: none;
+  animation: peek 1.8s ease-in-out forwards;
+}
+@keyframes peek {
+  0% { transform: translateX(130px) rotate(-20deg); }
+  20%, 75% { transform: translateX(10px) rotate(-12deg); }
+  35%, 55% { transform: translateX(0) rotate(-6deg) translateY(-14px); }
+  100% { transform: translateX(130px) rotate(-20deg); }
+}
+.result-title.perfect {
+  background: linear-gradient(90deg, #ff4f9a, #ffd400, #3ee07a, #38b6ff, #a066ff, #ff4f9a);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(3px 3px 0 var(--ink));
+  font-size: 46px;
+  animation: pop 0.5s, rainbow-text 2s linear infinite;
+}

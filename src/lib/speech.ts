@@ -29,7 +29,7 @@ export function stopSpeaking() {
 }
 
 /** 読み終わったら resolve。端末によって onend が来ないことがあるので時間で打ち切る */
-export function speak(text: string, { rate = 0.9, pitch = 1.25 } = {}): Promise<void> {
+export function speak(text: string, { rate = 0.95, pitch = 1.08 } = {}): Promise<void> {
   // ミュート中も画面の進行テンポは保つため、読み上げ相当の時間だけ待つ
   if (isMuted() || !('speechSynthesis' in window)) return new Promise((r) => setTimeout(r, 300 + text.length * 120))
   return new Promise((resolve) => {

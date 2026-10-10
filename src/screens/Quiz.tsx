@@ -9,10 +9,11 @@ import type { CharId, Mood } from '../sprites/monkeys'
 export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[] }
 
 type Phase = 'reading' | 'answering' | 'correct' | 'wrong'
-type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' }
+type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' }
 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
 const SESSION_EXTRA = 3 // まちがえた問題をもう一度出す上限
+const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow']
 
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
   const [queue, setQueue] = useState(questions)
@@ -31,6 +32,10 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const [fever, setFever] = useState(false)
   const [helper, setHelper] = useState<CharId | null>(null)
   const [bubble, setBubble] = useState('これ なあに？')
+  const [peeker, setPeeker] = useState<{ char: CharId; key: number } | null>(null)
+  // 1回の中でときどき「ボーナス問題」（金色・バナナ3ばい）
+  const bonusAt = useRef(Math.random() < 0.7 ? 2 + Math.floor(Math.random() * Math.max(1, questions.length - 2)) : -1)
+  const isBonus = index === bonusAt.current
   const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[], retried: 0 })
   const token = useRef(0) // 読み上げ途中で次へ進んだとき、古い非同期処理を止める
 
@@ -41,8 +46,15 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     setPicked(null)
     setSelected(null)
     setBubble('これ なあに？')
+    const bonus = index === bonusAt.current
+    if (bonus) {
+      setBanner({ text: 'ぼーなす！', kind: 'bonus', key: Date.now() })
+      setTimeout(() => setBanner(null), 1600)
+      sfx.bonus()
+      rain('star', 40)
+    } else sfx.jajan()
     ;(async () => {
-      await wait(350)
+      await wait(bonus ? 1500 : 450)
       await speak('これ、なあに？')
       for (let i = 0; i < round.choices.length; i++) {
         if (token.current !== my) return
@@ -100,7 +112,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
     if (choice === q.a) {
       const c = combo + 1
-      const add = 10 * (1 + Math.floor(c / 3))
+      const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1)
       setCombo(c)
       setCoins((v) => v + add)
       setGain({ n: add, key: Date.now() })
@@ -122,6 +134,15 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       }
       if (c === 8) celebrate('でんせつ！', 'legend', 'rainbow', x, y)
       if (c > 5 && c !== 8) rain('banana', 6)
+      if (isBonus) {
+        fountain('coin', 50)
+        sfx.bonus()
+      }
+      // ときどき別のおさるが顔を出してよろこぶ
+      if (c !== 3 && c !== 5 && c !== 8 && Math.random() < 0.6) {
+        setPeeker({ char: PEEKERS[(Math.random() * PEEKERS.length) | 0], key: Date.now() })
+        setTimeout(() => setPeeker(null), 1800)
+      }
 
       ;(async () => {
         await speak(`せいかい！ ${q.a}！`)
@@ -135,6 +156,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       setPhase('wrong')
       setBubble('おしい！')
       sfx.wrong()
+      sfx.boing()
       shake('small')
       // まちがえた問題は最後にもう一度
       if (stats.current.retried < SESSION_EXTRA) {
@@ -200,7 +222,10 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
       <div className="stage">
         <div className="host">
-          <PixelMonkey char={fever ? 'rainbow' : 'monchan'} mood={mood} size={84} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'fall' : 'idle'} />
+          <div className="host-monkey">
+            <PixelMonkey char={fever ? 'rainbow' : 'monchan'} mood={mood} size={84} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
+            {phase === 'wrong' && <span className="peel">🍌</span>}
+          </div>
           <div className={`bubble ${phase}`}>{bubble}</div>
         </div>
         {combo >= 2 && (
@@ -211,8 +236,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
         )}
       </div>
 
-      <div className={`picture ${phase}`} key={q.id + index}>
-        {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
+      <div className="picture-wrap">
+        {phase === 'correct' && <div className={`sunburst ${isBonus ? 'gold' : ''}`} />}
+        <div className={`picture ${phase} ${isBonus ? 'bonus' : ''}`} key={q.id + index}>
+          {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
+        </div>
+        {phase === 'correct' && <div className="stamp">せいかい！</div>}
       </div>
 
       <div className="choices">
@@ -244,6 +273,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
           {banner.text}
         </div>
       )}
+      {peeker && <PixelMonkey key={peeker.key} char={peeker.char} mood="happy" size={110} anim="none" className="peeker" />}
       {helper && <PixelMonkey key={helper} char={helper} mood="happy" size={120} anim="none" className="helper" />}
     </div>
   )
