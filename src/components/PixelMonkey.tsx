@@ -9,7 +9,7 @@ export function PixelMonkey({ char = 'monchan', mood = 'normal', size = 96, anim
       alt=""
       draggable={false}
       className={`pixel monkey anim-${anim} ${className}`}
-      style={{ width: size, height: (size * 18) / 16, ...style }}
+      style={{ width: size, height: 'auto', ...style }}
     />
   )
 }
