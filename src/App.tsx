@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MuteButton } from './components/MuteButton'
 import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects } from './lib/effects'
 import { pickSession, type Question } from './lib/quiz'
@@ -63,6 +64,7 @@ export default function App() {
       {screen.name === 'result' && (
         <Result result={screen.result} totalCoins={data.coins} onAgain={() => startQuiz(screen.level)} onHome={() => setScreen({ name: 'title' })} />
       )}
+      <MuteButton />
       <canvas ref={fx} className="fx" />
       <div id="flash" />
     </>

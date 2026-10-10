@@ -1,4 +1,6 @@
 // ファミコン風の効果音を WebAudio で合成（音声ファイル不要）
+import { isMuted, onMutedChange } from './settings'
+
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 
@@ -8,7 +10,8 @@ export function unlockAudio() {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     ctx = new AC()
     master = ctx.createGain()
-    master.gain.value = 0.25
+    master.gain.value = isMuted() ? 0 : 0.25
+    onMutedChange((m) => master && (master.gain.value = m ? 0 : 0.25))
     master.connect(ctx.destination)
   }
   if (ctx.state === 'suspended') void ctx.resume()

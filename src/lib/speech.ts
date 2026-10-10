@@ -1,4 +1,6 @@
 // 日本語の読み上げ（端末の標準合成音声）。のちに親の録音で差し替える予定
+import { isMuted, onMutedChange } from './settings'
+
 let voice: SpeechSynthesisVoice | null = null
 
 function pickVoice() {
@@ -20,13 +22,16 @@ export function unlockSpeech() {
   speechSynthesis.speak(u)
 }
 
+onMutedChange((m) => m && stopSpeaking())
+
 export function stopSpeaking() {
   if ('speechSynthesis' in window) speechSynthesis.cancel()
 }
 
 /** 読み終わったら resolve。端末によって onend が来ないことがあるので時間で打ち切る */
 export function speak(text: string, { rate = 0.9, pitch = 1.25 } = {}): Promise<void> {
-  if (!('speechSynthesis' in window)) return Promise.resolve()
+  // ミュート中も画面の進行テンポは保つため、読み上げ相当の時間だけ待つ
+  if (isMuted() || !('speechSynthesis' in window)) return new Promise((r) => setTimeout(r, 300 + text.length * 120))
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'ja-JP'
