@@ -1,18 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
+import { Band } from '../components/Band'
 import { PixelMonkey } from '../components/PixelMonkey'
+import { Road } from '../components/Road'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { now } from '../lib/day'
 import type { Save } from '../lib/storage'
-import { chooseUgoku, chooseZukkoke, layer, makeCtx, peekaboo, play, unlockCtx } from '../shows'
+import { chooseShow, chooseUgoku, chooseZukkoke, layer, makeCtx, peekaboo, play, reachFor, shouldAnnounce, themeOf, unlockCtx } from '../shows'
+import { songOf } from '../lib/bgm'
+import { getMotion } from '../lib/settings'
+import { getCurrent } from '../lib/players'
+import { startParam } from '../lib/testflags'
 import { COURSE, makeRound, type Question, type Round } from '../lib/quiz'
-import { sfx } from '../lib/sound'
+import { pauseBgm, resumeBgm, setBgmKey, setBgmLevel, sfx, startBgm, stopBgm } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
 
 export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[]; cleared: boolean; clearMs?: number }
 
 type Phase = 'reading' | 'answering' | 'correct' | 'wrong' | 'end'
-type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' | 'end' | 'clear' }
+type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' | 'end' | 'clear' | 'reach' }
 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
 const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow', 'sora', 'mint', 'choco']
@@ -39,6 +45,10 @@ const TIME_OVERRIDE = Number(new URLSearchParams(location.search).get('time')) |
 const GOAL_OVERRIDE = Number(new URLSearchParams(location.search).get('goal')) || 0
 const TIME_BONUS = 3_000 // 正解で +3秒
 const TIME_PENALTY = 3_000 // まちがいで -3秒
+// テスト用に ?start=数 で せいかい数を その数から始められる（みちのり・リーチの確認用）
+const START_CORRECT = startParam()
+// 画面のふちで息を止めて見ているおさる（のこり3・2・1問で 3・4・5匹）
+const CROWD: CharId[] = ['mandrill', 'sora', 'orangutan', 'mint', 'gorilla']
 const TICK = 100
 // のこり5秒からは時間の進みを半分に（5→0 を 実際は10秒かけて大きくカウントする）
 const COUNTDOWN_MS = 5_000
@@ -59,6 +69,21 @@ function FeverRing({ level }: { level: number }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/** のこりわずか: 画面の下のふちで、ほっぺをふくらませて息を止めるおさる。クリアで「ぷはーっ！」 */
+function ReachCrowd({ n, puha, motion }: { n: number; puha: boolean; motion: number }) {
+  if (n <= 0) return null
+  return (
+    <div className={`reach-crowd ${motion > 0 ? '' : 'still'} ${puha ? 'puha' : ''}`} aria-hidden>
+      {CROWD.slice(0, n).map((c, i) => (
+        <div key={c} className="reach-mk" style={{ animationDelay: `${i * 0.13}s` }}>
+          <PixelMonkey char={c} mood={puha ? 'happy' : 'normal'} size={34} anim={puha && motion > 0 ? 'jump' : 'none'} className="reach-img" style={{ animationDelay: `${i * 0.13}s` }} />
+        </div>
+      ))}
+      {puha && <div className="reach-puha">ぷはーっ！</div>}
     </div>
   )
 }
@@ -100,11 +125,48 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
   const [timeGain, setTimeGain] = useState<{ key: number; plus: boolean } | null>(null)
   // ときどき「ボーナス問題」（金色・バナナ3ばい）。最初の2問は普通
   const [isBonus, setIsBonus] = useState(false)
-  const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
+  const stats = useRef({ correct: START_CORRECT, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
   const token = useRef(0) // 読み上げ途中で次へ進んだとき、古い非同期処理を止める
   // 演出の解放状況（遊び始めの時点のもの）と、直前に使ったずっこけ
   const unlock = useRef(unlockCtx(save, now()))
   const lastZukkoke = useRef<string | undefined>(undefined)
+  // みちのりと BGM の曲は遊び始めに選ぶ。動きの強さも遊び始めのもの
+  const [theme] = useState(() => themeOf(chooseShow('michi', save.shows.pick, unlock.current).id))
+  const [song] = useState(() => songOf(chooseShow('ongaku', save.shows.pick, unlock.current).id))
+  const motion = useRef(getMotion()).current
+  const char = getCurrent()?.char ?? 'monchan'
+  // クリアまでの進み具合 E と、のこり問題数（リーチ）
+  const [correctN, setCorrectN] = useState(START_CORRECT)
+  const E = Math.min(1, correctN / GOAL)
+  const remaining = GOAL - correctN
+  const reach = reachFor(remaining)
+  const crowdN = useRef(0)
+  if (reach.crowd > 0) crowdN.current = reach.crowd
+  const [puha, setPuha] = useState(false)
+  const [big, setBig] = useState(false) // ラスト: 問題の絵を少し大きく
+  const reachDone = useRef(new Set<number>()) // お知らせを出したのこり数（1回だけ）
+
+  // ふだんのBGM（おさるバンド）。E で楽器とテンポが変わり、リーチで半音上がる
+  useEffect(() => {
+    startBgm(song, E)
+    return () => stopBgm()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    setBgmLevel(E)
+    setBgmKey(reach.keyUp)
+  }, [E, reach.keyUp])
+
+  /** のこり3問・1問のお知らせ（バナナ・ドラムロール・読み上げ）。出したのこり数は覚えておく */
+  async function announceReach(rem: number, my: number) {
+    const a = reachFor(rem).announce
+    if (!a) return
+    setBanner({ text: a.banner, kind: 'reach', key: Date.now() })
+    setTimeout(() => setBanner(null), 1800)
+    if (a.drumroll) sfx.drumroll(0.9)
+    await speak(a.speech)
+    if (token.current === my) reachDone.current.add(rem)
+  }
 
   // 問題が変わったら「じゃじゃーん」→「これなあに？」→ 選択肢を順番に読み上げ
   useEffect(() => {
@@ -114,6 +176,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     setPicked(null)
     setSelected(null)
     setBubble('これ なあに？')
+    setBig(reachFor(GOAL - stats.current.correct).bigPic)
     preloadSpeech(round.choices)
     const bonus = index >= 2 && Math.random() < 0.15
     setIsBonus(bonus)
@@ -126,6 +189,10 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     } else sfx.jajan()
     ;(async () => {
       if (bonus) await speak('ぼーなす！')
+      // ?goal=3 のように はじめから のこりわずかなら、最初の問題の前にお知らせ
+      const rem = GOAL - stats.current.correct
+      if (index === 0 && shouldAnnounce(rem, reachDone.current)) await announceReach(rem, my)
+      if (token.current !== my) return
       await wait(250)
       await speak('これ、なあに？')
       for (let i = 0; i < round.choices.length; i++) {
@@ -165,8 +232,10 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     if (feverLv === 0) {
       sfx.stopFever()
       prevGroup.current = 0
+      resumeBgm() // フィーバーが終わったら ふだんのBGMにもどる
       return
     }
+    pauseBgm() // フィーバー中は フィーバーの曲だけ
     document.body.classList.add('fever')
     if (feverLv > 1) document.body.classList.add(`fever-${feverLv}`)
     // 背景の虹のまわる速さ（レベルが高いほど速い）
@@ -236,6 +305,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     setPicked(choice)
     const q = round.q
     const [x, y] = center(el)
+    const myToken = token.current
 
     if (choice === q.a) {
       const c = combo + 1
@@ -251,6 +321,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       setTimeLeft(timeRef.current)
       setTimeGain({ key: Date.now(), plus: true })
       stats.current.correct++
+      setCorrectN(stats.current.correct)
       // 決まった問題数に届いたらクリア（クリアタイムは実際にかかった時間）
       const clearMs = stats.current.correct >= GOAL ? Math.round(performance.now() - startedAt.current) : null
       stats.current.bestCombo = Math.max(stats.current.bestCombo, c)
@@ -259,6 +330,11 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       let shout = PRAISE[(Math.random() * PRAISE.length) | 0]
       setBubble(shout)
 
+      if (clearMs !== null) {
+        // ためていた息を「ぷはーっ！」
+        setPuha(true)
+        setTimeout(() => sfx.puha(), 250)
+      }
       sfx.correct(c)
       sfx.coinCascade(Math.min(4 + c, 14))
       if (c >= 2) sfx.comboUp(c)
@@ -281,8 +357,11 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       ;(async () => {
         await speak(levelUp ? [shout, q.a, levelUp] : [shout, q.a])
         await wait(350)
-        if (clearMs !== null) clearGame(clearMs)
-        else next()
+        if (clearMs !== null) return clearGame(clearMs)
+        // のこり3問・1問になったら、お知らせしてから次の問題へ
+        const rem = GOAL - stats.current.correct
+        if (shouldAnnounce(rem, reachDone.current)) await announceReach(rem, myToken)
+        if (token.current === myToken) next()
       })()
     } else {
       setCombo(0)
@@ -352,6 +431,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     token.current++
     stopSpeaking()
     setHeatBoth(0)
+    stopBgm()
     setBanner({ text: 'しゅうりょうー！', kind: 'end', key: Date.now() })
     sfx.whistle()
     void speak('しゅうりょうー！')
@@ -367,6 +447,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     token.current++
     stopSpeaking()
     setHeatBoth(0)
+    stopBgm()
     setBanner({ text: 'くりあー！', kind: 'clear', key: Date.now() })
     sfx.fanfare()
     fountain('coin', 80)
@@ -411,6 +492,8 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
         </div>
       </header>
 
+      <Road correct={correctN} goal={GOAL} theme={theme} char={char} motion={motion} />
+
       {countdown > 0 && (
         <div className="countdown" aria-live="assertive">
           <span key={countdown}>{countdown}</span>
@@ -424,6 +507,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
           </div>
           <div className={`bubble ${phase}`}>{bubble}</div>
         </div>
+        <Band E={E} motion={motion} />
         {feverLv > 0 && <div className={`fever-badge lv${feverLv}`}>{FEVER_BADGE[feverLv]}</div>}
         {combo >= 2 && (
           <div className="combo" key={combo}>
@@ -433,7 +517,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
         )}
       </div>
 
-      <div className="picture-wrap">
+      <div className={`picture-wrap ${big ? 'big' : ''}`}>
         {phase === 'correct' && <div className={`sunburst ${isBonus ? 'gold' : ''}`} />}
         <div className={`picture ${phase} ${isBonus ? 'bonus' : ''}`} key={q.id + index}>
           {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
@@ -471,6 +555,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
           <FeverRing level={feverLv} />
         </>
       )}
+      <ReachCrowd n={phase === 'end' && !puha ? 0 : reach.crowd > 0 ? reach.crowd : puha ? crowdN.current : 0} puha={puha} motion={motion} />
       {banner && (
         <div className={`banner ${banner.kind}`} key={banner.key}>
           {banner.text}

@@ -49,6 +49,7 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
   - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
   - `?show=<id>` `?demo` 保存もランキングへの送信もしない
   - `?cat=カテゴリ名` そのカテゴリだけ出題（保存もランキングもなし）
+  - `?start=数` せいかい数をその数から始める（みちのり・リーチの確認用。記録しない）
   - `?time=秒` `?goal=問題数` は今までどおり（これらは記録する）
 - 進捗の更新は `src/lib/progress.ts` の `applyResult`（純粋）。単語の箱（☆・くもり）は `src/lib/leitner.ts`。日付は `src/lib/day.ts`（テストでは `setNow`）
 - ヘッドレスChromeは `~/.cache/saru-quiz/` にある（`scripts/browser.mjs`）
@@ -58,8 +59,12 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
 - 選び方: `pickShow(cat, save.shows.pick, u, rng, avoid)`（固定 / おまかせ / 直前を避ける）、うごくえは `ugokuFor(カテゴリ名, u)`。`?show=<id>` はそのカテゴリの演出を必ずその id にする（`index.ts` の `chooseUgoku` / `chooseZukkoke`）
 - 再生は `play(show, makeCtx({...}))`。DOM のアニメは `ctx.layer`（`layer.ts`。`#show-layer`、z-index 25）に置き、`layer.go(el, keyframes, opts)`（Web Animations）で動かす。`clear()` で片づけ、次の問題に入る前に Quiz が呼ぶ。clear 後は古い演出が何も置けない
 - 動きの強さ（設定 0〜1）は `effects.setMotion`。0 のときは粒子が最大4個・画面ゆれとフラッシュなしで、`layer.go` が「ふわっと光って消えるだけ」にする。1つ増やしたら `MOTION=0 node scripts/show_shots.mjs <id>` でも見る
-- 目で確かめる: `node scripts/show_shots.mjs [id…]`（うごくえ=正解、ずっこけ=まちがい。`.smoke/shows/`）
+- 目で確かめる: `node scripts/show_shots.mjs [id…]`（うごくえ=正解、ずっこけ=まちがい。ほかに `peekaboo` `michi-…`（4種×E=0/0.5/0.9・橋・どうくつ）`reach-…` `band-…`。`.smoke/shows/`）。`node scripts/contact_sheet.mjs 出力.png [--w 幅 --from 割合 --top 割合] 画像…` で1枚に並べて見る
 - 新しいうごくえ・ずっこけは、1秒に3回以上光らせない・痛い／こわい表現にしない
+- **みちのり**（`components/Road.tsx`、演出 `michi:jungle|umi|okashi|uchu`、`shows/michi.ts`）: クイズの上の道。せいかい数 ÷ クリア数 = E で おさる（`getCurrent().char`）が歩き、空は `skyStage(E)`（朝 <0.25 / 昼 <0.55 / 夕焼け <0.85 / 夜）。1/3 に川と橋（通ると ゆれる）、2/3 にどうくつ（「やっほー」2回）。夜はホタル・流れ星。見た目は theme で切りかえ、`play` は何もしない。動きの強さ 0 は 跳ねない・ホタル/流れ星/泡なし（`.road.still`）
+- **リーチ**（`shows/reach.ts` の `reachFor(のこり)`）: のこり3問で「あと3もん！」＋ドラムロール＋BGM半音上げ＋画面下のふちにおさる3〜5匹（`.reach-crowd`、ほっぺをふくらませて息を止める）、のこり1問で「ラスト！」＋絵1.06倍、クリアの正解で「ぷはーっ！」。お知らせは `shouldAnnounce` で1回だけ（`?goal=3` は最初に1回）。お知らせの読み上げは、ほかの読み上げと重ならないよう Quiz の流れの中（正解の読み上げのあと／最初の問題の前）に入れる
+- **おさるバンド**（BGM）: 曲・楽器・テンポは `lib/bgm.ts`（純粋。`layersAt(E)` `bpmAt(E)` `SONGS`。旋律はオリジナル、楽譜は `'C5:2 E5 - Am:4'` の書式）、鳴らすのは `sound.ts` の `startBgm(song, E)` / `setBgmLevel(E)` / `setBgmKey(半音)` / `pauseBgm` / `resumeBgm` / `stopBgm` / `duckBgm`（先読みの予約。BGMは効果音の 0.4 倍の音量）。楽器は たいこ → ベース(E≥.2) → マリンバ(.4) → ラッパ(.6) → コーラス(.8)、テンポは 100→124 BPM。読み上げ中は `speech.ts` が BGM を半分に（`speak` の前後。重なっても全部終わるまで）。フィーバーに入ったら `pauseBgm`、終わったら `resumeBgm`、終了・クリア・画面を離れたら `stopBgm`。曲は演出 `ongaku:march|matsuri|omocha|komoriuta`。`components/Band.tsx` が、楽器が加わるたびに おさるを1匹ずつ足す
+- みちのり・おんがくは 遊び始めに `chooseShow(cat, pick, 解放)` で選ぶ（`?show=<id>` で固定できる）。新しい曲・道は `bgm.ts` / `michi.ts`＋`ongaku.ts` に足して、`registry.test.ts` 系のテストも直す
 
 ## 演出の約束（子ども向けの安全）
 - フラッシュは1回ずつ・ゆっくり消す（1秒に3回以上点滅させない）

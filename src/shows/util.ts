@@ -14,6 +14,12 @@ export function hostRect(ctx: ShowCtx): DOMRect {
   return ctx.host?.getBoundingClientRect() ?? new DOMRect(30, 110, 60, 70)
 }
 
+/** 司会のおさるの「ふきだし」のすぐ右（「おしい！」などの吹き出しと重ならない場所）。ここに出す吹き出しの中心 */
+export function besideHost(ctx: ShowCtx, gap = 70): { x: number; y: number } {
+  const r = ctx.host?.parentElement?.getBoundingClientRect() ?? new DOMRect(16, 110, 190, 70)
+  return { x: r.right + gap, y: r.top + r.height * 0.4 }
+}
+
 /** 司会のおさる本体の画像（回したりするときはこちらを動かす） */
 export const monkeyOf = (ctx: ShowCtx): Element | null => ctx.host?.querySelector('img.monkey') ?? ctx.host
 

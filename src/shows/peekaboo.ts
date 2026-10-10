@@ -1,6 +1,6 @@
 // いないいない…ばあ！ 正解の絵が、おさるの後ろから大きくなりながら出てくる
 import type { ShowCtx } from './types'
-import { bubbleText, centerOf, ease, hostRect, track, wait, withClone } from './util'
+import { besideHost, bubbleText, centerOf, ease, hostRect, track, wait, withClone } from './util'
 
 export async function peekaboo(ctx: ShowCtx): Promise<void> {
   const host = ctx.host
@@ -15,8 +15,10 @@ export async function peekaboo(ctx: ShowCtx): Promise<void> {
     const dx = h.left + h.width / 2 - me.x
     const dy = h.top + h.height / 2 - me.y
     c.style.opacity = '0'
-    await bubbleText(ctx, 'いない いない…', h.left + h.width + 56, h.top - 6, 650)
-    void bubbleText(ctx, 'ばあ！', h.left + h.width + 40, h.top - 6, 900)
+    // 「おしい！」の吹き出し（.host の中）の右に出す。重ならない
+    const side = besideHost(ctx)
+    await bubbleText(ctx, 'いない いない…', side.x, side.y, 650)
+    void bubbleText(ctx, 'ばあ！', side.x, side.y, 900)
     await ctx.layer.go(
       c,
       track(30, (t) => {

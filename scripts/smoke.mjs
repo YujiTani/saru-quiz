@@ -3,6 +3,7 @@
 //  2. クリア: ?goal=3 で3問正解 →「くりあー！」→ クリアタイムつきの結果
 //  3. 解放: かんたんクリアで ふつうが あそべる / せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう・うごきの つよさ
 //  4. 演出: ?show=ugoku:norimono で正解、?show=zukkoke:hakushon でまちがい（9-*.png）
+//  5. みちのり（E=0 / 0.5 / 0.9）・おさるバンド・リーチ（?goal=3 で 画面のふちのおさる → ぷはーっ！）（10-*.png）
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -117,9 +118,20 @@ try {
   await start(page, '?goal=3&time=60')
   await page.click('.level-btn')
   await sleep(1200)
+  // ?goal=3 は はじめから のこり3問 → リーチ（バナー「あと3もん！」と、画面のふちで息をとめるおさる）
+  if (!(await page.$('.road'))) errors.push('みちのりが出ていません')
+  if (!(await page.$('.reach-crowd'))) errors.push('?goal=3 なのに リーチのおさる（.reach-crowd）が出ていません')
+  if (!(await page.$('.banner.reach'))) errors.push('?goal=3 なのに「あと3もん！」のバナーが出ていません')
+  if ((await page.$$('.reach-crowd .reach-mk')).length !== 3) errors.push('のこり3問なのに おさるが3匹ではありません')
+  await page.screenshot({ path: `${OUT}/5-reach.png` })
   for (let i = 0; i < 3; i++) {
+    if (i === 2 && !(await page.$('.picture-wrap.big'))) errors.push('ラスト（のこり1問）で絵が大きくなっていません')
     await answer(page, i)
     await sleep(400)
+    if (i === 2) {
+      if (!(await page.$('.reach-puha'))) errors.push('クリアの正解で「ぷはーっ！」が出ていません')
+      await page.screenshot({ path: `${OUT}/5-puha.png` })
+    }
     if (i < 2) await page.waitForFunction(() => !document.querySelector('.choice.is-answer'), { timeout: 20000 })
   }
   await page.waitForSelector('.banner.clear', { timeout: 20000 })
@@ -239,6 +251,39 @@ try {
   await sleep(700)
   await page.screenshot({ path: `${OUT}/9-peekaboo.png` })
   console.log('5b. ずっこけ: OK')
+
+  // 6. みちのり（E=0 / 0.5 / 0.9）と おさるバンド（?start= で せいかい数を決めて始める。記録はされない）
+  const E_SHOTS = [[0, 'e0'], [10, 'e50'], [18, 'e90']]
+  for (const [n, name] of E_SHOTS) {
+    await start(page, `?goal=20&start=${n}&cat=どうぶつ&time=60`)
+    await page.click('.level-btn')
+    await sleep(1500)
+    await page.screenshot({ path: `${OUT}/10-michi-${name}.png` })
+    const sky = await page.$eval('.road', (el) => el.className)
+    const want = { e0: 'sky-morning', e50: 'sky-day', e90: 'sky-night' }[name]
+    if (!sky.includes(want)) errors.push(`みちのりの空が ${want} ではありません（${sky}）`)
+    const bands = (await page.$$('.band-mk')).length
+    const wantBands = { e0: 1, e50: 3, e90: 5 }[name]
+    if (bands !== wantBands) errors.push(`E=${name} の おさるバンドが ${wantBands}匹ではなく ${bands}匹です`)
+    const crowd = (await page.$$('.reach-crowd .reach-mk')).length
+    const wantCrowd = name === 'e90' ? 4 : 0 // のこり2問は4匹、それより前は出さない
+    if (crowd !== wantCrowd) errors.push(`のこり${20 - n}問の リーチのおさるが ${wantCrowd}匹ではなく ${crowd}匹です`)
+    const flies = (await page.$$('.road-firefly')).length
+    if ((name === 'e90') !== (flies > 0)) errors.push(`ホタルの出かたがおかしい（${name}: ${flies}）`)
+  }
+  console.log('6a. みちのり・おさるバンド: OK')
+
+  // 動きの強さ 0: ホタル・流れ星は出さず、おさるは跳ねず、リーチのおさるはぷるぷるしない
+  await page.evaluate(() => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: 0 })))
+  await start(page, '?goal=20&start=18&cat=どうぶつ&time=60')
+  await page.click('.level-btn')
+  await sleep(1500)
+  if (await page.$('.road-firefly, .road-meteor')) errors.push('動きの強さ 0 なのに ホタル・流れ星が出ています')
+  if (!(await page.$('.road.still'))) errors.push('動きの強さ 0 の みちのりに still が付いていません')
+  if (!(await page.$('.reach-crowd.still'))) errors.push('動きの強さ 0 の リーチのおさるに still が付いていません')
+  await page.screenshot({ path: `${OUT}/10-motion0.png` })
+  await page.evaluate(() => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: 1 })))
+  console.log('6b. 動きの強さ0: OK')
 } finally {
   await browser.close()
   await server.close()

@@ -937,3 +937,128 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
   .countdown span { animation: none; }
 }
 .player-edit .settings-title { font-size: 30px; text-align: center; }
+
+/* ---------- みちのり（クイズの上の道） ---------- */
+.road {
+  --sky1: #9fdcff; --sky2: #fff0c4;
+  --ground: #5db85b; --path: #dcb277; --river: #4aa8ff; --cave: #4a3328;
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: 50px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--ink);
+  overflow: hidden;
+  background: var(--sky2);
+}
+.road-sky { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky1), var(--sky2)); opacity: 0; transition: opacity 1.4s ease; }
+.road-sky.on { opacity: 1; }
+.road.still .road-sky { transition: none; }
+/* 空の色: テーマ × 朝・昼・夕焼け・夜 */
+.th-jungle .s-morning { --sky1: #9fdcff; --sky2: #fff0c4; }
+.th-jungle .s-day { --sky1: #4fc0ff; --sky2: #c2edff; }
+.th-jungle .s-evening { --sky1: #ff8a50; --sky2: #ffd18c; }
+.th-jungle .s-night { --sky1: #151a48; --sky2: #3b3470; }
+.th-umi { --ground: #ecd9a0; --path: #f8ecc4; --river: #7fe0c0; --cave: #1c3550; }
+.th-umi .s-morning { --sky1: #6fd8e0; --sky2: #c4f2ff; }
+.th-umi .s-day { --sky1: #2f9fe0; --sky2: #86d6f6; }
+.th-umi .s-evening { --sky1: #2a6fa5; --sky2: #9a92d4; }
+.th-umi .s-night { --sky1: #082654; --sky2: #17488a; }
+.th-okashi { --ground: #e9a3c3; --path: #fff1f7; --river: #ff7ab0; --cave: #7a4a3a; }
+.th-okashi .s-morning { --sky1: #ffd0e8; --sky2: #fff1d8; }
+.th-okashi .s-day { --sky1: #ffb0d8; --sky2: #ffe5f2; }
+.th-okashi .s-evening { --sky1: #ff94bc; --sky2: #ffcc9c; }
+.th-okashi .s-night { --sky1: #4f2462; --sky2: #9a4a88; }
+.th-uchu { --ground: #4a4a74; --path: #8888bb; --river: #8a6aff; --cave: #34345e; }
+.th-uchu .s-morning { --sky1: #0a0a24; --sky2: #1c1c4a; }
+.th-uchu .s-day { --sky1: #0c0c2e; --sky2: #26205a; }
+.th-uchu .s-evening { --sky1: #1a0c3a; --sky2: #4a2060; }
+.th-uchu .s-night { --sky1: #02020e; --sky2: #0e0a2a; }
+
+.road-stars {
+  position: absolute; inset: 0 0 12px;
+  background-image: radial-gradient(#fff 1px, transparent 1.6px), radial-gradient(#ffe9a0 1px, transparent 1.6px);
+  background-size: 34px 22px, 51px 31px;
+  background-position: 4px 5px, 19px 13px;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.road-stars.on { opacity: 0.85; }
+.road.still .road-stars { transition: none; }
+.road-sun { position: absolute; top: 4px; width: 13px; height: 13px; margin-left: -6px; border-radius: 50%; background: #fff3a0; box-shadow: 0 0 0 2px #ffd84a; transition: left 0.6s ease-out; }
+.road.still .road-sun { transition: none; }
+.road-sun.evening { background: #ffb060; box-shadow: 0 0 0 2px #ff8a40; top: 14px; }
+.road-sun.night { background: #fffbe8; box-shadow: inset -3px -2px 0 #d8d4b8; top: 5px; }
+.th-umi .road-sun, .th-uchu .road-sun { display: none; }
+.road-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 13px; background: var(--ground); border-top: 3px solid rgba(43, 26, 46, 0.55); }
+.road-ground::after { content: ''; position: absolute; left: 0; right: 0; top: 2px; height: 5px; background: var(--path); border-radius: 3px; }
+.road-decor { position: absolute; bottom: 9px; line-height: 1; transform: translateX(-50%); }
+.road-decor.in-sky { bottom: auto; top: 6px; opacity: 0.9; }
+.road-start { position: absolute; left: 2%; bottom: 9px; font-size: 15px; line-height: 1; }
+.road-river { position: absolute; bottom: 0; width: 24px; height: 13px; margin-left: -12px; background: repeating-linear-gradient(90deg, var(--river) 0 6px, color-mix(in srgb, var(--river) 70%, #fff) 6px 9px); border-left: 2px solid rgba(43, 26, 46, 0.55); border-right: 2px solid rgba(43, 26, 46, 0.55); z-index: 1; }
+.road-bridge { position: absolute; bottom: 8px; width: 34px; height: 9px; margin-left: -17px; background: #b4803c; border: 2px solid var(--ink); border-radius: 4px 4px 2px 2px; z-index: 2; transform-origin: 50% 100%; }
+.road-bridge::before, .road-bridge::after { content: ''; position: absolute; top: -7px; width: 3px; height: 7px; background: var(--ink); }
+.road-bridge::before { left: 2px; }
+.road-bridge::after { right: 2px; }
+.road-bridge.swing { animation: bridge-swing 0.9s ease-in-out 0.45s 2; }
+@keyframes bridge-swing { 25% { transform: rotate(3.5deg); } 75% { transform: rotate(-3.5deg); } }
+.road-cave { position: absolute; bottom: 9px; width: 28px; height: 20px; margin-left: -14px; background: var(--cave); border: 2px solid var(--ink); border-bottom: none; border-radius: 14px 14px 0 0; z-index: 1; box-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.35); }
+.road-echo { position: absolute; top: 1px; z-index: 5; width: 0; }
+.road-echo span { position: absolute; left: 0; top: 0; padding: 0 5px; border: 2px solid var(--ink); border-radius: 9px; background: #fff; font-size: 11px; line-height: 15px; white-space: nowrap; opacity: 0; transform: translateX(-50%); }
+.road-echo .e1 { animation: echo-1 0.9s ease-out 0.45s forwards; }
+.road-echo .e2 { font-size: 8px; line-height: 11px; padding: 0 3px; border-width: 1.5px; margin-left: 24px; top: 2px; animation: echo-2 0.9s ease-out 1.15s forwards; }
+@keyframes echo-1 { 0% { opacity: 0; transform: translateX(-50%) scale(0.5); } 20%, 75% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) scale(1); } }
+@keyframes echo-2 { 0% { opacity: 0; transform: translateX(-50%) scale(0.5); } 20%, 75% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) scale(1); } }
+.road-echo.still span { animation-name: echo-fade; }
+@keyframes echo-fade { 0% { opacity: 0; } 20%, 75% { opacity: 1; } 100% { opacity: 0; } }
+.road-goal { position: absolute; right: 2%; bottom: 5px; z-index: 3; line-height: 1; }
+.goal-tree { font-size: 34px; display: block; }
+.goal-banana { position: absolute; left: -6px; bottom: 1px; font-size: 15px; }
+.road-char { position: absolute; bottom: 8px; width: 25px; margin-left: -12px; z-index: 4; transition: left 0.6s ease-in-out; }
+.road.still .road-char { transition: none; }
+.road-hop { animation: road-hop 0.6s ease-in-out; }
+@keyframes road-hop { 40% { transform: translateY(-14px); } 60% { transform: translateY(-14px); } }
+/* 夜: ホタルは ゆっくり（1回の明滅が 3秒ほど）、流れ星は 8秒に1回 */
+.road-firefly { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #e8ff7a; box-shadow: 0 0 6px 2px rgba(232, 255, 122, 0.7); z-index: 3; animation: firefly 3.2s ease-in-out infinite; }
+.road-firefly.f1 { left: 18%; top: 22px; }
+.road-firefly.f2 { left: 41%; top: 12px; animation-delay: -1s; animation-duration: 3.6s; }
+.road-firefly.f3 { left: 63%; top: 24px; animation-delay: -2s; animation-duration: 3s; }
+.road-firefly.f4 { left: 82%; top: 14px; animation-delay: -0.5s; animation-duration: 3.4s; }
+@keyframes firefly { 0%, 100% { opacity: 0.15; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(4px, -3px); } }
+.road-meteor { position: absolute; left: 70%; top: 3px; width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff); opacity: 0; z-index: 3; transform: rotate(28deg); animation: meteor 8s linear infinite; }
+@keyframes meteor { 0% { opacity: 0; transform: translate(0, 0) rotate(28deg); } 2% { opacity: 1; } 9% { opacity: 0; transform: translate(-70px, 32px) rotate(28deg); } 100% { opacity: 0; } }
+.road-bubble { position: absolute; bottom: 14px; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.9); animation: bubble-up 2.7s ease-in infinite; }
+.road.still .road-bubble { animation: none; bottom: 22px; }
+@keyframes bubble-up { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-28px); opacity: 0; } }
+
+/* ---------- おさるバンド（楽器が加わるたびに1匹ずつ） ---------- */
+.band { position: absolute; right: 0; bottom: 0; display: flex; gap: 2px; align-items: flex-end; pointer-events: none; z-index: 0; transform-origin: right bottom; }
+.stage .host { position: relative; z-index: 1; }
+/* れんぞく表示が出ているあいだは、おさるバンドは その左に寄って すこし小さく */
+.stage:has(.combo) .band { right: 92px; scale: 0.8; }
+.band-mk { position: relative; width: 26px; }
+.band-mk.pop { animation: band-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.band-emoji { position: absolute; right: -4px; bottom: -2px; font-size: 13px; line-height: 1; }
+@keyframes band-pop { 0% { transform: translateY(30px) scale(0.3); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- リーチ（のこりわずか） ---------- */
+.banner.reach { font-size: min(58px, 14vw); color: #ff9a2a; white-space: nowrap; }
+.picture-wrap .picture { transition: scale 0.4s ease-out; }
+.picture-wrap.big .picture { scale: 1.06; }
+.quiz .choices { position: relative; z-index: 3; }
+.reach-crowd { position: fixed; left: 0; right: 0; bottom: 0; height: 30px; display: flex; justify-content: space-evenly; align-items: flex-end; pointer-events: none; z-index: 4; overflow: visible; }
+.reach-mk { position: relative; width: 34px; height: 30px; overflow: hidden; animation: reach-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) backwards; }
+.reach-mk .reach-img { position: absolute; left: 0; top: 6px; transform-origin: 50% 70%; animation: puff 1.8s ease-in-out infinite; }
+/* ふくらんだほっぺ */
+.reach-mk::before, .reach-mk::after { content: ''; position: absolute; top: 17px; width: 9px; height: 9px; border-radius: 50%; background: #ffb0bf; z-index: 1; animation: puff-cheek 1.8s ease-in-out infinite; }
+.reach-mk::before { left: 1px; }
+.reach-mk::after { right: 1px; }
+.reach-crowd.puha .reach-mk { overflow: visible; }
+.reach-crowd.puha .reach-mk::before, .reach-crowd.puha .reach-mk::after { display: none; }
+.reach-crowd.puha .reach-mk .reach-img { animation: none; }
+.reach-crowd.still .reach-mk, .reach-crowd.still .reach-img, .reach-crowd.still .reach-mk::before, .reach-crowd.still .reach-mk::after { animation: none; }
+.reach-puha { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); padding: 4px 16px; border: 3px solid var(--ink); border-radius: 18px; background: #fff; font-size: 26px; white-space: nowrap; box-shadow: 0 3px 0 var(--ink); animation: pop 0.45s; }
+@keyframes puff { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.08, 0.96); } }
+@keyframes puff-cheek { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+@keyframes reach-pop { from { transform: translateY(30px); } }
