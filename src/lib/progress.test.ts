@@ -17,6 +17,7 @@ const res = (answers: [string, boolean][], extra: Partial<QuizResult> = {}): Qui
   bestCombo: 3,
   answers: answers.map(([id, ok]) => ({ id, ok })),
   cleared: false,
+  happenings: [],
   ...extra,
 })
 

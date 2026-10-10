@@ -1,7 +1,7 @@
 // 図鑑の「ためす」とプレゼントの再生。小さなクイズの舞台（司会のおさる・絵のカード）に演出を1回だけ流す
 import { songOf } from '../lib/bgm'
 import { allQuestions, playable, type Question } from '../lib/quiz'
-import { setBgmLevel, startBgm, stopBgm } from '../lib/sound'
+import { sfx, setBgmLevel, startBgm, stopBgm } from '../lib/sound'
 import { makeCtx, play } from './index'
 import type { Show } from './types'
 import { wait } from './util'
@@ -33,7 +33,14 @@ export const sampleToday = (): Question[] => withArt(playable.filter((q) => q.c 
 export type Cancel = { cancelled: boolean }
 export type PreviewEls = { host: HTMLElement | null; pic: HTMLElement | null }
 /** E: みちのり・おんがくの進み具合（舞台が Road や おさるバンドの表示に使う）、GOAL: みちのりの1周のこたえ数 */
-export type PreviewHooks = { setE?: (E: number) => void }
+export type PreviewHooks = {
+  setE?: (E: number) => void
+  /** おうえんの舞台の観客（E・正解した単語・正解の数）。null で消す */
+  setCheer?: (c: { E: number; words: Question[]; correct: number } | null) => void
+}
+
+const CHEER_STEPS = 8
+const CHEER_MS = 650
 
 export const ROAD_GOAL = 20
 const ROAD_MS = 6000
@@ -72,6 +79,22 @@ export async function runPreview(show: Show, els: PreviewEls, word: Question, ho
       }
     } finally {
       stopBgm()
+    }
+    return
+  }
+  if (show.cat === 'ouen') {
+    // おうえん: 正解が進むようすを見せる（E が 0 → 1。1つ正解するたびに なかまが加わる・ことりは音階が上がる）
+    const words = sampleToday()
+    try {
+      for (let i = 0; i < CHEER_STEPS && !cancel.cancelled; i++) {
+        hooks.setCheer?.({ E: i / (CHEER_STEPS - 1), words: words.slice(0, i + 1), correct: i + 1 })
+        if (show.id === 'ouen:kotori') sfx.chirp(i)
+        else if (show.id === 'ouen:nakama') sfx.sparkle()
+        await wait(CHEER_MS)
+      }
+      if (!cancel.cancelled) await wait(1200)
+    } finally {
+      hooks.setCheer?.(null)
     }
     return
   }

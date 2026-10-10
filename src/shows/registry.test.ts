@@ -66,7 +66,7 @@ describe('isUnlocked / ownedIn', () => {
     expect(ids(ownedIn('zukkoke', u0)).sort()).toEqual(['zukkoke:hakushon', 'zukkoke:slip'])
     expect(ids(ownedIn('zukkoke', withU({ playDays: 9 })))).toHaveLength(6)
     expect(ids(ownedIn('zukkoke', withU({ playDays: 12 })))).toHaveLength(8)
-    expect(ownedIn('ouen', u0)).toEqual([])
+    expect(ownedIn('happening', u0)).toEqual([]) // ハプニングは「見たら」（seen）で決まるので、解放条件では持てない
   })
 })
 
@@ -94,7 +94,7 @@ describe('pickShow', () => {
   })
 
   it('持っているものがなければ undefined', () => {
-    expect(pickShow('ouen', {}, u0, () => 0)).toBeUndefined()
+    expect(pickShow('happening', {}, u0, () => 0)).toBeUndefined()
   })
 
   it('ずっこけは直前と同じものが続かない', () => {

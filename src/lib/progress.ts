@@ -2,6 +2,7 @@
 import { dayKey } from './day'
 import { stageUp } from './banana'
 import { grantShows } from '../shows/book'
+import { getShow } from '../shows/registry'
 import { unlockCtx } from '../shows/unlock'
 import { applyAnswer, migrate } from './leitner'
 import { stickerComplete, stickerKind } from './stickers'
@@ -123,9 +124,19 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
     ...(review ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
   }
   events.bananaUp = stageUp(save.coins, next.coins)
+  // ハプニング: 見たものを seen に記録する（はじめて見たときだけ。時刻は変えない）。先に入れておくと、手に入れた判定（seen で決まる）が新しいものを拾える
+  const seen = { ...save.shows.seen }
+  const foundNow: string[] = []
+  for (const id of result.happenings ?? []) {
+    if (seen[id] !== undefined || getShow(id)?.cat !== 'happening') continue
+    seen[id] = nowMs
+    foundNow.push(id)
+  }
+  next.shows = { ...save.shows, seen }
   // えんしゅつ図鑑: 前と後で比べて、新しく手に入れたものを記録する（はじめから持っているものも まとめて記録）
   const g = grantShows(save.shows.got, unlockCtx(save, nowMs), unlockCtx(next, nowMs), nowMs)
-  next.shows = { ...save.shows, got: g.got }
-  events.newShows = g.newShows
+  next.shows = { ...next.shows, got: g.got }
+  // プレゼントは 3つまでなので、今 みつけたばかりのハプニングを先頭に（子どもが たった今 出会ったもの）
+  events.newShows = [...g.newShows.filter((id) => foundNow.includes(id)), ...g.newShows.filter((id) => !foundNow.includes(id))]
   return { save: next, events }
 }

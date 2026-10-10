@@ -7,7 +7,9 @@ import { stopBgm } from '../lib/sound'
 import { layer, themeOf, type Show } from '../shows'
 import { ROAD_GOAL, previewWord, runPreview, type Cancel } from '../shows/preview'
 import { wait } from '../shows/util'
+import type { Question } from '../lib/quiz'
 import { Band } from './Band'
+import { Cheer } from './Cheer'
 import { PixelMonkey } from './PixelMonkey'
 import { Road } from './Road'
 
@@ -28,6 +30,7 @@ export function ShowStage({ show, run, onDone, className = '' }: Props) {
   const picRef = useRef<HTMLDivElement>(null)
   const [E, setE] = useState(0)
   const [bubble, setBubble] = useState(IDLE)
+  const [cheer, setCheer] = useState<{ E: number; words: Question[]; correct: number } | null>(null)
   const motion = getMotion()
   const char = getCurrent()?.char ?? 'monchan'
   const word = useMemo(() => previewWord(show, run), [show, run])
@@ -40,11 +43,12 @@ export function ShowStage({ show, run, onDone, className = '' }: Props) {
     const cancel: Cancel = { cancelled: false }
     layer.clear()
     setE(0)
+    setCheer(null)
     setBubble(show.cat === 'zukkoke' ? 'おしい！' : show.cat === 'ugoku' ? 'せいかい！' : IDLE)
     void (async () => {
       await wait(show.cat === 'michi' || show.cat === 'ongaku' ? 150 : 600) // カードが入ってくる動きが終わってから
       if (cancel.cancelled) return
-      await runPreview(show, { host: hostRef.current, pic: picRef.current }, word, { setE }, cancel)
+      await runPreview(show, { host: hostRef.current, pic: picRef.current }, word, { setE, setCheer }, cancel)
       if (cancel.cancelled) return
       layer.clear() // 「ふせ」のまま残った おさるの傾きなどを もどす
       setBubble(IDLE)
@@ -81,6 +85,7 @@ export function ShowStage({ show, run, onDone, className = '' }: Props) {
           <div className="picture" ref={picRef} key={word.id}>
             {word.img ? <img src={word.img} alt="" draggable={false} /> : <span className="emoji">{word.e}</span>}
           </div>
+          {cheer && show && <Cheer id={show.id} E={cheer.E} motion={motion} words={cheer.words} correct={cheer.correct} />}
         </div>
       )}
     </div>
