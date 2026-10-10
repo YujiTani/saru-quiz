@@ -6,3 +6,4 @@ assets_raw
 .sheets
 .env.local
 supabase/.temp
+.vitest

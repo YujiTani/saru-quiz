@@ -1,4 +1,6 @@
+import { BananaPile } from '../components/BananaPile'
 import { PixelMonkey } from '../components/PixelMonkey'
+import { bananaStage } from '../lib/banana'
 import { getPlayers, MAX_PLAYERS, type Player } from '../lib/players'
 import { sfx } from '../lib/sound'
 
@@ -13,15 +15,18 @@ const UNLOCK_ALL = new URLSearchParams(location.search).get('unlock') === 'all'
 type Props = {
   player: Player
   onStart: (level: number) => void
+  onReview: () => void
   onSettings: () => void
   onRanking: () => void
+  onDiary: () => void
+  onBook: () => void
   onSwitch: (id: string) => void
   onNewPlayer: () => void
 }
 
 /** タイトル（メニュー）。選んでいるキャラの見た目・なまえ・色で表示が変わる */
-export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewPlayer }: Props) {
-  const { cleared, coins } = player.save
+export function Title({ player, onStart, onReview, onSettings, onRanking, onDiary, onBook, onSwitch, onNewPlayer }: Props) {
+  const { cleared, coins, review, stickers } = player.save
   // ひとつ前のコースをクリアすると解放。むずかしいは解放されるまで出さない
   const open = (level: number) => UNLOCK_ALL || level === 1 || cleared.includes(level - 1)
   const levels = LEVELS.filter((l) => l.level < 3 || open(l.level))
@@ -30,11 +35,11 @@ export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewP
   return (
     <div className="screen title" style={{ '--theme': player.color } as React.CSSProperties}>
       <div className="title-top">
-        <div className="title-btns">
-          <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
-          <button className="gear-btn" onClick={() => { sfx.tap(); onRanking() }} aria-label="らんきんぐ">🏆</button>
+        <div className="coin-row">
+          {/* ためたバナナの合計が「もの」の大きさで分かる（バナナのやま） */}
+          <BananaPile stage={bananaStage(coins)} size={52} className="pile-mini" />
+          <div className="coin-badge">🍌 {coins}</div>
         </div>
-        <div className="coin-badge">🍌 {coins}</div>
       </div>
       <h1 className="logo small">
         <span>おさるの</span>
@@ -43,7 +48,7 @@ export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewP
       </h1>
 
       <div className="player-hero">
-        <PixelMonkey key={player.id} char={player.char} mood="happy" size={88} anim="jump" />
+        <PixelMonkey key={player.id} char={player.char} mood="happy" size={80} anim="jump" />
         <span className="player-plate big">{player.name}</span>
       </div>
 
@@ -95,6 +100,34 @@ export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewP
             </button>
           ),
         )}
+      </div>
+
+      {/* まるいアイコンボタンの1行: ふくしゅう（まちがえた単語がたまっていたら）・えにっき（シールの枚数つき）・ずかん・らんきんぐ・せってい */}
+      <div className="icon-row">
+        {review.length > 0 && (
+          <button className="icon-btn review-btn" onClick={() => { sfx.tap(); onReview() }} aria-label={`ふくしゅう ${review.length}もん`}>
+            <span className="ic">🔁</span>
+            <span className="lb">ふくしゅう</span>
+            <span className="n">{review.length}</span>
+          </button>
+        )}
+        <button className="icon-btn diary-btn" onClick={() => { sfx.tap(); onDiary() }} aria-label="えにっき">
+          <span className="ic">📔</span>
+          <span className="lb">えにっき</span>
+          {stickers > 0 && <span className="n sticker-n">{stickers}</span>}
+        </button>
+        <button className="icon-btn book-btn" onClick={() => { sfx.tap(); onBook() }} aria-label="ずかん">
+          <span className="ic">🎁</span>
+          <span className="lb">ずかん</span>
+        </button>
+        <button className="icon-btn gear-btn rank-btn" onClick={() => { sfx.tap(); onRanking() }} aria-label="らんきんぐ">
+          <span className="ic">🏆</span>
+          <span className="lb">らんきんぐ</span>
+        </button>
+        <button className="icon-btn gear-btn settings-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">
+          <span className="ic">⚙️</span>
+          <span className="lb">せってい</span>
+        </button>
       </div>
       <p className="credit">VOICEVOX:ずんだもん / 四国めたん / 春日部つむぎ / もち子(cv 明日葉よもぎ) / ナースロボ＿タイプＴ</p>
     </div>

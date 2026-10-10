@@ -1,6 +1,6 @@
 // 読み上げ。VOICEVOX で作った声（設定で選んだ1人）を鳴らし、無いセリフは端末の合成音声で読む
 import { getVoice, getVolume, isMuted, onSettingsChange, type VoiceId } from './settings'
-import { playVoice, preloadVoice, stopVoice } from './sound'
+import { duckBgm, playVoice, preloadVoice, stopVoice } from './sound'
 
 // 声ごとのセリフ一覧（テキスト → mp3 のパス）。選んだ声のぶんだけ読み込む
 const manifests = import.meta.glob<Record<string, string>>('../data/voices/*.json', { import: 'default' })
@@ -89,6 +89,8 @@ export function unlockSpeech() {
 onSettingsChange(() => isMuted() && stopSpeaking())
 
 let speakToken = 0
+// 読み上げのあいだは BGM を小さくする（読み上げが重なっても、全部おわるまで小さいまま）
+let speaking = 0
 
 export function stopSpeaking() {
   speakToken++
@@ -100,12 +102,17 @@ export function stopSpeaking() {
 export async function speak(text: string | string[], opts?: { rate?: number; pitch?: number }): Promise<void> {
   const parts = Array.isArray(text) ? text : [text]
   const my = ++speakToken
-  await ready // 声を切り替えた直後でも、新しい声で読む
-  for (const part of parts) {
-    if (my !== speakToken) return
-    if (!isMuted() && VOICE[part] && (await playVoice(VOICE[part]))) continue
-    if (my !== speakToken) return
-    await speakTTS(part, opts)
+  if (speaking++ === 0) duckBgm(true)
+  try {
+    await ready // 声を切り替えた直後でも、新しい声で読む
+    for (const part of parts) {
+      if (my !== speakToken) return
+      if (!isMuted() && VOICE[part] && (await playVoice(VOICE[part]))) continue
+      if (my !== speakToken) return
+      await speakTTS(part, opts)
+    }
+  } finally {
+    if (--speaking === 0) duckBgm(false)
   }
 }
 

@@ -1,7 +1,7 @@
 // プレイヤー（キャラ）。1台の端末で3人まで作れて、タイトルで切り替える
 // キャラごとに分けるもの: なまえ・見た目・色・ランキングのID・バナナ・コース解放・問題ごとの記録
 import type { CharId } from '../sprites/monkeys'
-import { emptySave, loadOldSave, type Save } from './storage'
+import { emptySave, loadOldSave, normalizeSave, type Save } from './storage'
 
 const KEY = 'saru-quiz/players'
 const OLD_SETTINGS_KEY = 'saru-quiz/settings'
@@ -31,7 +31,7 @@ function load(): Store {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const s = JSON.parse(raw) as Store
-      s.list = s.list.map((p) => ({ ...p, save: { ...emptySave(), ...p.save } }))
+      s.list = s.list.map((p) => ({ ...p, save: normalizeSave(p.save) }))
       return s
     }
     // 前のバージョン（1人ぶん）のデータがあれば 1人目のキャラに引き継ぐ。ランキングのIDも同じものを使う

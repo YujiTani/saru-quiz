@@ -11,7 +11,11 @@ export const VOICES = [
 ] as const
 export type VoiceId = (typeof VOICES)[number]['id']
 
-type Settings = { muted: boolean; volume: number; voice: VoiceId }
+// motion: 動きの強さ 0〜1。さわるまでは未保存で、端末の「視差効果を減らす」設定に合わせる
+type Settings = { muted: boolean; volume: number; voice: VoiceId; motion?: number }
+
+/** 端末が「視差効果を減らす」ならゼロ、そうでなければ最大 */
+const defaultMotion = () => (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1)
 
 // 前のバージョンの項目（playerName / playerId）は キャラへの引き継ぎ用に消さずに残す
 let rest: Record<string, unknown> = {}
@@ -21,9 +25,10 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
-      const { muted, volume, voice, ...others } = JSON.parse(raw)
+      const { muted, volume, voice, motion, ...others } = JSON.parse(raw)
       rest = others
       Object.assign(def, { muted: muted ?? def.muted, volume: volume ?? def.volume, voice: voice ?? def.voice })
+      if (typeof motion === 'number') def.motion = Math.max(0, Math.min(1, motion))
     }
     else def.muted = localStorage.getItem(OLD_MUTED_KEY) === '1' // 前のバージョンのミュート設定を引き継ぐ
   } catch {
@@ -56,6 +61,7 @@ export function onSettingsChange(f: () => void) {
 export const isMuted = () => state.muted
 export const getVolume = () => state.volume
 export const getVoice = () => state.voice
+export const getMotion = () => state.motion ?? defaultMotion()
 
 export function setMuted(m: boolean) {
   state.muted = m
@@ -63,6 +69,10 @@ export function setMuted(m: boolean) {
 }
 export function setVolume(v: number) {
   state.volume = Math.max(0, Math.min(1, v))
+  save()
+}
+export function setMotion(m: number) {
+  state.motion = Math.max(0, Math.min(1, Math.round(m * 10) / 10))
   save()
 }
 export function setVoice(v: VoiceId) {

@@ -1,10 +1,14 @@
 // ファミコン風の効果音を WebAudio で合成（音声ファイル不要）
 import { getVolume, isMuted, onSettingsChange } from './settings'
+import { bpmAt, layersAt, stepSec, type Song, type Step } from './bgm'
+import { PHRASES, type Instrument } from './instruments'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let voiceGain: GainNode | null = null
 let voiceSrc: AudioBufferSourceNode | null = null
+// BGM用の音量の出口（効果音より かなり小さい）。読み上げ中はさらに下げる
+let bgmBus: GainNode | null = null
 const buffers = new Map<string, Promise<AudioBuffer>>()
 
 /** iOS はユーザー操作の中で一度鳴らさないと音が出ないので、最初のタップで呼ぶ */
@@ -14,6 +18,9 @@ export function unlockAudio() {
     ctx = new AC()
     master = ctx.createGain()
     voiceGain = ctx.createGain()
+    bgmBus = ctx.createGain()
+    bgmBus.gain.value = BGM_VOLUME
+    bgmBus.connect(master)
     applyVolume()
     onSettingsChange(applyVolume)
     master.connect(ctx.destination)
@@ -132,7 +139,7 @@ export function stopVoice() {
   voiceSrc = null
 }
 
-function tone(freq: number, start: number, dur: number, type: OscillatorType = 'square', vol = 1, slideTo?: number) {
+function tone(freq: number, start: number, dur: number, type: OscillatorType = 'square', vol = 1, slideTo?: number, out?: AudioNode | null) {
   if (!ctx || !master) return
   const t = ctx.currentTime + start
   const osc = ctx.createOscillator()
@@ -142,7 +149,7 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
   if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t + dur)
   g.gain.setValueAtTime(vol, t)
   g.gain.exponentialRampToValueAtTime(0.001, t + dur)
-  osc.connect(g).connect(master)
+  osc.connect(g).connect(out ?? master)
   osc.start(t)
   osc.stop(t + dur + 0.02)
 }
@@ -151,7 +158,7 @@ const note = (n: number) => 440 * Math.pow(2, (n - 69) / 12) // MIDI番号 → H
 
 let noiseBuf: AudioBuffer | null = null
 /** ノイズ（シュッ・ドラム用） */
-function noise(start: number, dur: number, vol = 0.5, from = 800, to = 8000, type: BiquadFilterType = 'bandpass') {
+function noise(start: number, dur: number, vol = 0.5, from = 800, to = 8000, type: BiquadFilterType = 'bandpass', out?: AudioNode | null) {
   if (!ctx || !master) return
   if (!noiseBuf) {
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
@@ -168,9 +175,129 @@ function noise(start: number, dur: number, vol = 0.5, from = 800, to = 8000, typ
   const g = ctx.createGain()
   g.gain.setValueAtTime(vol, t)
   g.gain.exponentialRampToValueAtTime(0.001, t + dur)
-  src.connect(f).connect(g).connect(master)
+  src.connect(f).connect(g).connect(out ?? master)
   src.start(t)
   src.stop(t + dur + 0.02)
+}
+
+// ---- ふだんのBGM（おさるバンド）----
+// 曲のデータと「どの楽器をいつ鳴らすか」は bgm.ts。ここは WebAudio で ファミコン風の音にして、少し先まで予約していく
+const BGM_VOLUME = 0.4 // 効果音（master）に対する大きさ
+let bgm: { song: Song; step: number; next: number; timer: ReturnType<typeof setInterval> } | null = null
+let bgmPaused = false
+let bgmLevel = 0
+let bgmKey = 0
+let bgmDucked = false
+
+const hz = (n: number) => note(n + bgmKey)
+
+/** 立ち上がりのある音（コーラス・ラッパ用）。dur 秒で消える */
+function voice(freq: number, start: number, dur: number, type: OscillatorType, vol: number, attack = 0.03) {
+  if (!ctx || !bgmBus) return
+  const t = ctx.currentTime + start
+  const osc = ctx.createOscillator()
+  const g = ctx.createGain()
+  osc.type = type
+  osc.frequency.setValueAtTime(freq, t)
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(vol, t + Math.min(attack, dur / 2))
+  g.gain.setValueAtTime(vol, t + Math.max(attack, dur - 0.08))
+  g.gain.linearRampToValueAtTime(0.0001, t + dur)
+  osc.connect(g).connect(bgmBus)
+  osc.start(t)
+  osc.stop(t + dur + 0.02)
+}
+
+/** 1ステップぶんを鳴らす。at は 今から何秒後か */
+function playStep(song: Song, i: number, at: number, sec: number) {
+  const on = layersAt(bgmLevel)
+  const stac = song.staccato ? 0.5 : 0.9
+  // たいこ: キック・ハイハット（おまつりは どん・かっ）
+  const bar = song.drums[Math.floor(i / song.barSteps) % song.drums.length]
+  const d = bar[i % song.barSteps]
+  if (d === 'K') tone(150, at, 0.14, 'sine', 0.9, 45, bgmBus)
+  else if (d === 'h') noise(at, 0.03, 0.22, 7000, 9000, 'highpass', bgmBus)
+  else if (d === 'd') tone(120, at, 0.2, 'sine', 1, 55, bgmBus)
+  else if (d === 'k') noise(at, 0.06, 0.4, 1800, 900, 'bandpass', bgmBus)
+  const pick = (t: Step[]) => t[i % t.length]
+  const b = on.includes('bass') ? pick(song.bass) : null
+  if (b) b.n.forEach((n) => tone(hz(n), at, Math.min(b.len * sec * stac, 0.9), 'triangle', 0.7, undefined, bgmBus))
+  // マリンバ風: ぽこっとした音＋高い倍音
+  const m = on.includes('marimba') ? pick(song.marimba) : null
+  if (m)
+    m.n.forEach((n) => {
+      tone(hz(n), at, 0.28, 'sine', 0.4, undefined, bgmBus)
+      tone(hz(n) * 4, at, 0.07, 'sine', 0.12, undefined, bgmBus)
+    })
+  // ラッパ風のメロディ
+  const l = on.includes('lead') ? pick(song.lead) : null
+  if (l) l.n.forEach((n) => voice(hz(n), at, Math.max(0.08, l.len * sec * (song.staccato ? 0.45 : 0.92)), 'sawtooth', 0.15, 0.015))
+  // コーラス: やわらかい矩形波の和音
+  const c = on.includes('choir') ? pick(song.choir) : null
+  if (c) c.n.forEach((n) => voice(hz(n), at, c.len * sec * 0.95, 'square', 0.055, 0.12))
+}
+
+function bgmTick() {
+  if (!ctx || !bgm || bgmPaused) return
+  const sec = stepSec(bpmAt(bgmLevel, bgm.song.bpmScale))
+  if (bgm.next < ctx.currentTime - 0.05) bgm.next = ctx.currentTime + 0.05 // 止まっていたあとは追いかけない
+  while (bgm.next < ctx.currentTime + 0.2) {
+    playStep(bgm.song, bgm.step % bgm.song.steps, Math.max(0, bgm.next - ctx.currentTime), stepSec(bpmAt(bgmLevel, bgm.song.bpmScale)))
+    bgm.next += sec
+    bgm.step++
+  }
+}
+
+const applyDuck = () => {
+  if (!ctx || !bgmBus) return
+  bgmBus.gain.cancelScheduledValues(ctx.currentTime)
+  bgmBus.gain.linearRampToValueAtTime(bgmDucked ? BGM_VOLUME * 0.5 : BGM_VOLUME, ctx.currentTime + 0.15)
+}
+
+/** ふだんのBGMをはじめる。E（0〜1）は楽器の数とテンポ */
+export function startBgm(song: Song, E = 0) {
+  stopBgm()
+  if (!ctx) return
+  bgmLevel = E
+  bgmKey = 0
+  bgmPaused = false
+  bgm = { song, step: 0, next: ctx.currentTime + 0.1, timer: setInterval(bgmTick, 40) }
+  applyDuck()
+  bgmTick()
+}
+
+/** クリアまでの進み具合 E。楽器が増え、テンポが上がる */
+export function setBgmLevel(E: number) {
+  bgmLevel = E
+}
+
+/** 半音いくつ上げるか（リーチで +1） */
+export function setBgmKey(semitones: number) {
+  bgmKey = semitones
+}
+
+/** ひとやすみ（フィーバー中）。resumeBgm で つづきから */
+export function pauseBgm() {
+  bgmPaused = true
+}
+
+export function resumeBgm() {
+  if (!bgm || !bgmPaused) return
+  bgmPaused = false
+  if (ctx) bgm.next = ctx.currentTime + 0.1
+}
+
+export function stopBgm() {
+  if (bgm) clearInterval(bgm.timer)
+  bgm = null
+  bgmPaused = false
+  bgmKey = 0
+}
+
+/** 読み上げのあいだ BGM の音量を半分にする */
+export function duckBgm(on: boolean) {
+  bgmDucked = on
+  applyDuck()
 }
 
 // ---- フィーバー中のBGM（150BPMのチップチューン） ----
@@ -326,5 +453,112 @@ export const sfx = {
   },
   drumroll(dur = 1.2) {
     for (let t = 0; t < dur; t += 0.05) tone(80 + Math.random() * 40, t, 0.04, 'sawtooth', 0.3)
+  },
+  /** のりものの「ブーン」（エンジンがだんだん高くなって遠ざかる） */
+  vroom() {
+    tone(70, 0, 0.5, 'sawtooth', 0.5, 190)
+    tone(140, 0.45, 0.5, 'sawtooth', 0.4, 520)
+    tone(520, 0.9, 0.4, 'sawtooth', 0.25, 220)
+    noise(0.1, 0.9, 0.35, 300, 1800, 'lowpass')
+  },
+  /** 「ぱくっ」（かじる音） */
+  munch() {
+    tone(220, 0, 0.07, 'square', 0.5, 120)
+    noise(0.02, 0.09, 0.55, 3000, 900)
+    tone(180, 0.1, 0.06, 'triangle', 0.5, 110)
+  },
+  /** 「はくしょん！」（息をすって、ぷしゅっ） */
+  achoo() {
+    tone(500, 0, 0.35, 'sine', 0.4, 900)
+    noise(0.38, 0.25, 0.7, 6000, 800)
+    tone(300, 0.38, 0.2, 'triangle', 0.6, 120)
+  },
+  /** 「ぷはーっ」（ためていた息をはく） */
+  puha() {
+    noise(0, 0.6, 0.45, 3500, 700, 'bandpass')
+    tone(330, 0, 0.4, 'sine', 0.3, 520)
+  },
+  /** カメラの「カシャッ」（シャッター。やさしい音） */
+  shutter() {
+    noise(0, 0.05, 0.4, 5000, 2500, 'bandpass')
+    noise(0.07, 0.07, 0.35, 3500, 1800, 'bandpass')
+    tone(1800, 0, 0.04, 'square', 0.18)
+  },
+  /** シールが「ぺたっ」と貼られる */
+  paste() {
+    tone(180, 0, 0.09, 'sine', 0.7, 90)
+    noise(0, 0.05, 0.3, 1200, 600, 'lowpass')
+  },
+  /** うごくえ「がっき」: 楽器の短いフレーズ（たいこ ドンドン / ぴあの ドレミ / らっぱ パパーン / すず シャンシャン / 木琴） */
+  instrument(kind: Instrument) {
+    for (const p of PHRASES[kind]) {
+      if (kind === 'drum') {
+        tone(150, p.t, p.len, 'sine', 0.9, 55)
+        noise(p.t, 0.05, 0.22, 1500, 600, 'bandpass')
+      } else if (kind === 'piano') {
+        tone(note(p.n), p.t, p.len, 'triangle', 0.55)
+        tone(note(p.n + 12), p.t, p.len * 0.5, 'sine', 0.15)
+      } else if (kind === 'trumpet') {
+        tone(note(p.n), p.t, p.len, 'sawtooth', 0.28)
+        tone(note(p.n + 12), p.t, p.len * 0.8, 'square', 0.08)
+      } else if (kind === 'bell') {
+        tone(note(p.n), p.t, p.len, 'sine', 0.3)
+        tone(note(p.n + 12), p.t, p.len * 0.6, 'sine', 0.1)
+        noise(p.t, 0.04, 0.12, 8000, 9000, 'highpass')
+      } else {
+        tone(note(p.n), p.t, p.len, 'sine', 0.5)
+        tone(note(p.n) * 4, p.t, 0.07, 'sine', 0.12)
+      }
+    }
+  },
+  /** 天気: あめ（やさしいザーッ）・かぜ（ひゅーっ） */
+  rain() {
+    noise(0, 1.6, 0.1, 7000, 5000, 'highpass')
+  },
+  wind() {
+    noise(0, 1.6, 0.18, 500, 1800, 'bandpass')
+  },
+  /** はずむ「ぽよん」 */
+  bound() {
+    tone(220, 0, 0.14, 'sine', 0.7, 420)
+  },
+  /** 「ずずーん」（地面から生えてくる。小さめの低い音） */
+  rumble() {
+    noise(0, 0.55, 0.3, 320, 80, 'lowpass')
+    tone(70, 0, 0.5, 'sine', 0.35, 42)
+  },
+  /** トンカン。i=0 は「トン」（低い）、i=1 は「カン」（高い） */
+  tonkan(i: number) {
+    if (i % 2 === 0) {
+      tone(240, 0, 0.1, 'square', 0.45, 130)
+      noise(0, 0.05, 0.3, 1800, 700, 'bandpass')
+    } else {
+      tone(1500, 0, 0.14, 'triangle', 0.4, 1000)
+      tone(2250, 0, 0.08, 'sine', 0.12)
+    }
+  },
+  /** 花がふわっと咲く（やさしい上りの音） */
+  bloom() {
+    ;[72, 76, 79, 84].forEach((n, i) => tone(note(n), 0.1 + i * 0.12, 0.3, 'triangle', 0.35))
+  },
+  /** ねこの「にゃー」（やさしく） */
+  meow() {
+    tone(620, 0, 0.12, 'sine', 0.3, 880)
+    tone(880, 0.12, 0.28, 'sine', 0.3, 560)
+  },
+  /** 「ぽんっ」（栓がぬける） */
+  pon() {
+    tone(260, 0, 0.1, 'sine', 0.8, 760)
+    noise(0, 0.05, 0.3, 3000, 1200, 'bandpass')
+  },
+  /** プレゼントの箱が「パカッ」と開く */
+  openBox() {
+    noise(0, 0.08, 0.4, 2500, 900, 'bandpass')
+    ;[76, 80, 83, 88].forEach((n, i) => tone(note(n), 0.08 + i * 0.07, 0.25, 'triangle', 0.4))
+  },
+  /** ひよこの「ぴよっ」 */
+  peep() {
+    tone(note(88), 0, 0.07, 'triangle', 0.5, note(94))
+    tone(note(91), 0.1, 0.07, 'triangle', 0.5, note(96))
   },
 }
