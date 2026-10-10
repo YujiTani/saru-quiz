@@ -1,0 +1,17 @@
+name: Keep Supabase awake
+
+# Supabase の無料プロジェクトは7日間アクセスがないと一時停止するので、週2回ランキングを読む
+on:
+  schedule:
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_URL != '' }}
+    steps:
+      - run: |
+          curl -fsS "${{ vars.SUPABASE_URL }}/rest/v1/scores?select=name&limit=1" \
+            -H "apikey: ${{ vars.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ vars.SUPABASE_ANON_KEY }}" > /dev/null

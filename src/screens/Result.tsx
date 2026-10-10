@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake } from '../lib/effects'
+import { rankingEnabled, submitScore, type SubmitResult } from '../lib/ranking'
+import { getPlayerName } from '../lib/settings'
 import { sfx } from '../lib/sound'
 import { speak } from '../lib/speech'
 import type { QuizResult } from './Quiz'
@@ -8,13 +10,25 @@ import type { QuizResult } from './Quiz'
 // 0: けっかはっぴょうー！ 1: せいかい数 2: れんぞく 3: バナナ集計 4: おわり（ボタン表示）
 type Stage = 0 | 1 | 2 | 3 | 4
 
-export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizResult; totalCoins: number; onAgain: () => void; onHome: () => void }) {
+type Props = { level: number; result: QuizResult; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
+
+export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }: Props) {
   const [stage, setStage] = useState<Stage>(0)
   const [stars, setStars] = useState(0)
   const [shown, setShown] = useState(0)
   const [ask, setAsk] = useState(false)
+  const [rank, setRank] = useState<SubmitResult | null>(null)
+  const rankRef = useRef<SubmitResult | null>(null)
   const n = result.correct
   const perfect = n >= 5 && result.answers.every((a) => a.ok)
+
+  // ランキングに送る（クリアしたらクリアタイム、しなかったら正解数。どちらもバナナ数つき）
+  useEffect(() => {
+    void submitScore({ course: level, cleared: result.cleared, clearMs: result.clearMs ?? null, correct: result.correct, bananas: result.coins }).then((r) => {
+      rankRef.current = r
+      setRank(r)
+    })
+  }, [level, result])
 
   useEffect(() => {
     let alive = true
@@ -78,11 +92,12 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
           rain('banana', 30)
           void speak('ぱーふぇくと！ ぜんぶ、せいかい！ すごーい！')
         } else void speak('よくできました！')
-        // 発表が終わってから少し間をおいて「まだ あそぶ〜？」
+        // 発表が終わってから少し間をおいて、きょうの順位 →「まだ あそぶ〜？」
         at(perfect ? 4200 : 2400, () => {
           setAsk(true)
           sfx.coin()
-          void speak('まだ、あそぶー？')
+          const r = rankRef.current
+          void speak(r && r.day <= 50 ? ['きょうの', `${r.day}い！`, 'まだ、あそぶー？'] : 'まだ、あそぶー？')
         })
       })
     })
@@ -146,9 +161,17 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
         <div className="again-pop">
           <div className="again-card">
             <PixelMonkey char="monchan" mood="happy" size={72} anim="jump" />
+            {rank ? (
+              <p className="again-rank">
+                🏆 きょうの <b>{rank.day}</b>い！ こんげつ <b>{rank.month}</b>い{rank.newBest && <span className="new-best">しんきろく！</span>}
+              </p>
+            ) : (
+              rankingEnabled() && !getPlayerName() && <p className="again-note">せっていで なまえを いれると ランキングに のるよ</p>
+            )}
             <p className="again-q">まだ、あそぶー？</p>
             <button className="btn again" onClick={() => { sfx.tap(); onAgain() }}>もういっかい！</button>
             <button className="btn home" onClick={() => { sfx.tap(); onHome() }}>おわり</button>
+            <button className="btn rank-link" onClick={() => { sfx.tap(); onRanking() }}>🏆 らんきんぐを みる</button>
           </div>
         </div>
       )}

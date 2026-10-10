@@ -4,3 +4,4 @@ assets_raw
 .DS_Store
 .smoke
 .sheets
+.env.local

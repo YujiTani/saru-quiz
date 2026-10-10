@@ -106,6 +106,16 @@ try {
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/settings')))
   if (saved.playerName !== 'ゆうちゃん' || saved.voice !== 'tsumugi' || saved.muted !== true) errors.push(`設定が保存されていません: ${JSON.stringify(saved)}`)
   console.log('3. せってい: OK')
+
+  // 4. ランキング画面（接続先が未設定なら「じゅんびちゅう」、設定済みなら一覧かメッセージ）
+  await page.click('.back-btn')
+  await sleep(300)
+  await page.click('.title-btns .gear-btn:nth-child(2)')
+  await page.waitForSelector('.rank-list', { timeout: 5000 })
+  await page.click('.rank-tabs:nth-of-type(2) .rank-tab:nth-child(2)')
+  await sleep(800)
+  await page.screenshot({ path: `${OUT}/8-ranking.png` })
+  console.log('4. らんきんぐ: OK')
 } finally {
   await browser.close()
   await server.close()

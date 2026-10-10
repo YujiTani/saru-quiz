@@ -8,11 +8,16 @@ const LEVELS = [
   { level: 2, stars: '⭐⭐', label: 'ふつう', color: '#38b6ff' },
 ]
 
-export function Title({ coins, onStart, onSettings }: { coins: number; onStart: (level: number) => void; onSettings: () => void }) {
+type Props = { coins: number; onStart: (level: number) => void; onSettings: () => void; onRanking: () => void }
+
+export function Title({ coins, onStart, onSettings, onRanking }: Props) {
   return (
     <div className="screen title">
       <div className="title-top">
-        <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
+        <div className="title-btns">
+          <button className="gear-btn" onClick={() => { sfx.tap(); onSettings() }} aria-label="せってい">⚙️</button>
+          <button className="gear-btn" onClick={() => { sfx.tap(); onRanking() }} aria-label="らんきんぐ">🏆</button>
+        </div>
         <div className="coin-badge">🍌 {coins}</div>
       </div>
       <h1 className="logo">
@@ -41,7 +46,7 @@ export function Title({ coins, onStart, onSettings }: { coins: number; onStart: 
           </button>
         ))}
       </div>
-      <p className="credit">VOICEVOX:ずんだもん</p>
+      <p className="credit">VOICEVOX:ずんだもん / 四国めたん / 春日部つむぎ / もち子(cv 明日葉よもぎ) / ナースロボ＿タイプＴ</p>
     </div>
   )
 }

@@ -5,7 +5,9 @@ import { COURSE, pickSession, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
 import { load, save, type Save } from './lib/storage'
+import { flushPending } from './lib/ranking'
 import { Quiz, type QuizResult } from './screens/Quiz'
+import { Ranking } from './screens/Ranking'
 import { Result } from './screens/Result'
 import { Settings } from './screens/Settings'
 import { Title } from './screens/Title'
@@ -13,7 +15,13 @@ import { Title } from './screens/Title'
 // 出題はクリアに必要な数＋予備（足りなければ先頭に戻る）
 const sessionSize = (level: number) => (COURSE[level]?.goal ?? 100) + 30
 
-type Screen = { name: 'tap' } | { name: 'title' } | { name: 'settings' } | { name: 'quiz'; level: number; questions: Question[]; key: number } | { name: 'result'; level: number; result: QuizResult }
+type Screen =
+  | { name: 'tap' }
+  | { name: 'title' }
+  | { name: 'settings' }
+  | { name: 'ranking'; course: number }
+  | { name: 'quiz'; level: number; questions: Question[]; key: number }
+  | { name: 'result'; level: number; result: QuizResult }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
@@ -29,6 +37,8 @@ export default function App() {
       sfx.sparkle()
     }
     addEventListener('pointerdown', onDown)
+    // オフラインでためていたスコアを送り直す
+    void flushPending()
     return () => removeEventListener('pointerdown', onDown)
   }, [])
 
@@ -69,13 +79,23 @@ export default function App() {
           <span className="tap-text">タップしてね</span>
         </button>
       )}
-      {screen.name === 'title' && <Title coins={data.coins} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} />}
+      {screen.name === 'title' && (
+        <Title coins={data.coins} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} onRanking={() => setScreen({ name: 'ranking', course: 1 })} />
+      )}
       {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} />}
+      {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
         <Quiz key={screen.key} level={screen.level} questions={screen.questions} onFinish={(r) => finish(screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />
       )}
       {screen.name === 'result' && (
-        <Result result={screen.result} totalCoins={data.coins} onAgain={() => startQuiz(screen.level)} onHome={() => setScreen({ name: 'title' })} />
+        <Result
+          level={screen.level}
+          result={screen.result}
+          totalCoins={data.coins}
+          onAgain={() => startQuiz(screen.level)}
+          onHome={() => setScreen({ name: 'title' })}
+          onRanking={() => setScreen({ name: 'ranking', course: screen.level })}
+        />
       )}
       <canvas ref={fx} className="fx" />
       <div id="flash" />

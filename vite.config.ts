@@ -25,9 +25,15 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,mp3}'],
+        // 声（mp3）は5人ぶんで大きいので最初には入れず、選んだ声だけ使ったときにキャッシュする
+        globPatterns: ['**/*.{js,css,html,svg,png,webp}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/voice/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'voices', expiration: { maxEntries: 8000 } },
+          },
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
             handler: 'CacheFirst',

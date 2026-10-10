@@ -1,10 +1,65 @@
-// 日本語の読み上げ（端末の標準合成音声）。のちに親の録音で差し替える予定
-import voices from '../data/voices.json'
-import { getVolume, isMuted, onSettingsChange } from './settings'
+// 読み上げ。VOICEVOX で作った声（設定で選んだ1人）を鳴らし、無いセリフは端末の合成音声で読む
+import { getVoice, getVolume, isMuted, onSettingsChange, type VoiceId } from './settings'
 import { playVoice, preloadVoice, stopVoice } from './sound'
 
-// VOICEVOX（ずんだもん）で作った音声。無いセリフは端末の合成音声で読む
-const VOICE: Record<string, string> = voices
+// 声ごとのセリフ一覧（テキスト → mp3 のパス）。選んだ声のぶんだけ読み込む
+const manifests = import.meta.glob<Record<string, string>>('../data/voices/*.json', { import: 'default' })
+let VOICE: Record<string, string> = {}
+let loadedVoice: VoiceId | null = null
+let ready: Promise<void> = Promise.resolve()
+
+function loadVoice(id: VoiceId) {
+  if (loadedVoice === id) return ready
+  loadedVoice = id
+  const load = manifests[`../data/voices/${id}.json`] ?? manifests['../data/voices/zundamon.json']
+  ready = load().then((m) => {
+    if (loadedVoice === id) VOICE = m
+    warmCache(id, m)
+  })
+  return ready
+}
+
+// オフラインでも鳴るように、選んだ声のファイルを裏で少しずつ取っておく（Service Worker がキャッシュする）。
+// 取り終わった声は記録して、次からはやらない
+let warmToken = 0
+function warmCache(id: VoiceId, m: Record<string, string>) {
+  const urls = Object.values(m)
+  const key = `saru-quiz/warm/${id}/${urls.length}`
+  try {
+    if (localStorage.getItem(key)) return
+  } catch {
+    // 記録できない環境では毎回取る
+  }
+  const my = ++warmToken
+  let i = 0
+  let failed = false
+  const worker = async () => {
+    while (my === warmToken && i < urls.length) {
+      try {
+        await fetch(urls[i++])
+      } catch {
+        failed = true // オフラインならやめる
+        return
+      }
+    }
+  }
+  setTimeout(async () => {
+    await Promise.all([0, 1, 2].map(() => worker()))
+    if (my === warmToken && !failed && i >= urls.length) {
+      try {
+        localStorage.setItem(key, '1')
+      } catch {
+        // 無視
+      }
+    }
+  }, 3000)
+}
+
+loadVoice(getVoice())
+onSettingsChange(() => {
+  if (getVoice() !== loadedVoice) void loadVoice(getVoice())
+})
+
 export const hasVoice = (text: string) => text in VOICE
 export function preloadSpeech(texts: string[]) {
   for (const t of texts) if (VOICE[t]) preloadVoice(VOICE[t])
@@ -45,6 +100,7 @@ export function stopSpeaking() {
 export async function speak(text: string | string[], opts?: { rate?: number; pitch?: number }): Promise<void> {
   const parts = Array.isArray(text) ? text : [text]
   const my = ++speakToken
+  await ready // 声を切り替えた直後でも、新しい声で読む
   for (const part of parts) {
     if (my !== speakToken) return
     if (!isMuted() && VOICE[part] && (await playVoice(VOICE[part]))) continue
