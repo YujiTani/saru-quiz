@@ -13,6 +13,7 @@ const UNLOCK_ALL = new URLSearchParams(location.search).get('unlock') === 'all'
 type Props = {
   player: Player
   onStart: (level: number) => void
+  onReview: () => void
   onSettings: () => void
   onRanking: () => void
   onSwitch: (id: string) => void
@@ -20,8 +21,8 @@ type Props = {
 }
 
 /** タイトル（メニュー）。選んでいるキャラの見た目・なまえ・色で表示が変わる */
-export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewPlayer }: Props) {
-  const { cleared, coins } = player.save
+export function Title({ player, onStart, onReview, onSettings, onRanking, onSwitch, onNewPlayer }: Props) {
+  const { cleared, coins, review } = player.save
   // ひとつ前のコースをクリアすると解放。むずかしいは解放されるまで出さない
   const open = (level: number) => UNLOCK_ALL || level === 1 || cleared.includes(level - 1)
   const levels = LEVELS.filter((l) => l.level < 3 || open(l.level))
@@ -94,6 +95,12 @@ export function Title({ player, onStart, onSettings, onRanking, onSwitch, onNewP
               </span>
             </button>
           ),
+        )}
+        {/* まちがえた単語がたまっていたら、ふくしゅう（時間なし・ぜんぶ当てたらクリア） */}
+        {review.length > 0 && (
+          <button className="btn review-btn" onClick={() => { sfx.tap(); onReview() }}>
+            🔁 ふくしゅう（{review.length}）
+          </button>
         )}
       </div>
       <p className="credit">VOICEVOX:ずんだもん / 四国めたん / 春日部つむぎ / もち子(cv 明日葉よもぎ) / ナースロボ＿タイプＴ</p>

@@ -2,10 +2,13 @@
 import { dayKey } from './day'
 import { applyAnswer, migrate } from './leitner'
 import type { QuizResult } from '../screens/Quiz'
-import type { Save, WordStat } from './storage'
+import { normalizeSave, type LastResult, type Save, type WordStat } from './storage'
 
 const DIARY_MAX = 30
 const REVIEW_MAX = 30
+
+/** 「まえより のびたよ！」の1行。text は画面の文字（親向け）、speech は読み上げ */
+export type GrowthLine = { text: string; speech: string }
 
 export type ResultEvents = {
   /** 新しく☆1になった単語 */
@@ -16,6 +19,25 @@ export type ResultEvents = {
   polished: string[]
   /** その日はじめて遊び終わった */
   firstPlayToday: boolean
+  /** 同じコースの前回より のびた項目（最大3行。のびていなければ空） */
+  growth: GrowthLine[]
+}
+
+const fmtTime = (ms: number) => {
+  const sec = Math.floor(ms / 1000)
+  return `${Math.floor(sec / 60)}ふん${String(sec % 60).padStart(2, '0')}びょう`
+}
+
+/** 同じコースの前回と比べて、のびた項目だけを返す（せいかい数・さいこうれんぞく・クリアタイムが短く）。前回がなければ空 */
+export function growthLines(prev: LastResult | undefined, cur: Pick<LastResult, 'correct' | 'bestCombo' | 'clearMs'>, level: number): GrowthLine[] {
+  if (!prev || prev.level !== level) return []
+  const out: GrowthLine[] = []
+  if (cur.correct > prev.correct) out.push({ text: `せいかい ${prev.correct} → ${cur.correct}`, speech: 'せいかいが、ふえたよ！' })
+  if (cur.bestCombo > prev.bestCombo) out.push({ text: `れんぞく ${prev.bestCombo} → ${cur.bestCombo}`, speech: 'れんぞくが、のびたよ！' })
+  if (cur.clearMs !== undefined && prev.clearMs !== undefined && cur.clearMs < prev.clearMs) {
+    out.push({ text: `くりあたいむ ${fmtTime(prev.clearMs)} → ${fmtTime(cur.clearMs)}`, speech: 'くりあたいむが、はやくなったよ！' })
+  }
+  return out.slice(0, 3)
 }
 
 /** 単語ごとの「最初の答え」の正誤。同じ問題はまちがえるとあとでもう一度出るので、最初に出てきたものだけ見る */
@@ -28,8 +50,9 @@ export function firstAnswers(answers: QuizResult['answers']): Map<string, boolea
 const addUnique = (list: string[], ids: string[]) => [...list, ...ids.filter((id) => !list.includes(id))]
 
 /** 結果を反映した新しい Save と、今回あったこと。review はふくしゅうモードか */
-export function applyResult(save: Save, result: QuizResult, nowMs: number, level: number, review = false): { save: Save; events: ResultEvents } {
-  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false }
+export function applyResult(input: Save, result: QuizResult, nowMs: number, level: number, review = false): { save: Save; events: ResultEvents } {
+  const save = normalizeSave(input) // 古いデータ（lastByLevel がない）でも同じに扱う
+  const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, growth: [] }
   const first = firstAnswers(result.answers)
 
   // 単語ごとの記録（ok/ng は全部の答えを数える。箱は最初の答えだけ）
@@ -64,7 +87,10 @@ export function applyResult(save: Save, result: QuizResult, nowMs: number, level
   const solved = review ? new Set([...first].filter(([, ok]) => ok).map(([id]) => id)) : new Set<string>()
   const reviewList = addUnique(save.review, missed).filter((id) => !solved.has(id)).slice(-REVIEW_MAX)
 
-  const cleared = result.cleared && !save.cleared.includes(level) ? [...save.cleared, level] : save.cleared
+  // ふくしゅうは、コースのクリア（解放）にも「まえより」の記録にも入れない
+  const cleared = !review && result.cleared && !save.cleared.includes(level) ? [...save.cleared, level] : save.cleared
+  const last: LastResult = { correct: result.correct, bestCombo: result.bestCombo, clearMs: result.clearMs, level, at: nowMs }
+  if (!review) events.growth = growthLines(save.lastByLevel[level], last, level)
   const next: Save = {
     ...save,
     coins: save.coins + result.coins,
@@ -74,7 +100,7 @@ export function applyResult(save: Save, result: QuizResult, nowMs: number, level
     stats,
     diary,
     review: reviewList,
-    lastResult: { correct: result.correct, bestCombo: result.bestCombo, clearMs: result.clearMs, level, at: nowMs },
+    ...(review ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
   }
   return { save: next, events }
 }

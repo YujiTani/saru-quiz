@@ -4,6 +4,8 @@
 //  3. 解放: かんたんクリアで ふつうが あそべる / せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう・うごきの つよさ
 //  4. 演出: ?show=ugoku:norimono で正解、?show=zukkoke:hakushon でまちがい（9-*.png）
 //  5. みちのり（E=0 / 0.5 / 0.9）・おさるバンド・リーチ（?goal=3 で 画面のふちのおさる → ぷはーっ！）（10-*.png）
+//  6. まなび: 手がかり（まちがえた単語が もう一度出たら 選択肢が減る → 3回目は正解が光る）→ おぼえたよ → ふくしゅう（時間ゲージなし・
+//     ぜんぶ正解で review が空に）→ 2回目のプレイで「まえより のびたよ」→ くもりの絵（拭きとって ぴかぴか）（11-*.png）
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -34,6 +36,30 @@ async function answer(page, i, wrong = false) {
   }
   throw new Error('選択肢が見つかりません')
 }
+
+/** 今の問題（絵から特定する） */
+async function currentQ(page) {
+  const key = await page.$eval('.picture', (el) => el.querySelector('img')?.getAttribute('src') ?? el.textContent)
+  const q = data.questions.find((q) => q.img === key || q.e === key)
+  if (!q) throw new Error(`絵から問題が特定できません: ${key}`)
+  return q
+}
+
+/** ラベルの選択肢を選んで「これ！」 */
+async function choose(page, label) {
+  for (const b of await page.$$('.choice')) {
+    if ((await b.evaluate((el) => el.textContent)) === label) {
+      await b.click()
+      await sleep(200)
+      await page.click('.decide.show')
+      return
+    }
+  }
+  throw new Error(`選択肢が見つかりません: ${label}`)
+}
+
+/** 今の問題が終わる（次の問題に進む・クリアする）まで待つ */
+const settle = (page) => page.waitForFunction(() => !document.querySelector('.choice.is-answer') || document.querySelector('.banner.clear'), { timeout: 30000 })
 
 /** なまえ入力欄に（iPhone の変換を通さず）値を入れる */
 async function typeName(page, v) {
@@ -143,6 +169,9 @@ try {
   const sent = submitted.find((b) => b.p_cleared)
   if (!sent) errors.push('クリアしたのにランキングに送っていません')
   else if (!Number.isInteger(sent.p_clear_ms) || sent.p_course !== 1) errors.push(`ランキングに送る値がおかしい: ${JSON.stringify(sent)}`)
+  // 前回（時間切れの1回目）よりせいかい数が少ないので「まえより のびたよ」は出ない
+  await page.waitForSelector('.again-pop', { timeout: 90000 })
+  if (await page.$('.grow-card')) errors.push('のびていないのに「まえより のびたよ」が出ています')
   console.log('2. クリア: OK')
 
   // 3. かんたんクリアで ふつうが解放 → せってい
@@ -284,6 +313,162 @@ try {
   await page.screenshot({ path: `${OUT}/10-motion0.png` })
   await page.evaluate(() => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: 1 })))
   console.log('6b. 動きの強さ0: OK')
+
+  // 7. まなび: 手がかり → おぼえたよ → ふくしゅう → まえより のびたよ
+  // ふつう（3択）を6問クリアまで。はじめの2問（W, X）をわざとまちがえる。W は2回目もまちがえて、3回目に正解が光る
+  await start(page, '?goal=6&time=90')
+  await page.click('.level-btn:nth-child(2)')
+  await sleep(1200)
+  const asked = {}
+  const firstTwo = []
+  let glowSeen = false
+  for (let k = 0; k < 14 && !(await page.$('.banner.clear')); k++) {
+    const q = await currentQ(page)
+    const times = (asked[q.id] = (asked[q.id] ?? 0) + 1)
+    const nChoices = (await page.$$('.choice')).length
+    if (firstTwo.length < 2 && times === 1) firstTwo.push(q.id)
+    const isW = q.id === firstTwo[0]
+    const isX = q.id === firstTwo[1]
+    let wrong = false
+    if (times === 1) {
+      if (nChoices !== 3) errors.push(`はじめて出た問題の選択肢が3つではなく${nChoices}つです`)
+      wrong = isW || isX
+    } else if (times === 2) {
+      if (nChoices !== 2) errors.push(`まちがえた問題が2回目に出たのに 選択肢が減っていません（${nChoices}つ）`)
+      if (await page.$('.choice.is-hint')) errors.push('2回目で正解が光っています')
+      wrong = isW
+    } else {
+      await page.waitForSelector('.choice.is-hint', { timeout: 30000 }).catch(() => errors.push('3回目なのに 正解の選択肢が光りません'))
+      const lit = await page.$$eval('.choice.is-hint', (els) => els.map((e) => e.textContent))
+      if (lit.length !== 1 || lit[0] !== q.a) errors.push(`光っている選択肢が正解ではありません: ${JSON.stringify(lit)}`)
+      if (!glowSeen) {
+        await sleep(1000) // 2秒周期のいちばん光るところ
+        await page.screenshot({ path: `${OUT}/11-hint-glow.png` })
+      }
+      glowSeen = true
+    }
+    if (times === 2 && k < 8) await page.screenshot({ path: `${OUT}/11-hint-fewer.png` })
+    if (wrong) {
+      for (const b of await page.$$('.choice')) {
+        if ((await b.evaluate((el) => el.textContent)) !== q.a) {
+          await b.click()
+          await sleep(200)
+          await page.click('.decide.show')
+          break
+        }
+      }
+    } else await choose(page, q.a)
+    await sleep(300)
+    await settle(page)
+    await sleep(200)
+  }
+  if (!glowSeen) errors.push('手がかり（正解が光る）を確かめられませんでした')
+  // 結果: ぜんぶ読み上げたあとに「おぼえたよ」のカード
+  await page.waitForSelector('.learn-card', { timeout: 60000 })
+  await sleep(500)
+  await page.screenshot({ path: `${OUT}/11-learned.png` })
+  if ((await page.$$('.learn-card .word-tile')).length < 1) errors.push('「あたらしく おぼえたよ！」に単語の絵が出ていません')
+  if (await page.$('.grow-card')) errors.push('はじめてのコースなのに「まえより のびたよ」が出ています')
+  await page.waitForSelector('.again-pop', { timeout: 90000 })
+  const mySave = () =>
+    page.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+      return p.list.find((x) => x.id === p.current).save
+    })
+  const clearedBefore = (await mySave()).cleared
+  const reviewIds = (await mySave()).review
+  if (!firstTwo.every((id) => reviewIds.includes(id))) errors.push(`最初にまちがえた単語が review に入っていません: ${JSON.stringify(reviewIds)}`)
+  console.log(`7a. 手がかり・おぼえたよ: OK（review ${reviewIds.length}語）`)
+
+  // ふくしゅう: タイトルにボタン → 時間ゲージなし → ぜんぶ正解でクリア → review が空に
+  const sentBefore = submitted.length
+  await start(page, '')
+  const btn = await page.$('.review-btn')
+  if (!btn) errors.push('review があるのに タイトルに「ふくしゅう」ボタンが出ていません')
+  else {
+    const label = await btn.evaluate((el) => el.textContent)
+    if (!label.includes(`（${reviewIds.length}）`)) errors.push(`ふくしゅうボタンの数がちがう: ${label} / review ${reviewIds.length}`)
+    await page.screenshot({ path: `${OUT}/11-title-review.png` })
+    await btn.click()
+    await sleep(1500)
+    if (await page.$('.gauge')) errors.push('ふくしゅうに時間ゲージが出ています')
+    if (!(await page.$('.mode-chip'))) errors.push('ふくしゅうの表示が出ていません')
+    if (!(await page.$('.road'))) errors.push('ふくしゅうに みちのりが出ていません')
+    await page.screenshot({ path: `${OUT}/11-review.png` })
+    const n = Math.min(10, reviewIds.length)
+    const order = []
+    for (let k = 0; k < n && !(await page.$('.banner.clear')); k++) {
+      order.push((await currentQ(page)).id)
+      await answer(page, k + 10)
+      await sleep(400)
+      if (k < n - 1) await settle(page)
+    }
+    // 新しいほうから出る
+    if (order.join() !== [...reviewIds].reverse().slice(0, n).join()) errors.push(`ふくしゅうの出題順が review の新しい順ではありません: ${order} / ${reviewIds}`)
+    await page.waitForSelector('.banner.clear', { timeout: 30000 })
+    await page.waitForSelector('.result-mode', { timeout: 20000 })
+    if (await page.$('.result-cleartime')) errors.push('ふくしゅうなのに クリアタイムが出ています')
+    await page.waitForSelector('.again-pop', { timeout: 90000 })
+    await page.screenshot({ path: `${OUT}/11-review-result.png` })
+    if (await page.$('.rank-link')) errors.push('ふくしゅうの結果に らんきんぐのボタンが出ています')
+    const after = await mySave()
+    if (after.review.length !== 0) errors.push(`ふくしゅうで ぜんぶ正解したのに review が残っています: ${JSON.stringify(after.review)}`)
+    if (JSON.stringify(after.cleared) !== JSON.stringify(clearedBefore)) errors.push(`ふくしゅうでコースの解放が変わっています: ${JSON.stringify(after.cleared)}`)
+    if (submitted.length !== sentBefore) errors.push('ふくしゅうがランキングに送られています')
+  }
+  await start(page, '')
+  if (await page.$('.review-btn')) errors.push('review が空なのに「ふくしゅう」ボタンが出ています')
+  console.log('7b. ふくしゅう: OK')
+
+  // 2回目のプレイ: 前回（かんたん3問）よりせいかい数が増えるので「まえより のびたよ」
+  await start(page, '?goal=5&time=60')
+  await page.click('.level-btn')
+  await sleep(1200)
+  for (let i = 0; i < 5; i++) {
+    await answer(page, i + 10)
+    await sleep(400)
+    if (i < 4) await settle(page)
+  }
+  await page.waitForSelector('.grow-card', { timeout: 90000 })
+  await sleep(500)
+  await page.screenshot({ path: `${OUT}/11-growth.png` })
+  const lines = await page.$$eval('.grow-line', (els) => els.map((e) => e.textContent))
+  if (!lines.some((t) => t.startsWith('せいかい 3 → 5'))) errors.push(`「まえより のびたよ」の中身がおかしい: ${JSON.stringify(lines)}`)
+  console.log('7c. まえより のびたよ: OK')
+
+  // 8. くもり: save を書きかえて のりもの の単語を ぜんぶ くもり（box=1・due=40日前）にしてから遊ぶ
+  const cloudIds = data.questions.filter((q) => q.c === 'のりもの' && (q.img || q.e)).map((q) => q.id)
+  await page.evaluate((ids) => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    const me = p.list.find((x) => x.id === p.current)
+    const t = Date.now() - 40 * 86400000
+    for (const id of ids) me.save.stats[id] = { ok: 3, ng: 0, last: t, box: 1, boxAt: t, due: t, firstOkAt: t }
+    localStorage.setItem('saru-quiz/players', JSON.stringify(p))
+  }, cloudIds)
+  await start(page, '?cat=のりもの&goal=3&time=60')
+  await page.click('.level-btn')
+  await sleep(1500)
+  if (!(await page.$('.picture.is-cloudy'))) errors.push('くもりの単語なのに 絵にくもりが出ていません')
+  await page.screenshot({ path: `${OUT}/11-cloudy.png` })
+  // 最初の答えで正解 → 拭きとる（0.6秒）→ キラッ → 「ぴかぴか！」
+  await answer(page, 20)
+  await sleep(250)
+  if (!(await page.$('.picture.is-wiping'))) errors.push('くもりの絵に正解したのに 拭きとる動きが始まっていません')
+  await page.screenshot({ path: `${OUT}/11-wiping.png` })
+  // 0.6秒たったら くもりが消えて、吹き出しが「ぴかぴか！」になる
+  await page
+    .waitForFunction(() => document.querySelector('.bubble')?.textContent === 'ぴかぴか！' && document.querySelector('.picture.correct') && !document.querySelector('.picture.is-cloudy'), { polling: 30, timeout: 4000 })
+    .catch(() => errors.push('拭きとったあと くもりが消えて「ぴかぴか！」になっていません'))
+  await sleep(150)
+  await page.screenshot({ path: `${OUT}/11-polished.png` })
+  await page.waitForFunction(() => !document.querySelector('.choice.is-answer'), { timeout: 30000 })
+  await sleep(300)
+  // まちがえたときは くもりはそのまま（罰はなし）
+  if (!(await page.$('.picture.is-cloudy'))) errors.push('次のくもりの単語に くもりが出ていません')
+  await answer(page, 21, true)
+  await sleep(600)
+  if (!(await page.$('.picture.wrong.is-cloudy'))) errors.push('まちがえたのに くもりが消えています')
+  console.log('8. くもり・ぴかぴか: OK')
 } finally {
   await browser.close()
   await server.close()

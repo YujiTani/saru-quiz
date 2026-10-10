@@ -20,7 +20,10 @@ export type Save = {
   diary: Record<string, DiaryDay>
   /** 最初の答えでまちがえた単語（ふくしゅう用。最大30） */
   review: string[]
+  /** 直前のプレイ（どのコースでも）。コースごとの記録は lastByLevel */
   lastResult?: LastResult
+  /** コースごとの直前の結果（「まえより のびたよ」で比べる相手）。古いデータは normalizeSave で移す */
+  lastByLevel: Record<number, LastResult>
   /** もらったシールの数（段階3で使う） */
   stickers: number
   shows: ShowsSave
@@ -34,15 +37,25 @@ export const emptySave = (): Save => ({
   stats: {},
   diary: {},
   review: [],
+  lastByLevel: {},
   stickers: 0,
   shows: { got: {}, seen: {}, pick: {} },
 })
+
+/** 読み込んだ Save を今の形にそろえる（古いデータは lastResult を lastByLevel に移す） */
+export function normalizeSave(save: Save): Save {
+  const base = { ...emptySave(), ...save }
+  const by = base.lastByLevel ?? {}
+  const last = base.lastResult
+  if (last && !by[last.level]) return { ...base, lastByLevel: { ...by, [last.level]: last } }
+  return { ...base, lastByLevel: by }
+}
 
 /** 前のバージョンの進捗（キャラに引き継ぐため） */
 export function loadOldSave(): Save {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? { ...emptySave(), ...JSON.parse(raw) } : emptySave()
+    return raw ? normalizeSave(JSON.parse(raw)) : emptySave()
   } catch {
     return emptySave()
   }

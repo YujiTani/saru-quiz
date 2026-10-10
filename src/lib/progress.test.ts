@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { applyResult, firstAnswers } from './progress'
-import { emptySave } from './storage'
-import type { Save } from './storage'
+import { applyResult, firstAnswers, growthLines } from './progress'
+import { emptySave, normalizeSave } from './storage'
+import type { LastResult, Save } from './storage'
 import type { QuizResult } from '../screens/Quiz'
 
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h).getTime()
@@ -105,5 +105,85 @@ describe('progress 記録', () => {
     expect(save.review).toHaveLength(30)
     expect(save.review[0]).toBe('r1')
     expect(save.review[29]).toBe('x')
+  })
+})
+
+describe('growthLines まえより のびたよ', () => {
+  const prev: LastResult = { correct: 10, bestCombo: 5, clearMs: 60_000, level: 1, at: T0 }
+
+  it('前回がなければ何も出さない', () => {
+    expect(growthLines(undefined, { correct: 99, bestCombo: 99 }, 1)).toEqual([])
+  })
+
+  it('のびた項目だけ出す', () => {
+    expect(growthLines(prev, { correct: 12, bestCombo: 5 }, 1).map((l) => l.speech)).toEqual(['せいかいが、ふえたよ！'])
+    expect(growthLines(prev, { correct: 10, bestCombo: 7 }, 1).map((l) => l.speech)).toEqual(['れんぞくが、のびたよ！'])
+    expect(growthLines(prev, { correct: 10, bestCombo: 5, clearMs: 50_000 }, 1).map((l) => l.speech)).toEqual(['くりあたいむが、はやくなったよ！'])
+  })
+
+  it('のびていなければ（同じ・へった・おそくなった）何も出さない', () => {
+    expect(growthLines(prev, { correct: 10, bestCombo: 5, clearMs: 60_000 }, 1)).toEqual([])
+    expect(growthLines(prev, { correct: 3, bestCombo: 2, clearMs: 90_000 }, 1)).toEqual([])
+  })
+
+  it('前回がクリアしていない（clearMs なし）ときは タイムを比べない', () => {
+    expect(growthLines({ ...prev, clearMs: undefined }, { correct: 10, bestCombo: 5, clearMs: 30_000 }, 1)).toEqual([])
+  })
+
+  it('3つとも のびたら 3行（せいかい → れんぞく → タイムの順）。text に前回と今回が入る', () => {
+    const lines = growthLines(prev, { correct: 20, bestCombo: 9, clearMs: 45_000 }, 1)
+    expect(lines).toHaveLength(3)
+    expect(lines.map((l) => l.speech)).toEqual(['せいかいが、ふえたよ！', 'れんぞくが、のびたよ！', 'くりあたいむが、はやくなったよ！'])
+    expect(lines[0].text).toBe('せいかい 10 → 20')
+    expect(lines[2].text).toBe('くりあたいむ 1ふん00びょう → 0ふん45びょう')
+  })
+
+  it('ちがうコースの前回とは比べない', () => {
+    expect(growthLines({ ...prev, level: 2 }, { correct: 99, bestCombo: 99 }, 1)).toEqual([])
+  })
+})
+
+describe('lastByLevel コースごとの前回', () => {
+  it('コースごとに持つ。ほかのコースの結果は消えない', () => {
+    const a = applyResult(emptySave(), res([['a', true]], { bestCombo: 2 }), T0, 1)
+    const b = applyResult(a.save, res([['a', true], ['b', true]], { bestCombo: 3 }), T0 + 1000, 2)
+    expect(Object.keys(b.save.lastByLevel)).toEqual(['1', '2'])
+    expect(b.save.lastByLevel[1]).toMatchObject({ correct: 1, bestCombo: 2, level: 1 })
+    expect(b.save.lastByLevel[2]).toMatchObject({ correct: 2, bestCombo: 3, level: 2 })
+    expect(b.save.lastResult).toEqual(b.save.lastByLevel[2])
+  })
+
+  it('2回目に のびていれば events.growth に出る。同じコースの前回と比べる', () => {
+    const a = applyResult(emptySave(), res([['a', true]]), T0, 1)
+    expect(a.events.growth).toEqual([])
+    const other = applyResult(a.save, res([['a', true]]), T0, 2) // 別のコースを挟んでも
+    const b = applyResult(other.save, res([['a', true], ['b', true], ['c', true]], { bestCombo: 3 }), T0, 1)
+    expect(b.events.growth.map((l) => l.speech)).toEqual(['せいかいが、ふえたよ！'])
+  })
+
+  it('古いデータ（lastResult だけ）は lastByLevel に移す', () => {
+    const old = { ...emptySave(), lastResult: { correct: 4, bestCombo: 2, level: 2, at: T0 } } as Save
+    delete (old as Partial<Save>).lastByLevel
+    expect(normalizeSave(old).lastByLevel).toEqual({ 2: old.lastResult })
+    // そのまま applyResult に渡しても、前回として比べられる
+    const r = applyResult(old, res([['a', true], ['b', true], ['c', true], ['d', true], ['e', true]], { bestCombo: 2 }), T0, 2)
+    expect(r.events.growth.map((l) => l.speech)).toEqual(['せいかいが、ふえたよ！'])
+    expect(r.save.lastByLevel[2].correct).toBe(5)
+  })
+
+  it('すでに lastByLevel があれば lastResult で上書きしない', () => {
+    const cur = { correct: 9, bestCombo: 1, level: 1, at: T0 }
+    const s = normalizeSave({ ...emptySave(), lastResult: { ...cur, correct: 1 }, lastByLevel: { 1: cur } })
+    expect(s.lastByLevel[1]).toEqual(cur)
+  })
+
+  it('ふくしゅうモードは、クリア（解放）にも「まえより」の記録にも入れない', () => {
+    const base: Save = { ...emptySave(), review: ['a'] }
+    const { save, events } = applyResult(base, res([['a', true]], { cleared: true, clearMs: 1000 }), T0, 2, true)
+    expect(save.cleared).toEqual([])
+    expect(save.lastResult).toBeUndefined()
+    expect(save.lastByLevel).toEqual({})
+    expect(events.growth).toEqual([])
+    expect(save.review).toEqual([]) // 最初に正解したので外れる
   })
 })

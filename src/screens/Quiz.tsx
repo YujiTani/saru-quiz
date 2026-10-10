@@ -4,13 +4,14 @@ import { PixelMonkey } from '../components/PixelMonkey'
 import { Road } from '../components/Road'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { now } from '../lib/day'
+import { isCloudy } from '../lib/leitner'
 import type { Save } from '../lib/storage'
 import { chooseShow, chooseUgoku, chooseZukkoke, layer, makeCtx, peekaboo, play, reachFor, shouldAnnounce, themeOf, unlockCtx } from '../shows'
 import { songOf } from '../lib/bgm'
 import { getMotion } from '../lib/settings'
 import { getCurrent } from '../lib/players'
 import { startParam } from '../lib/testflags'
-import { COURSE, makeRound, type Question, type Round } from '../lib/quiz'
+import { COURSE, MODE_RULES, hintFor, makeRound, type Mode, type Question, type Round } from '../lib/quiz'
 import { pauseBgm, resumeBgm, setBgmKey, setBgmLevel, sfx, startBgm, stopBgm } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
@@ -88,14 +89,25 @@ function ReachCrowd({ n, puha, motion }: { n: number; puha: boolean; motion: num
   )
 }
 
-export function Quiz({ level, questions, save, onFinish, onQuit }: { level: number; questions: Question[]; save: Save; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
+type QuizProps = { mode: Mode; level: number; questions: Question[]; save: Save; onFinish: (r: QuizResult) => void; onQuit: () => void }
+
+export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizProps) {
+  const rules = MODE_RULES[mode]
   const course = COURSE[level] ?? COURSE[1]
   const TIME_MAX = (TIME_OVERRIDE || course.time) * 1000
-  const GOAL = GOAL_OVERRIDE || course.goal
+  // コースはクリア数、ふくしゅうは出題数（ぜんぶ正解したらクリア）
+  const GOAL = rules.course ? GOAL_OVERRIDE || course.goal : questions.length
   const startedAt = useRef(performance.now())
   const queueRef = useRef(questions)
   const [index, setIndex] = useState(0)
   const [round, setRound] = useState<Round>(() => makeRound(questions[0], level))
+  // 手がかり: 1回のプレイの中で単語ごとにまちがえた回数 / もう答えた単語 / くもりの単語（遊び始めに決める）
+  const misses = useRef(new Map<string, number>())
+  const answered = useRef(new Set<string>())
+  const cloudy = useRef(new Set(questions.filter((q) => isCloudy(save.stats[q.id], now())).map((q) => q.id)))
+  const [wipe, setWipe] = useState<'none' | 'wiping' | 'clean'>('none')
+  const [glow, setGlow] = useState(false) // 正解の選択肢をふわっと光らせる（まちがい2回以上のあと）
+  const picRef = useRef<HTMLDivElement>(null)
   const [phase, setPhase] = useState<Phase>('reading')
   const phaseRef = useRef<Phase>('reading')
   phaseRef.current = phase
@@ -176,9 +188,12 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     setPicked(null)
     setSelected(null)
     setBubble('これ なあに？')
+    setWipe('none')
+    setGlow(false)
     setBig(reachFor(GOAL - stats.current.correct).bigPic)
     preloadSpeech(round.choices)
-    const bonus = index >= 2 && Math.random() < 0.15
+    // くもりの絵は金色のかがやき（::after）と重なるので、ボーナスにしない
+    const bonus = index >= 2 && !cloudy.current.has(round.q.id) && Math.random() < 0.15
     setIsBonus(bonus)
     sfx.whoosh()
     if (bonus) {
@@ -204,12 +219,14 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       if (token.current !== my) return
       setReading(-1)
       setPhase('answering')
+      if (round.hint === 'glow') setGlow(true) // 読み上げが終わったら、正解がふわっと光る
     })()
     return () => stopSpeaking()
   }, [round, index])
 
   // 時間ゲージ
   useEffect(() => {
+    if (!rules.timer) return // ふくしゅうは時間がない
     const id = setInterval(() => {
       const p = phaseRef.current
       if (p !== 'reading' && p !== 'answering') return
@@ -288,7 +305,11 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     setPhase('answering')
     setBubble('これかな？')
     sfx.select()
-    void speak(round.choices[i])
+    const my = token.current
+    void speak(round.choices[i]).then(() => {
+      // 読み上げを途中で止めて選んだときも、読み終わったら手がかりを出す
+      if (token.current === my && round.hint === 'glow') setGlow(true)
+    })
   }
 
   function decide() {
@@ -317,9 +338,14 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       setHeatBoth(nh)
       setCoins((v) => v + add)
       setGain({ n: add, key: Date.now() })
-      timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
-      setTimeLeft(timeRef.current)
-      setTimeGain({ key: Date.now(), plus: true })
+      if (rules.timer) {
+        timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
+        setTimeLeft(timeRef.current)
+        setTimeGain({ key: Date.now(), plus: true })
+      }
+      // くもりの絵を最初の答えで当てたら、拭いてぴかぴかにする
+      const polish = !answered.current.has(q.id) && cloudy.current.has(q.id)
+      answered.current.add(q.id)
       stats.current.correct++
       setCorrectN(stats.current.correct)
       // 決まった問題数に届いたらクリア（クリアタイムは実際にかかった時間）
@@ -329,6 +355,17 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       setPhase('correct')
       let shout = PRAISE[(Math.random() * PRAISE.length) | 0]
       setBubble(shout)
+      if (polish) {
+        setWipe('wiping') // 左から右へ0.6秒で拭きとる → キラッと星 → 「ぴかぴか！」
+        setTimeout(() => {
+          if (token.current !== myToken) return
+          setWipe('clean')
+          setBubble('ぴかぴか！')
+          const r = picRef.current?.getBoundingClientRect()
+          if (r) burst(r.left + r.width / 2, r.top + r.height / 2, 'star', 28, 1.2)
+          sfx.sparkle()
+        }, 600)
+      }
 
       if (clearMs !== null) {
         // ためていた息を「ぷはーっ！」
@@ -354,6 +391,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
         setTimeout(() => setPeeker(null), 1800)
       }
 
+      if (polish) shout = 'ぴかぴか！'
       ;(async () => {
         await speak(levelUp ? [shout, q.a, levelUp] : [shout, q.a])
         await wait(350)
@@ -367,9 +405,13 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
       setCombo(0)
       // ねつは下がる（0にはならない）
       setHeatBoth(Math.max(0, heatRef.current - 40))
-      timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
-      setTimeLeft(timeRef.current)
-      setTimeGain({ key: Date.now(), plus: false })
+      if (rules.timer) {
+        timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
+        setTimeLeft(timeRef.current)
+        setTimeGain({ key: Date.now(), plus: false })
+      }
+      answered.current.add(q.id)
+      misses.current.set(q.id, (misses.current.get(q.id) ?? 0) + 1)
       stats.current.answers.push({ id: q.id, ok: false })
       setPhase('wrong')
       setBubble('おしい！')
@@ -453,7 +495,7 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
     fountain('coin', 80)
     rain('star', 150)
     rain('confetti', 200)
-    void speak('くりあー！')
+    void speak(mode === 'review' ? 'ふくしゅう、くりあー！' : 'くりあー！')
     setTimeout(() => {
       onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: true, clearMs })
     }, 2800)
@@ -461,31 +503,36 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
 
   function next() {
     if (phaseRef.current === 'end') return
-    if (timeRef.current <= 0) return endGame()
+    if (rules.timer && timeRef.current <= 0) return endGame()
     const qs = queueRef.current
     const ni = (index + 1) % qs.length
     setIndex(index + 1)
-    setRound(makeRound(qs[ni], level))
+    // まちがえたことのある問題は、手がかり（選択肢を減らす / 正解を光らせる）つきで出す
+    setRound(makeRound(qs[ni], level, hintFor(misses.current.get(qs[ni].id) ?? 0)))
   }
 
   const mood: Mood = phase === 'correct' ? 'happy' : phase === 'wrong' ? 'sad' : 'normal'
   const q = round.q
   const pct = (timeLeft / TIME_MAX) * 100
-  const countdown = timeLeft > 0 && timeLeft <= COUNTDOWN_MS ? Math.ceil(timeLeft / 1000) : 0
+  const countdown = rules.timer && timeLeft > 0 && timeLeft <= COUNTDOWN_MS ? Math.ceil(timeLeft / 1000) : 0
 
   return (
     <div className={`screen quiz ${feverLv ? `is-fever lv${feverLv}` : ''}`}>
       <header className="quiz-top">
         <button className="quit" onClick={onQuit} aria-label="もどる">✕</button>
-        <div className={`gauge ${pct < 17 ? 'low' : pct < 40 ? 'mid' : ''}`}>
-          <div className="gauge-fill" style={{ width: `${pct}%` }} />
-          <span className="gauge-icon">⏰</span>
-          {timeGain && (
-            <span key={timeGain.key} className={`time-gain ${timeGain.plus ? '' : 'minus'}`}>
-              {timeGain.plus ? '+3' : '-3'}
-            </span>
-          )}
-        </div>
+        {rules.timer ? (
+          <div className={`gauge ${pct < 17 ? 'low' : pct < 40 ? 'mid' : ''}`}>
+            <div className="gauge-fill" style={{ width: `${pct}%` }} />
+            <span className="gauge-icon">⏰</span>
+            {timeGain && (
+              <span key={timeGain.key} className={`time-gain ${timeGain.plus ? '' : 'minus'}`}>
+                {timeGain.plus ? '+3' : '-3'}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="mode-chip">🔁 ふくしゅう</div>
+        )}
         <div className="coin-badge">
           🍌 {coins}
           {gain && <span key={gain.key} className="gain">+{gain.n}</span>}
@@ -519,7 +566,11 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
 
       <div className={`picture-wrap ${big ? 'big' : ''}`}>
         {phase === 'correct' && <div className={`sunburst ${isBonus ? 'gold' : ''}`} />}
-        <div className={`picture ${phase} ${isBonus ? 'bonus' : ''}`} key={q.id + index}>
+        <div
+          ref={picRef}
+          className={`picture ${phase} ${isBonus ? 'bonus' : ''} ${cloudy.current.has(q.id) && wipe !== 'clean' ? 'is-cloudy' : ''} ${wipe === 'wiping' ? 'is-wiping' : ''}`}
+          key={q.id + index}
+        >
           {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
         </div>
         {phase === 'correct' && <div className="stamp">せいかい！</div>}
@@ -529,13 +580,14 @@ export function Quiz({ level, questions, save, onFinish, onQuit }: { level: numb
         {round.choices.map((c, i) => {
           const done = phase === 'correct' || phase === 'wrong' || phase === 'end'
           const state = done ? (c === q.a ? 'is-answer' : c === picked ? 'is-wrong' : 'is-dim') : selected === i ? 'is-selected' : reading === i ? 'is-reading' : ''
+          const hinted = glow && !done && c === q.a // 手がかり: 正解の選択肢がふわっと光る
           return (
             <button
               key={c + index}
               ref={(el) => {
                 choiceRefs.current[i] = el
               }}
-              className={`btn choice ${state}`}
+              className={`btn choice ${state} ${hinted ? 'is-hint' : ''}`}
               style={{ fontSize: `min(30px, ${(74 / c.length).toFixed(1)}vw)` }}
               onClick={() => select(i)}
             >

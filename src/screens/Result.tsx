@@ -4,6 +4,7 @@ import { burst, fountain, rain, shake } from '../lib/effects'
 import { rankingEnabled, submitScore, type SubmitResult } from '../lib/ranking'
 import { getPlayerName } from '../lib/players'
 import type { ResultEvents } from '../lib/progress'
+import { MODE_RULES, questionById, type Mode } from '../lib/quiz'
 import { isTestRun } from '../lib/testflags'
 import { sfx } from '../lib/sound'
 import { speak } from '../lib/speech'
@@ -12,9 +13,33 @@ import type { QuizResult } from './Quiz'
 // 0: けっかはっぴょうー！ 1: せいかい数 2: れんぞく 3: バナナ集計 4: おわり（ボタン表示）
 type Stage = 0 | 1 | 2 | 3 | 4
 
-type Props = { level: number; result: QuizResult; events?: ResultEvents; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
+type Props = { mode: Mode; level: number; result: QuizResult; events?: ResultEvents; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
 
-export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }: Props) {
+const NO_EVENTS: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, growth: [] }
+const TILES_MAX = 6
+
+/** 単語の絵（なければ絵文字）。さわると読み上げる。badge は絵のすみに付く ☆ など */
+function WordTile({ id, badge }: { id: string; badge: string }) {
+  const q = questionById(id)
+  if (!q) return null
+  return (
+    <button className="word-tile" onClick={() => { sfx.tap(); void speak(q.a) }} aria-label={q.a}>
+      {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
+      <span className="badge">{badge}</span>
+    </button>
+  )
+}
+
+type Tail = { grow: boolean; mastered: boolean; stars: boolean; polish: boolean }
+
+export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, onAgain, onHome, onRanking }: Props) {
+  const rules = MODE_RULES[mode]
+  const review = mode === 'review'
+  // 「まえより のびたよ」と「おぼえたよ」のカード（結果発表の最後に1つずつ出す）
+  const [tail, setTail] = useState<Tail>({ grow: false, mastered: false, stars: false, polish: false })
+  const mastered = events.newMastered.slice(0, TILES_MAX)
+  const starUps = events.starUps.filter(([id]) => !events.newMastered.includes(id)).slice(0, TILES_MAX)
+  const polished = events.polished.slice(0, TILES_MAX)
   const [stage, setStage] = useState<Stage>(0)
   const [stars, setStars] = useState(0)
   const [shown, setShown] = useState(0)
@@ -26,12 +51,12 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
 
   // ランキングに送る（クリアしたらクリアタイム、しなかったら正解数。どちらもバナナ数つき）
   useEffect(() => {
-    if (isTestRun()) return // テスト用のURLのときはランキングに送らない
+    if (isTestRun() || !rules.ranked) return // テスト用のURLと、ふくしゅうはランキングに送らない
     void submitScore({ course: level, cleared: result.cleared, clearMs: result.clearMs ?? null, correct: result.correct, bananas: result.coins, bestCombo: result.bestCombo }).then((r) => {
       rankRef.current = r
       setRank(r)
     })
-  }, [level, result])
+  }, [level, result, rules.ranked])
 
   useEffect(() => {
     let alive = true
@@ -58,7 +83,7 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
       at(n * per + 200, () => {
         sfx.combo(2)
         burst(innerWidth / 2, innerHeight * 0.4, 'star', 30, 1.2)
-        if (result.cleared && result.clearMs) {
+        if (!review && result.cleared && result.clearMs) {
           const sec = Math.floor(result.clearMs / 1000)
           const m = Math.floor(sec / 60)
           void speak([`${n}こ、せいかい！`, 'くりあたいむは', ...(m > 0 ? [`${m}ふん`] : []), `${sec % 60}びょう`, 'だよ'])
@@ -95,20 +120,58 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
           rain('banana', 30)
           void speak('ぱーふぇくと！ ぜんぶ、せいかい！ すごーい！')
         } else void speak('よくできました！')
-        // 発表が終わってから少し間をおいて、きょうの順位 →「まだ あそぶ〜？」
-        at(perfect ? 4200 : 2400, () => {
+        // 発表が終わってから少し間をおいて、「まえより のびたよ」→「おぼえたよ」→ きょうの順位 →「まだ あそぶ〜？」
+        void (async () => {
+          const sleep = (ms: number) => new Promise<void>((r) => at(ms, r))
+          const show = (k: keyof Tail) => {
+            setTail((t) => ({ ...t, [k]: true }))
+            sfx.sparkle()
+            burst(innerWidth / 2, innerHeight * 0.6, 'star', 14, 0.9)
+          }
+          await sleep(perfect ? 4200 : 2400)
+          if (events.growth.length > 0) {
+            show('grow')
+            await speak(['まえより、のびたよ！', ...events.growth.map((l) => l.speech)])
+            if (!alive) return
+            await sleep(500)
+          }
+          if (mastered.length > 0) {
+            show('mastered')
+            await speak('あたらしく、おぼえたよ！')
+            if (!alive) return
+            await sleep(500)
+          }
+          if (starUps.length > 0) {
+            show('stars')
+            await speak('ほしが、ふえたよ！')
+            if (!alive) return
+            await sleep(400)
+          }
+          if (polished.length > 0) {
+            show('polish')
+            await speak('ぴかぴか！')
+            if (!alive) return
+            await sleep(400)
+          }
           setAsk(true)
           sfx.coin()
           const r = rankRef.current
           void speak(r && r.day <= 50 ? ['きょうの', `${r.day}い！`, 'まだ、あそぶー？'] : 'まだ、あそぶー？')
-        })
+        })()
       })
     })
     return () => {
       alive = false
       timers.forEach(clearTimeout)
     }
-  }, [result, n, perfect])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, n, perfect, events])
+
+  // カードが出たら、見えるところまでスクロール
+  const tailRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (tail.grow || tail.mastered) tailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [tail])
 
   // 「まだ、あそぶー？」が出たら一番下までスクロール（上に戻せば結果も見られる）
   const askRef = useRef<HTMLDivElement>(null)
@@ -125,14 +188,17 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
           はっぴょうー！
         </h2>
       ) : (
-        <h2 className={`result-title pop ${stage === 4 && perfect ? 'perfect' : ''}`}>{stage === 4 ? (perfect ? 'ぱーふぇくと！' : 'よくできました！') : 'けっか'}</h2>
+        <h2 className={`result-title pop ${stage === 4 && perfect ? 'perfect' : ''}`}>
+          {stage === 4 ? (perfect ? 'ぱーふぇくと！' : review && result.cleared ? <>ふくしゅう<br />くりあー！</> : 'よくできました！') : 'けっか'}
+        </h2>
       )}
+      {review && <div className="mode-chip result-mode">🔁 ふくしゅう</div>}
       <div className="result-monkeys">
         <PixelMonkey char="mandrill" mood="happy" size={58} anim={stage >= 1 ? 'dance' : 'idle'} />
         <PixelMonkey char="monchan" mood="happy" size={100} anim={stage === 4 ? 'jump' : stage >= 1 ? 'dance' : 'idle'} />
         <PixelMonkey char="gorilla" mood="happy" size={66} anim={stage >= 1 ? 'dance' : 'idle'} />
       </div>
-      {stage >= 1 && result.cleared && result.clearMs !== undefined && (
+      {stage >= 1 && !review && result.cleared && result.clearMs !== undefined && (
         <div className="result-cleartime">
           <span>⏱ くりあたいむ</span>
           <span className="time">
@@ -166,6 +232,51 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
         </div>
       )}
       {stage >= 4 && <div className="result-total">ぜんぶで 🍌 {totalCoins}</div>}
+      {(tail.grow || tail.mastered || tail.stars || tail.polish) && (
+      <div className="result-tail" ref={tailRef}>
+        {tail.grow && (
+          <div className="learn-card grow-card pop">
+            <div className="learn-title">📈 まえより のびたよ！</div>
+            {events.growth.map((l) => (
+              <div key={l.speech} className="grow-line">
+                {l.text}
+              </div>
+            ))}
+          </div>
+        )}
+        {tail.mastered && (
+          <div className="learn-card pop">
+            <div className="learn-title">🌟 あたらしく おぼえたよ！</div>
+            <div className="learn-row">
+              {mastered.map((id) => (
+                <WordTile key={id} id={id} badge="☆" />
+              ))}
+              {events.newMastered.length > TILES_MAX && <span className="learn-more">+{events.newMastered.length - TILES_MAX}</span>}
+            </div>
+          </div>
+        )}
+        {tail.stars && (
+          <div className="learn-card small pop">
+            <div className="learn-title">☆が ふえたよ！</div>
+            <div className="learn-row">
+              {starUps.map(([id, box]) => (
+                <WordTile key={id} id={id} badge={`☆${box}`} />
+              ))}
+            </div>
+          </div>
+        )}
+        {tail.polish && (
+          <div className="learn-card small pop">
+            <div className="learn-title">✨ ぴかぴかに したよ！</div>
+            <div className="learn-row">
+              {polished.map((id) => (
+                <WordTile key={id} id={id} badge="✨" />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      )}
       {ask && (
         <div className="again-pop" ref={askRef}>
           <div className="again-card">
@@ -180,7 +291,7 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
             <p className="again-q">まだ、あそぶー？</p>
             <button className="btn again" onClick={() => { sfx.tap(); onAgain() }}>もういっかい！</button>
             <button className="btn home" onClick={() => { sfx.tap(); onHome() }}>おわり</button>
-            <button className="btn rank-link" onClick={() => { sfx.tap(); onRanking() }}>🏆 らんきんぐを みる</button>
+            {rules.ranked && <button className="btn rank-link" onClick={() => { sfx.tap(); onRanking() }}>🏆 らんきんぐを みる</button>}
           </div>
         </div>
       )}
