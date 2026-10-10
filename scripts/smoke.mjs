@@ -1,7 +1,8 @@
 // 通しテスト（スクショは .smoke/ に出力）。使い方: npm run smoke
 //  1. 時間切れ: タップ → タイトル → 8問（途中で1回わざと間違える）→ ゲージ切れ →「しゅうりょうー！」→ 結果 → ポップアップ
 //  2. クリア: ?goal=3 で3問正解 →「くりあー！」→ クリアタイムつきの結果
-//  3. 解放: かんたんクリアで ふつうが あそべる / せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう
+//  3. 解放: かんたんクリアで ふつうが あそべる / せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう・うごきの つよさ
+//  4. 演出: ?show=ugoku:norimono で正解、?show=zukkoke:hakushon でまちがい（9-*.png）
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -152,11 +153,17 @@ try {
   if (!(await page.$('.settings-player'))) errors.push('キャラを なおしたあと せっていに もどっていません')
   await page.click('.voice-btn:nth-child(3)')
   await page.click('.sound-btn:nth-child(2)')
+  // うごきの つよさ（0〜100・10刻み）
+  await page.$eval('.motion-row input', (el) => {
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    set.call(el, '30')
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  })
   await sleep(200)
   await page.screenshot({ path: `${OUT}/7-settings.png` })
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/settings')))
   const players = await page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/players')))
-  if (players.list[0]?.name !== 'ゆうちゃん' || saved.voice !== 'tsumugi' || saved.muted !== true) errors.push(`設定が保存されていません: ${JSON.stringify({ saved, players: players.list.map((p) => p.name) })}`)
+  if (players.list[0]?.name !== 'ゆうちゃん' || saved.voice !== 'tsumugi' || saved.muted !== true || saved.motion !== 0.3) errors.push(`設定が保存されていません: ${JSON.stringify({ saved, players: players.list.map((p) => p.name) })}`)
   console.log('3. せってい: OK')
 
   // 3b. キャラをふやして切りかえる（コースの解放はキャラごと）
@@ -202,6 +209,36 @@ try {
   await sleep(800)
   await page.screenshot({ path: `${OUT}/8-ranking.png` })
   console.log('4. らんきんぐ: OK')
+
+  // 5. 演出（?show で必ず使う。isTestRun なので記録はされない）
+  // うごくえ: のりもの。正解の300ms後（ためている）と、走り去るとき
+  await start(page, '?show=ugoku:norimono&cat=のりもの&goal=3&time=60')
+  await page.click('.level-btn')
+  await sleep(1200)
+  await answer(page, 0)
+  await sleep(300)
+  await page.screenshot({ path: `${OUT}/9-ugoku.png` })
+  await sleep(700)
+  if ((await page.$$('#show-layer .show-clone')).length !== 1) errors.push('うごくえの絵の複製が出ていません')
+  if ((await page.$eval('.picture img', (el) => getComputedStyle(el).opacity)) !== '0') errors.push('うごくえの間、元の絵が透明になっていません')
+  await page.screenshot({ path: `${OUT}/9-ugoku-run.png` })
+  await page.waitForFunction(() => !document.querySelector('.choice.is-answer'), { timeout: 20000 })
+  await sleep(300)
+  if ((await page.$eval('.picture img', (el) => getComputedStyle(el).opacity)) !== '1') errors.push('次の問題で絵が元にもどっていません')
+  if ((await page.$$('#show-layer > *')).length !== 0) errors.push('次の問題になっても演出の要素が残っています')
+  console.log('5a. うごくえ: OK')
+
+  // ずっこけ: まちがえた直後（くしゃみで帽子がとぶ）と、そのあとの「ばあ！」
+  await start(page, '?show=zukkoke:hakushon&cat=のりもの&time=60')
+  await page.click('.level-btn')
+  await sleep(1200)
+  await answer(page, 0, true)
+  await sleep(1100)
+  await page.screenshot({ path: `${OUT}/9-zukkoke.png` })
+  await page.waitForSelector('.show-clone', { timeout: 20000 })
+  await sleep(700)
+  await page.screenshot({ path: `${OUT}/9-peekaboo.png` })
+  console.log('5b. ずっこけ: OK')
 } finally {
   await browser.close()
   await server.close()

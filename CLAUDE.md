@@ -44,7 +44,7 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/fit_illust.mjs <id…>`（描いた範囲を測って中央・同じ大きさにそろえる。何度実行しても同じ）→ `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
 - コード変更後: `npm run check`（問題JSON再生成 + 単体テスト + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
-- 単体テスト: `npm run test`（vitest。`src/lib/*.test.ts`。進捗・ライトナー式の箱・乱数・日付。設定は `vitest.config.ts`）
+- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・演出の解放と選び方。設定は `vitest.config.ts`）
 - テスト用のURLパラメータ（`src/lib/testflags.ts`）
   - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
   - `?show=<id>` `?demo` 保存もランキングへの送信もしない
@@ -52,6 +52,14 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
   - `?time=秒` `?goal=問題数` は今までどおり（これらは記録する）
 - 進捗の更新は `src/lib/progress.ts` の `applyResult`（純粋）。単語の箱（☆・くもり）は `src/lib/leitner.ts`。日付は `src/lib/day.ts`（テストでは `setNow`）
 - ヘッドレスChromeは `~/.cache/saru-quiz/` にある（`scripts/browser.mjs`）
+
+## 演出エンジン（`src/shows/`）
+- 演出1つ = `Show`（`types.ts`）。`registry.ts` の `SHOWS` に登録し、`base: true` か `unlock(u)` で手に入れる。解放の集計は `unlock.ts` の `unlockCtx(save, now)`
+- 選び方: `pickShow(cat, save.shows.pick, u, rng, avoid)`（固定 / おまかせ / 直前を避ける）、うごくえは `ugokuFor(カテゴリ名, u)`。`?show=<id>` はそのカテゴリの演出を必ずその id にする（`index.ts` の `chooseUgoku` / `chooseZukkoke`）
+- 再生は `play(show, makeCtx({...}))`。DOM のアニメは `ctx.layer`（`layer.ts`。`#show-layer`、z-index 25）に置き、`layer.go(el, keyframes, opts)`（Web Animations）で動かす。`clear()` で片づけ、次の問題に入る前に Quiz が呼ぶ。clear 後は古い演出が何も置けない
+- 動きの強さ（設定 0〜1）は `effects.setMotion`。0 のときは粒子が最大4個・画面ゆれとフラッシュなしで、`layer.go` が「ふわっと光って消えるだけ」にする。1つ増やしたら `MOTION=0 node scripts/show_shots.mjs <id>` でも見る
+- 目で確かめる: `node scripts/show_shots.mjs [id…]`（うごくえ=正解、ずっこけ=まちがい。`.smoke/shows/`）
+- 新しいうごくえ・ずっこけは、1秒に3回以上光らせない・痛い／こわい表現にしない
 
 ## 演出の約束（子ども向けの安全）
 - フラッシュは1回ずつ・ゆっくり消す（1秒に3回以上点滅させない）

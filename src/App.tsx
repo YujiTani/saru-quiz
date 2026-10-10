@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { PixelMonkey } from './components/PixelMonkey'
-import { attachEffects, burst } from './lib/effects'
+import { attachEffects, burst, setMotion as setEffectsMotion } from './lib/effects'
+import { getMotion, onSettingsChange } from './lib/settings'
+import { attachLayer } from './shows'
 import { COURSE, pickSession, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
@@ -37,9 +39,14 @@ export default function App() {
   const player = getCurrent()
   const data = player?.save ?? emptySave()
   const fx = useRef<HTMLCanvasElement>(null)
+  const showLayer = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (fx.current) attachEffects(fx.current)
+    if (showLayer.current) attachLayer(showLayer.current)
+    // 動きの強さ（設定）を演出に反映する
+    setEffectsMotion(getMotion())
+    const offSettings = onSettingsChange(() => setEffectsMotion(getMotion()))
     // どこをタップしてもキラキラ
     const onDown = (e: PointerEvent) => {
       resumeAudio()
@@ -49,7 +56,10 @@ export default function App() {
     addEventListener('pointerdown', onDown)
     // オフラインでためていたスコアを送り直す
     void flushPending()
-    return () => removeEventListener('pointerdown', onDown)
+    return () => {
+      removeEventListener('pointerdown', onDown)
+      offSettings()
+    }
   }, [])
 
   function startQuiz(level: number) {
@@ -117,7 +127,7 @@ export default function App() {
       {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} />}
       {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
-        <Quiz key={screen.key} level={screen.level} questions={screen.questions} onFinish={(r) => finish(screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />
+        <Quiz key={screen.key} level={screen.level} questions={screen.questions} save={data} onFinish={(r) => finish(screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />
       )}
       {screen.name === 'result' && (
         <Result
@@ -130,6 +140,7 @@ export default function App() {
           onRanking={() => setScreen({ name: 'ranking', course: screen.level })}
         />
       )}
+      <div id="show-layer" className="show-layer" ref={showLayer} />
       <canvas ref={fx} className="fx" />
       <div id="flash" />
     </>

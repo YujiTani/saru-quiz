@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
+import { now } from '../lib/day'
+import type { Save } from '../lib/storage'
+import { chooseUgoku, chooseZukkoke, layer, makeCtx, peekaboo, play, unlockCtx } from '../shows'
 import { COURSE, makeRound, type Question, type Round } from '../lib/quiz'
 import { sfx } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
@@ -60,7 +63,7 @@ function FeverRing({ level }: { level: number }) {
   )
 }
 
-export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
+export function Quiz({ level, questions, save, onFinish, onQuit }: { level: number; questions: Question[]; save: Save; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
   const course = COURSE[level] ?? COURSE[1]
   const TIME_MAX = (TIME_OVERRIDE || course.time) * 1000
   const GOAL = GOAL_OVERRIDE || course.goal
@@ -99,10 +102,14 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const [isBonus, setIsBonus] = useState(false)
   const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
   const token = useRef(0) // 読み上げ途中で次へ進んだとき、古い非同期処理を止める
+  // 演出の解放状況（遊び始めの時点のもの）と、直前に使ったずっこけ
+  const unlock = useRef(unlockCtx(save, now()))
+  const lastZukkoke = useRef<string | undefined>(undefined)
 
   // 問題が変わったら「じゃじゃーん」→「これなあに？」→ 選択肢を順番に読み上げ
   useEffect(() => {
     const my = ++token.current
+    layer.clear() // 前の問題の演出を片づける
     setPhase('reading')
     setPicked(null)
     setSelected(null)
@@ -191,6 +198,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       document.body.classList.remove('fever', ...FEVER_CLASSES)
       document.body.style.removeProperty('--fever-speed')
       sfx.stopFever()
+      layer.clear()
     },
     [],
   )
@@ -255,8 +263,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       sfx.coinCascade(Math.min(4 + c, 14))
       if (c >= 2) sfx.comboUp(c)
       flash()
-      burst(x, y, 'confetti', 60)
-      burst(x, y, 'coin', 8 + Math.min(c, 10) * 2, 0.9)
+      // 正解のうごくえ（はじける・コインもここ）。進み具合 E は せいかい数 ÷ クリアの数
+      void play(chooseUgoku(q.c, unlock.current), makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current, at: { x, y }, combo: c }))
       if (c === 3) shout = celebrate('すごい！', 'combo', 'mandrill', x, y)
       if (c === 8 || (c > 8 && c % 5 === 3)) shout = celebrate('でんせつ！', 'legend', 'rainbow', x, y)
       if (feverLv > 0) rain('banana', 8)
@@ -287,13 +295,17 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       setPhase('wrong')
       setBubble('おしい！')
       sfx.wrong()
-      sfx.boing()
       shake('small')
       // まちがえた問題はあとでもう一度
       const qs = queueRef.current
       queueRef.current = [...qs.slice(0, index + 4), q, ...qs.slice(index + 4)]
+      // おさるのずっこけ → 正解の絵が おさるの後ろから「ばあ！」と出てくる
+      const zk = chooseZukkoke(save.shows.pick, unlock.current, lastZukkoke.current)
+      lastZukkoke.current = zk.id
+      const zctx = makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current })
       ;(async () => {
-        await speak(['おしい！ これは、', q.a, 'だよ'])
+        await Promise.all([play(zk, zctx), speak('おしい！ これは、')])
+        await Promise.all([peekaboo(zctx).catch(() => {}), speak([q.a, 'だよ'])])
         await wait(600)
         next()
       })()
@@ -408,8 +420,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       <div className="stage">
         <div className="host">
           <div className="host-monkey">
-            <PixelMonkey char={feverLv ? 'rainbow' : 'monchan'} mood={mood} size={60} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
-            {phase === 'wrong' && <span className="peel">🍌</span>}
+            <PixelMonkey char={feverLv ? 'rainbow' : 'monchan'} mood={mood} size={60} anim={phase === 'correct' ? 'jump' : 'idle'} />
           </div>
           <div className={`bubble ${phase}`}>{bubble}</div>
         </div>

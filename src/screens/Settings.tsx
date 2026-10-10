@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { getCurrent } from '../lib/players'
-import { getVoice, getVolume, isMuted, onSettingsChange, setMuted, setVoice, setVolume, VOICES, type VoiceId } from '../lib/settings'
+import { burst } from '../lib/effects'
+import { getMotion, getVoice, getVolume, isMuted, onSettingsChange, setMotion, setMuted, setVoice, setVolume, VOICES, type VoiceId } from '../lib/settings'
 import { sfx } from '../lib/sound'
 import { speak, stopSpeaking } from '../lib/speech'
 
@@ -11,6 +12,8 @@ export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditP
   const [voice, setVoiceState] = useState<VoiceId>(getVoice)
   const [muted, setMutedState] = useState(isMuted)
   const [volume, setVolumeState] = useState(getVolume)
+  const [motion, setMotionState] = useState(getMotion)
+  const lastTry = useRef(0)
 
   useEffect(
     () =>
@@ -18,6 +21,7 @@ export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditP
         setVoiceState(getVoice())
         setMutedState(isMuted())
         setVolumeState(getVolume())
+        setMotionState(getMotion())
       }),
     [],
   )
@@ -27,6 +31,16 @@ export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditP
     sfx.select()
     stopSpeaking()
     void speak('これ、なあに？')
+  }
+
+  // 動きの強さを変えたら、その強さで星を少し出して ためせる
+  function tryMotion(v: number, input: HTMLInputElement) {
+    setMotion(v / 100)
+    const t = performance.now()
+    if (t - lastTry.current < 250) return
+    lastTry.current = t
+    const r = input.getBoundingClientRect()
+    burst(r.left + 16 + (r.width - 32) * (v / 100), r.top + r.height / 2, 'star', 14, 0.7)
   }
 
   return (
@@ -82,6 +96,15 @@ export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditP
             aria-label="おんりょう"
           />
           <span>🔊</span>
+        </label>
+      </section>
+
+      <section className="settings-card">
+        <h2 className="settings-label">🌀 うごきの つよさ</h2>
+        <label className="motion-row">
+          <span>🍃</span>
+          <input type="range" min={0} max={100} step={10} value={Math.round(motion * 100)} onChange={(e) => tryMotion(Number(e.target.value), e.currentTarget)} aria-label="うごきの つよさ" />
+          <span>🌪️</span>
         </label>
       </section>
 

@@ -327,4 +327,28 @@ export const sfx = {
   drumroll(dur = 1.2) {
     for (let t = 0; t < dur; t += 0.05) tone(80 + Math.random() * 40, t, 0.04, 'sawtooth', 0.3)
   },
+  /** のりものの「ブーン」（エンジンがだんだん高くなって遠ざかる） */
+  vroom() {
+    tone(70, 0, 0.5, 'sawtooth', 0.5, 190)
+    tone(140, 0.45, 0.5, 'sawtooth', 0.4, 520)
+    tone(520, 0.9, 0.4, 'sawtooth', 0.25, 220)
+    noise(0.1, 0.9, 0.35, 300, 1800, 'lowpass')
+  },
+  /** 「ぱくっ」（かじる音） */
+  munch() {
+    tone(220, 0, 0.07, 'square', 0.5, 120)
+    noise(0.02, 0.09, 0.55, 3000, 900)
+    tone(180, 0.1, 0.06, 'triangle', 0.5, 110)
+  },
+  /** 「はくしょん！」（息をすって、ぷしゅっ） */
+  achoo() {
+    tone(500, 0, 0.35, 'sine', 0.4, 900)
+    noise(0.38, 0.25, 0.7, 6000, 800)
+    tone(300, 0.38, 0.2, 'triangle', 0.6, 120)
+  },
+  /** ひよこの「ぴよっ」 */
+  peep() {
+    tone(note(88), 0, 0.07, 'triangle', 0.5, note(94))
+    tone(note(91), 0.1, 0.07, 'triangle', 0.5, note(96))
+  },
 }
