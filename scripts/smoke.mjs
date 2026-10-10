@@ -33,7 +33,12 @@ try {
     const wrong = i === 6
     for (const b of await page.$$('.choice')) {
       if (((await b.evaluate((el) => el.textContent)) === q.a) !== wrong) {
+        // 1回目: 選んで読み上げ → 2回目: 「これ！」ボタン（偶数問）か同じボタン（奇数問）で回答
         await b.click()
+        await sleep(200)
+        if (i === 1) await page.screenshot({ path: `${OUT}/2b-selected.png` })
+        if (i % 2 === 0) await page.click('.decide.show')
+        else await b.click()
         break
       }
     }

@@ -238,7 +238,7 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 @keyframes bounce-card { 40% { transform: scale(1.08) rotate(2deg); } }
 @keyframes shake-x { 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 
-.choices { width: 100%; display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.choices { width: 100%; display: flex; flex-direction: column; gap: 12px; padding-top: 6px; }
 .choice {
   --c: #fff;
   height: 72px;
@@ -248,7 +248,27 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 .choice:nth-child(1) { --c: #ffe3f0; }
 .choice:nth-child(2) { --c: #e0f4ff; }
 .choice:nth-child(3) { --c: #e6ffe9; }
-.choice.is-reading { --c: var(--yellow); transform: scale(1.04); }
+.choice.is-reading { --c: #fff3a8; transform: scale(1.02); }
+.choice.is-selected { --c: var(--yellow); transform: scale(1.05); z-index: 2; animation: selected-pop 0.35s; }
+.choice.is-selected::before { content: '🔊'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 24px; }
+@keyframes selected-pop { 0% { transform: scale(0.95); } 60% { transform: scale(1.1); } 100% { transform: scale(1.05); } }
+.decide {
+  --c: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 66px;
+  font-size: 32px;
+  color: #fff;
+  text-shadow: 0 3px 0 var(--ink);
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.decide.show { visibility: visible; opacity: 1; transform: scale(1); animation: decide-pulse 1s ease-in-out infinite; }
+@keyframes decide-pulse { 50% { transform: scale(1.06); } }
 .choice.is-answer { --c: var(--yellow); animation: pop-small 0.5s; z-index: 2; }
 @keyframes pop-small { 0% { transform: scale(0.9); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .choice.is-answer::after { content: '⭕'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 30px; }
@@ -334,8 +354,9 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
   body.fever::before { animation: none; }
   #flash.on { animation: none; }
 }
-@media (max-height: 700px) {
-  .choice { height: 60px; font-size: 30px; }
+@media (max-height: 760px) {
+  .choice { height: 58px; }
+  .decide { height: 56px; font-size: 28px; }
   .logo .big { font-size: 52px; }
   .level-btn { height: 64px; }
 }

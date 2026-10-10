@@ -22,6 +22,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   const [phase, setPhase] = useState<Phase>('reading')
   const [reading, setReading] = useState(-1)
   const [picked, setPicked] = useState<string | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
+  const choiceRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [combo, setCombo] = useState(0)
   const [coins, setCoins] = useState(0)
   const [gain, setGain] = useState<{ n: number; key: number } | null>(null)
@@ -37,6 +39,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     const my = ++token.current
     setPhase('reading')
     setPicked(null)
+    setSelected(null)
     setBubble('これ なあに？')
     ;(async () => {
       await wait(350)
@@ -62,6 +65,28 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   function center(el: Element) {
     const r = el.getBoundingClientRect()
     return [r.left + r.width / 2, r.top + r.height / 2] as const
+  }
+
+  // 3歳児はひらがなが読めないので、1回目のタップは「選ぶ＋読み上げ」、
+  // 同じボタンをもう一度 or「これ！」ボタンで回答する
+  function select(i: number) {
+    if (phase === 'correct' || phase === 'wrong') return
+    const el = choiceRefs.current[i]
+    if (selected === i && el) return answer(round.choices[i], el)
+    token.current++
+    stopSpeaking()
+    setReading(-1)
+    setSelected(i)
+    setPhase('answering')
+    setBubble('これかな？')
+    sfx.tap()
+    void speak(round.choices[i])
+  }
+
+  function decide() {
+    if (selected === null) return
+    const el = choiceRefs.current[selected]
+    if (el) answer(round.choices[selected], el)
   }
 
   function answer(choice: string, el: HTMLElement) {
@@ -192,13 +217,26 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
       <div className="choices">
         {round.choices.map((c, i) => {
-          const state = phase === 'correct' || phase === 'wrong' ? (c === q.a ? 'is-answer' : c === picked ? 'is-wrong' : 'is-dim') : reading === i ? 'is-reading' : ''
+          const done = phase === 'correct' || phase === 'wrong'
+          const state = done ? (c === q.a ? 'is-answer' : c === picked ? 'is-wrong' : 'is-dim') : selected === i ? 'is-selected' : reading === i ? 'is-reading' : ''
           return (
-            <button key={c + index} className={`btn choice ${state}`} style={{ fontSize: `min(36px, ${(78 / c.length).toFixed(1)}vw)` }} onClick={(e) => answer(c, e.currentTarget)}>
+            <button
+              key={c + index}
+              ref={(el) => {
+                choiceRefs.current[i] = el
+              }}
+              className={`btn choice ${state}`}
+              style={{ fontSize: `min(36px, ${(78 / c.length).toFixed(1)}vw)` }}
+              onClick={() => select(i)}
+            >
               {c}
             </button>
           )
         })}
+        <button className={`btn decide ${selected !== null && phase === 'answering' ? 'show' : ''}`} onClick={decide} aria-label="これにする">
+          <PixelMonkey char="monchan" mood="happy" size={40} anim="none" />
+          これ！
+        </button>
       </div>
 
       {banner && (
