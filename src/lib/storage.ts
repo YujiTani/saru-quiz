@@ -6,10 +6,12 @@ export type Save = {
   coins: number
   bestCombo: number
   plays: number
+  /** クリアしたコース（かんたんクリア → ふつう解放、ふつうクリア → むずかしい解放） */
+  cleared: number[]
   stats: Record<string, WordStat>
 }
 
-const empty = (): Save => ({ coins: 0, bestCombo: 0, plays: 0, stats: {} })
+const empty = (): Save => ({ coins: 0, bestCombo: 0, plays: 0, cleared: [], stats: {} })
 
 export function load(): Save {
   try {

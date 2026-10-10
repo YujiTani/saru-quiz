@@ -150,6 +150,10 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
   font-size: 32px;
 }
 .level-btn .stars { font-size: 26px; }
+.level-btn.is-locked { --c: #b9b2c4; color: #5a5068; }
+.lock-text { display: flex; flex-direction: column; line-height: 1.1; }
+.lock-text small { font-size: 13px; }
+.level-btn.is-new::after { content: 'NEW!'; position: absolute; top: -10px; right: -6px; padding: 2px 8px; border: 3px solid var(--ink); border-radius: 10px; background: #ff3a5a; color: #fff; font-size: 14px; transform: rotate(8deg); }
 
 /* ---------- おさるのうごき ---------- */
 .monkey { display: block; transform-origin: 50% 100%; }
@@ -330,7 +334,11 @@ button { font: inherit; color: inherit; border: none; background: none; padding:
 }
 
 /* ---------- けっか ---------- */
-.result { justify-content: center; gap: 16px; text-align: center; }
+.result { gap: 16px; text-align: center; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* 中身が少ないときはまんなか、はみ出すときは上から並べてスクロールできるように */
+.result > * { flex-shrink: 0; }
+.result > :first-child { margin-top: auto; }
+.result > :last-child { margin-bottom: auto; }
 .result-title { margin: 0; font-size: 40px; color: #fff; text-shadow: 0 4px 0 var(--ink); }
 .result-title.pop { animation: pop 0.5s; color: var(--yellow); }
 .result-monkeys { display: flex; align-items: flex-end; gap: 8px; }
@@ -617,14 +625,11 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 
 /* ---------- ゲーム終了後のポップアップ ---------- */
 .again-pop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
+  /* 結果の一番下に並べる（重ねると結果が隠れるので）。出たら自動でここまでスクロール */
+  width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 16px;
-  background: rgba(20, 8, 40, 0.6);
+  padding: 8px 0 16px;
   animation: fade-in 0.3s;
 }
 .again-card {
@@ -720,7 +725,7 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .title-btns { display: flex; gap: 8px; }
 .ranking { justify-content: flex-start; gap: 10px; }
 .rank-tabs { width: 100%; display: flex; gap: 8px; }
-.rank-tab { --c: #fff; flex: 1; height: 46px; font-size: 20px; }
+.rank-tab { --c: #fff; flex: 1; height: 46px; font-size: 18px; padding: 0 4px; }
 .rank-tab.is-on { --c: var(--yellow); }
 .rank-list { flex: 1; min-height: 0; overflow-y: auto; align-items: stretch; }
 .rank-list ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -730,7 +735,61 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .rank-no { text-align: center; font-size: 20px; }
 .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-score { font-family: 'DotGothic16', monospace; font-weight: 400; }
-.rank-banana { font-size: 15px; color: #8a5a00; }
+.rank-banana { font-size: 13px; color: #8a5a00; text-align: right; line-height: 1.2; }
+/* 1〜3位のカード（光の帯がゆっくり流れる。点滅はしない） */
+.rank-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 4px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 5px 0 var(--ink);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.rank-top::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: rank-sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes rank-sheen { 60%, 100% { transform: translateX(100%); } }
+.rank-top-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.rank-top-label { font-size: 15px; color: var(--ink); }
+.rank-top-name { font-size: 24px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-top-stats { font-size: 15px; color: #5a3a10; display: flex; flex-wrap: wrap; column-gap: 8px; align-items: baseline; }
+.rank-top-stats > span { white-space: nowrap; }
+.rank-top-stats b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 20px; color: var(--ink); }
+.rank-top.top1 {
+  margin-top: 14px;
+  padding: 16px 14px;
+  border-width: 5px;
+  background: linear-gradient(135deg, #fff6a8, #ffd23a 45%, #ffb300 70%, #fff09a);
+  box-shadow: 0 6px 0 var(--ink), 0 0 0 4px #fff inset, 0 0 24px 4px rgba(255, 210, 60, 0.8);
+  overflow: visible;
+}
+.rank-top.top1::after { border-radius: 12px; }
+.rank-top.top1 .rank-top-label { font-size: 18px; color: #c0392b; font-weight: bold; }
+.rank-top.top1 .rank-top-name { font-size: 32px; text-shadow: 0 2px 0 #fff; }
+.rank-top.top1 .rank-top-stats b { font-size: 26px; }
+.rank-crown {
+  position: absolute;
+  top: -22px;
+  left: 22px;
+  font-size: 34px;
+  transform: rotate(-15deg);
+  animation: dance 0.8s steps(2) infinite;
+  z-index: 1;
+}
+.rank-top.top2 { background: linear-gradient(135deg, #ffffff, #d9e2ec 50%, #b8c4d0); }
+.rank-top.top3 { background: linear-gradient(135deg, #ffe2c4, #e8a66a 55%, #c97d40); }
+.rank-top.is-me { outline: 4px solid #ff3a5a; outline-offset: 2px; }
 .rank-msg { margin: 20px 0; text-align: center; font-size: 18px; color: #6a4a6a; }
 .again-rank { margin: 0; font-size: 18px; text-align: center; }
 .again-rank b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 28px; color: #e8a80a; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; }

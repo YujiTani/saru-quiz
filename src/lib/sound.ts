@@ -251,7 +251,20 @@ export const sfx = {
   },
   /** フィーバー突入（サイレン＋ドーン） */
   /** フィーバー突入（レベルが高いほど派手） */
+  /** フィーバーのレベルアップ: ダンダンダンダン！！（重い4連打 → いつものキュイーン） */
   feverStart(level = 1) {
+    const root = 33 + Math.min(level, 9) // レベルが上がるほど少しずつ高く
+    ;[0, 0.15, 0.3, 0.45].forEach((t, i) => {
+      const last = i === 3
+      tone(160, t, last ? 0.5 : 0.22, 'sine', 1, 38) // ドン（キック）
+      tone(note(root + i * 2), t, last ? 0.45 : 0.16, 'sawtooth', 0.45) // ダン（低い和音）
+      tone(note(root + 7 + i * 2), t, last ? 0.45 : 0.16, 'square', 0.3)
+      tone(note(root + 12 + i * 2), t, last ? 0.45 : 0.16, 'square', 0.22)
+      noise(t, last ? 0.5 : 0.18, last ? 0.8 : 0.55, 5000, 300, 'lowpass') // バシッ
+    })
+    setTimeout(() => sfx.feverRise(level), 650)
+  },
+  feverRise(level = 1) {
     tone(300, 0, 0.6, 'sawtooth', 0.35, 1800)
     tone(450, 0.05, 0.6, 'square', 0.25, 2400)
     tone(110, 0.62, 0.7, 'sine', 1, 40)

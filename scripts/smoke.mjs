@@ -1,7 +1,7 @@
 // 通しテスト（スクショは .smoke/ に出力）。使い方: npm run smoke
 //  1. 時間切れ: タップ → タイトル → 8問（途中で1回わざと間違える）→ ゲージ切れ →「しゅうりょうー！」→ 結果 → ポップアップ
 //  2. クリア: ?goal=3 で3問正解 →「くりあー！」→ クリアタイムつきの結果
-//  3. せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう
+//  3. 解放: かんたんクリアで ふつうが あそべる / せってい: なまえ（ひらがな以外は はじく）・こえ・おと・おんりょう
 import { createServer } from 'vite'
 import fs from 'fs'
 import { launch } from './browser.mjs'
@@ -48,6 +48,7 @@ try {
   // 1. 時間切れで終わる
   await start(page, '?time=15')
   await page.screenshot({ path: `${OUT}/1-title.png` })
+  if (!(await page.$('.level-btn.is-locked'))) errors.push('さいしょから ふつう が解放されています')
   await page.click('.level-btn')
   await sleep(1200)
   await page.screenshot({ path: `${OUT}/2-quiz.png` })
@@ -83,8 +84,11 @@ try {
   await page.screenshot({ path: `${OUT}/6-cleartime.png` })
   console.log('2. クリア: OK')
 
-  // 3. せってい
+  // 3. かんたんクリアで ふつうが解放 → せってい
   await start(page, '')
+  if (await page.$('.level-btn.is-locked')) errors.push('かんたんをクリアしても ふつう が解放されません')
+  if ((await page.$$('.level-btn')).length !== 2) errors.push('むずかしい が早く出ています')
+  await page.screenshot({ path: `${OUT}/6b-unlocked.png` })
   await page.click('.gear-btn')
   await sleep(400)
   await page.type('.name-input', 'Yuu1')

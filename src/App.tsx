@@ -52,7 +52,8 @@ export default function App() {
       const s = stats[a.id] ?? { ok: 0, ng: 0, last: 0 }
       stats[a.id] = { ok: s.ok + (a.ok ? 1 : 0), ng: s.ng + (a.ok ? 0 : 1), last: Date.now() }
     }
-    const next = { coins: data.coins + result.coins, bestCombo: Math.max(data.bestCombo, result.bestCombo), plays: data.plays + 1, stats }
+    const cleared = result.cleared && !data.cleared.includes(level) ? [...data.cleared, level] : data.cleared
+    const next = { coins: data.coins + result.coins, bestCombo: Math.max(data.bestCombo, result.bestCombo), plays: data.plays + 1, cleared, stats }
     setData(next)
     save(next)
     setScreen({ name: 'result', level, result })
@@ -80,7 +81,7 @@ export default function App() {
         </button>
       )}
       {screen.name === 'title' && (
-        <Title coins={data.coins} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} onRanking={() => setScreen({ name: 'ranking', course: 1 })} />
+        <Title coins={data.coins} cleared={data.cleared} onStart={startQuiz} onSettings={() => setScreen({ name: 'settings' })} onRanking={() => setScreen({ name: 'ranking', course: 1 })} />
       )}
       {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}

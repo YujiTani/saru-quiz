@@ -24,7 +24,7 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
 
   // ランキングに送る（クリアしたらクリアタイム、しなかったら正解数。どちらもバナナ数つき）
   useEffect(() => {
-    void submitScore({ course: level, cleared: result.cleared, clearMs: result.clearMs ?? null, correct: result.correct, bananas: result.coins }).then((r) => {
+    void submitScore({ course: level, cleared: result.cleared, clearMs: result.clearMs ?? null, correct: result.correct, bananas: result.coins, bestCombo: result.bestCombo }).then((r) => {
       rankRef.current = r
       setRank(r)
     })
@@ -107,6 +107,12 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
     }
   }, [result, n, perfect])
 
+  // 「まだ、あそぶー？」が出たら一番下までスクロール（上に戻せば結果も見られる）
+  const askRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (ask) askRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [ask])
+
   return (
     <div className="screen result">
       {stage === 0 ? (
@@ -158,7 +164,7 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
       )}
       {stage >= 4 && <div className="result-total">ぜんぶで 🍌 {totalCoins}</div>}
       {ask && (
-        <div className="again-pop">
+        <div className="again-pop" ref={askRef}>
           <div className="again-card">
             <PixelMonkey char="monchan" mood="happy" size={72} anim="jump" />
             {rank ? (

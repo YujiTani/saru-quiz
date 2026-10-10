@@ -9,9 +9,9 @@ const PENDING_KEY = 'saru-quiz/pending-scores'
 export const rankingEnabled = () => Boolean(URL_BASE && ANON_KEY)
 
 export type Period = 'day' | 'month'
-export type ScoreRow = { pub_id: string; name: string; cleared: boolean; clear_ms: number | null; correct: number; bananas: number }
+export type ScoreRow = { pub_id: string; name: string; cleared: boolean; clear_ms: number | null; correct: number; bananas: number; best_combo: number }
 export type SubmitResult = { day: number; month: number; newBest: boolean }
-type Pending = { course: number; cleared: boolean; clearMs: number | null; correct: number; bananas: number }
+type Pending = { course: number; cleared: boolean; clearMs: number | null; correct: number; bananas: number; bestCombo?: number }
 
 const headers = () => ({ apikey: ANON_KEY!, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' })
 
@@ -42,6 +42,7 @@ async function post(s: Pending): Promise<SubmitResult> {
       p_clear_ms: s.clearMs,
       p_correct: s.correct,
       p_bananas: s.bananas,
+      p_combo: Math.min(s.bestCombo ?? 0, s.correct),
     }),
   })
   if (!res.ok) throw new Error(`submit ${res.status}`)
@@ -95,7 +96,7 @@ export async function flushPending() {
 /** ランキング上位50件 */
 export async function fetchRanking(course: number, period: Period): Promise<ScoreRow[]> {
   const q = new URLSearchParams({
-    select: 'pub_id,name,cleared,clear_ms,correct,bananas',
+    select: 'pub_id,name,cleared,clear_ms,correct,bananas,best_combo',
     course: `eq.${course}`,
     period: `eq.${period}`,
     period_key: `eq.${periodKey(period)}`,

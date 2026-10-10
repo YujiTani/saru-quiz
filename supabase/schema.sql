@@ -5,6 +5,7 @@
 --   → その日のハイスコアがそのままマンスリーにも入る
 -- - かんたん / ふつう / むずかしい（course 1/2/3）は別のランキング
 -- - 並び順: クリアした人（タイムが早い順 → バナナが多い順）→ クリアしていない人（正解数が多い順 → バナナが多い順）
+-- - best_combo（さいこう れんぞく）は並び順に使わず、その期間でいちばん長い連続正解を記録する
 -- - 読み取りは誰でもできる。書き込みは submit_score() だけ
 -- - player_id は本人だけが知っているID。公開するのはそのハッシュ（pub_id）だけにして、なりすましを防ぐ
 
@@ -21,9 +22,13 @@ create table if not exists public.scores (
   clear_ms   integer,
   correct    integer     not null,
   bananas    integer     not null,
+  best_combo integer     not null default 0,
   updated_at timestamptz not null default now(),
   primary key (player_id, course, period, period_key)
 );
+
+-- あとから足した列（作成済みのテーブル用）
+alter table public.scores add column if not exists best_combo integer not null default 0;
 
 create index if not exists scores_rank_idx
   on public.scores (course, period, period_key, cleared desc, clear_ms asc, correct desc, bananas desc);
@@ -35,7 +40,7 @@ create policy "誰でも読める" on public.scores for select using (true);
 
 -- player_id は見せない（列ごとに読み取りを許可）
 revoke all on public.scores from anon, authenticated;
-grant select (pub_id, name, course, period, period_key, cleared, clear_ms, correct, bananas, updated_at)
+grant select (pub_id, name, course, period, period_key, cleared, clear_ms, correct, bananas, best_combo, updated_at)
   on public.scores to anon, authenticated;
 
 -- a の記録が b よりよいか
@@ -51,9 +56,11 @@ create or replace function public.score_better(
 $$;
 
 -- スコアを送る。きょう・こんげつの順位を返す
+drop function if exists public.submit_score(uuid, text, smallint, boolean, integer, integer, integer);
 create or replace function public.submit_score(
   p_player uuid, p_name text, p_course smallint,
-  p_cleared boolean, p_clear_ms integer, p_correct integer, p_bananas integer
+  p_cleared boolean, p_clear_ms integer, p_correct integer, p_bananas integer,
+  p_combo integer default 0
 ) returns json language plpgsql security definer set search_path = public as $$
 declare
   v_day   text := to_char(now() at time zone 'Asia/Tokyo', 'YYYY-MM-DD');
@@ -69,7 +76,8 @@ begin
   -- 入力チェック（なまえはひらがな8文字まで、ありえない値ははじく）
   if p_name !~ '^[ぁ-んー]{1,8}$' then raise exception 'bad name'; end if;
   if p_course not in (1, 2, 3) then raise exception 'bad course'; end if;
-  if p_correct < 0 or p_correct > 1000 or p_bananas < 0 or p_bananas > 10000000 then raise exception 'bad score'; end if;
+  if p_correct < 0 or p_correct > 1000 or p_bananas < 0 or p_bananas > 10000000
+     or p_combo < 0 or p_combo > p_correct then raise exception 'bad score'; end if;
   if p_cleared and (p_correct < v_goal or p_clear_ms is null or p_clear_ms < v_goal * 1000) then raise exception 'bad clear'; end if;
   if not p_cleared then p_clear_ms := null; end if;
 
@@ -87,9 +95,10 @@ begin
     -- きょうの記録を更新した（または きょう はじめて）
     if v_period = 'day' and v_rows > 0 then v_best := true; end if;
 
-    -- なまえを変えたときは記録が悪くても名前だけ合わせる
-    update scores set name = p_name
-      where player_id = p_player and course = p_course and period = v_period and period_key = v_key and name <> p_name;
+    -- なまえを変えたときは記録が悪くても名前だけ合わせる。さいこう れんぞくは記録と別に長いほうを残す
+    update scores set name = p_name, best_combo = greatest(best_combo, p_combo)
+      where player_id = p_player and course = p_course and period = v_period and period_key = v_key
+        and (name <> p_name or best_combo < p_combo);
 
     select count(*) + 1 into v_rank
       from scores o, scores me
