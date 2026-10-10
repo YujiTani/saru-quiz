@@ -1,5 +1,14 @@
 // 日本語の読み上げ（端末の標準合成音声）。のちに親の録音で差し替える予定
+import voices from '../data/voices.json'
 import { isMuted, onMutedChange } from './settings'
+import { playVoice, preloadVoice, stopVoice } from './sound'
+
+// VOICEVOX（ずんだもん）で作った音声。無いセリフは端末の合成音声で読む
+const VOICE: Record<string, string> = voices
+export const hasVoice = (text: string) => text in VOICE
+export function preloadSpeech(texts: string[]) {
+  for (const t of texts) if (VOICE[t]) preloadVoice(VOICE[t])
+}
 
 let voice: SpeechSynthesisVoice | null = null
 
@@ -24,12 +33,28 @@ export function unlockSpeech() {
 
 onMutedChange((m) => m && stopSpeaking())
 
+let speakToken = 0
+
 export function stopSpeaking() {
+  speakToken++
+  stopVoice()
   if ('speechSynthesis' in window) speechSynthesis.cancel()
 }
 
-/** 読み終わったら resolve。端末によって onend が来ないことがあるので時間で打ち切る */
-export function speak(text: string, { rate = 0.95, pitch = 1.08 } = {}): Promise<void> {
+/** 読み終わったら resolve。配列なら順番に読む（例: ['せいかい！', 'りんご']） */
+export async function speak(text: string | string[], opts?: { rate?: number; pitch?: number }): Promise<void> {
+  const parts = Array.isArray(text) ? text : [text]
+  const my = ++speakToken
+  for (const part of parts) {
+    if (my !== speakToken) return
+    if (!isMuted() && VOICE[part] && (await playVoice(VOICE[part]))) continue
+    if (my !== speakToken) return
+    await speakTTS(part, opts)
+  }
+}
+
+/** 端末の合成音声。端末によって onend が来ないことがあるので時間で打ち切る */
+function speakTTS(text: string, { rate = 0.95, pitch = 1.08 } = {}): Promise<void> {
   // ミュート中も画面の進行テンポは保つため、読み上げ相当の時間だけ待つ
   if (isMuted() || !('speechSynthesis' in window)) return new Promise((r) => setTimeout(r, 300 + text.length * 120))
   return new Promise((resolve) => {

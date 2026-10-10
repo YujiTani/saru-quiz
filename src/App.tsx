@@ -10,7 +10,7 @@ import { Quiz, type QuizResult } from './screens/Quiz'
 import { Result } from './screens/Result'
 import { Title } from './screens/Title'
 
-const SESSION_SIZE = 10
+const SESSION_SIZE = 60 // 時間ゲームなので多めに用意（足りなければ先頭に戻る）
 
 type Screen = { name: 'tap' } | { name: 'title' } | { name: 'quiz'; level: number; questions: Question[]; key: number } | { name: 'result'; level: number; result: QuizResult }
 
@@ -48,6 +48,10 @@ export default function App() {
 
   return (
     <>
+      <header className="app-header">
+        <span className="app-title">おさるのなあに？クイズ</span>
+        <MuteButton />
+      </header>
       {screen.name === 'tap' && (
         <button
           className="screen tap-start"
@@ -71,7 +75,6 @@ export default function App() {
       {screen.name === 'result' && (
         <Result result={screen.result} totalCoins={data.coins} onAgain={() => startQuiz(screen.level)} onHome={() => setScreen({ name: 'title' })} />
       )}
-      <MuteButton />
       <canvas ref={fx} className="fx" />
       <div id="flash" />
     </>

@@ -38,6 +38,7 @@ export function Title({ coins, onStart }: { coins: number; onStart: (level: numb
           </button>
         ))}
       </div>
+      <p className="credit">VOICEVOX:ずんだもん</p>
     </div>
   )
 }

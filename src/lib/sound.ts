@@ -3,6 +3,9 @@ import { isMuted, onMutedChange } from './settings'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
+let voiceGain: GainNode | null = null
+let voiceSrc: AudioBufferSourceNode | null = null
+const buffers = new Map<string, Promise<AudioBuffer>>()
 
 /** iOS はユーザー操作の中で一度鳴らさないと音が出ないので、最初のタップで呼ぶ */
 export function unlockAudio() {
@@ -11,10 +14,62 @@ export function unlockAudio() {
     ctx = new AC()
     master = ctx.createGain()
     master.gain.value = isMuted() ? 0 : 0.25
-    onMutedChange((m) => master && (master.gain.value = m ? 0 : 0.25))
+    voiceGain = ctx.createGain()
+    voiceGain.gain.value = isMuted() ? 0 : 1
+    onMutedChange((m) => {
+      if (master) master.gain.value = m ? 0 : 0.25
+      if (voiceGain) voiceGain.gain.value = m ? 0 : 1
+    })
     master.connect(ctx.destination)
+    voiceGain.connect(ctx.destination)
   }
   if (ctx.state === 'suspended') void ctx.resume()
+}
+
+function loadBuffer(url: string) {
+  let p = buffers.get(url)
+  if (!p) {
+    p = fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((b) => ctx!.decodeAudioData(b))
+    p.catch(() => buffers.delete(url))
+    buffers.set(url, p)
+  }
+  return p
+}
+
+/** 録音済みの声（mp3）を鳴らす。鳴らし終わったら resolve。鳴らせなければ false */
+export async function playVoice(url: string): Promise<boolean> {
+  if (!ctx || !voiceGain) return false
+  try {
+    const buf = await loadBuffer(url)
+    stopVoice()
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.connect(voiceGain)
+    voiceSrc = src
+    await new Promise<void>((resolve) => {
+      src.onended = () => resolve()
+      src.start()
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 先読み（次の問題の選択肢など） */
+export function preloadVoice(url: string) {
+  if (ctx) void loadBuffer(url).catch(() => {})
+}
+
+export function stopVoice() {
+  try {
+    voiceSrc?.stop()
+  } catch {
+    // すでに止まっている
+  }
+  voiceSrc = null
 }
 
 function tone(freq: number, start: number, dur: number, type: OscillatorType = 'square', vol = 1, slideTo?: number) {
@@ -33,6 +88,36 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
 }
 
 const note = (n: number) => 440 * Math.pow(2, (n - 69) / 12) // MIDI番号 → Hz
+
+let noiseBuf: AudioBuffer | null = null
+/** ノイズ（シュッ・ドラム用） */
+function noise(start: number, dur: number, vol = 0.5, from = 800, to = 8000, type: BiquadFilterType = 'bandpass') {
+  if (!ctx || !master) return
+  if (!noiseBuf) {
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
+    const d = noiseBuf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  }
+  const t = ctx.currentTime + start
+  const src = ctx.createBufferSource()
+  src.buffer = noiseBuf
+  const f = ctx.createBiquadFilter()
+  f.type = type
+  f.frequency.setValueAtTime(from, t)
+  f.frequency.exponentialRampToValueAtTime(to, t + dur)
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(vol, t)
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+  src.connect(f).connect(g).connect(master)
+  src.start(t)
+  src.stop(t + dur + 0.02)
+}
+
+// ---- フィーバー中のBGM（150BPMのチップチューン） ----
+let feverTimer: ReturnType<typeof setInterval> | null = null
+let feverStep = 0
+const FEVER_BASS = [36, 36, 48, 36, 39, 39, 51, 39, 41, 41, 53, 41, 43, 43, 55, 46]
+const FEVER_LEAD = [72, 0, 76, 79, 0, 76, 84, 0, 75, 0, 79, 82, 0, 79, 87, 86]
 
 export const sfx = {
   tap() {
@@ -81,6 +166,70 @@ export const sfx = {
   /** タップしたときの小さい音 */
   sparkle() {
     tone(note(96 + Math.floor(Math.random() * 5)), 0, 0.05, 'triangle', 0.15)
+  },
+  /** 選択肢を選んだ「ポコッ」 */
+  select() {
+    tone(note(79), 0, 0.06, 'square', 0.5)
+    tone(note(86), 0.05, 0.1, 'square', 0.5)
+  },
+  /** カードが出てくる「シュッ」 */
+  whoosh() {
+    noise(0, 0.25, 0.35, 600, 5000)
+  },
+  /** コインがジャラジャラ */
+  coinCascade(n: number) {
+    for (let i = 0; i < n; i++) {
+      const t = 0.3 + i * Math.max(0.035, 0.09 - i * 0.004)
+      tone(note(88 + (i % 3) * 2), t, 0.06, 'square', 0.35)
+      tone(note(95 + (i % 2) * 3), t + 0.04, 0.12, 'square', 0.3)
+    }
+  },
+  /** 連続正解のたびに音が上がっていく「ピロリン↑」 */
+  comboUp(c: number) {
+    const b = 76 + Math.min(c, 15) * 2
+    ;[0, 4, 7, 12, 16].forEach((s, i) => tone(note(b + s), 0.55 + i * 0.045, 0.09, 'square', 0.35))
+  },
+  /** フィーバー突入（サイレン＋ドーン） */
+  feverStart() {
+    tone(300, 0, 0.6, 'sawtooth', 0.35, 1800)
+    tone(450, 0.05, 0.6, 'square', 0.25, 2400)
+    tone(110, 0.62, 0.7, 'sine', 1, 40)
+    noise(0.62, 0.6, 0.6, 3000, 200, 'lowpass')
+    ;[72, 76, 79, 84, 88, 91, 96].forEach((n, i) => tone(note(n), 0.7 + i * 0.05, 0.12, 'square', 0.4))
+  },
+  startFever() {
+    if (feverTimer || !ctx) return
+    feverStep = 0
+    const beat = 60 / 150 / 2
+    feverTimer = setInterval(() => {
+      const i = feverStep++ % 16
+      tone(note(FEVER_BASS[i]), 0, beat * 0.9, 'triangle', 0.9)
+      if (FEVER_LEAD[i]) tone(note(FEVER_LEAD[i]), 0, beat * 0.8, 'square', 0.22)
+      if (i % 4 === 0) tone(120, 0, 0.12, 'sine', 0.9, 50)
+      if (i % 4 === 2) noise(0, 0.08, 0.4, 2000, 6000)
+      noise(0, 0.03, 0.15, 7000, 9000, 'highpass')
+    }, beat * 1000)
+  },
+  stopFever() {
+    if (feverTimer) clearInterval(feverTimer)
+    feverTimer = null
+  },
+  /** 残り時間が少ないときの「チッ」 */
+  tick(urgent = false) {
+    tone(urgent ? 1760 : 1320, 0, 0.05, 'square', urgent ? 0.5 : 0.3)
+  },
+  /** 終了の「ピピーッ」 */
+  whistle() {
+    tone(2200, 0, 0.12, 'square', 0.5)
+    tone(2200, 0.18, 0.12, 'square', 0.5)
+    tone(2200, 0.36, 0.8, 'square', 0.5)
+    tone(2210, 0.36, 0.8, 'triangle', 0.4)
+  },
+  /** 結果発表の「ジャン！」 */
+  jan() {
+    tone(note(48), 0, 0.5, 'sawtooth', 0.4)
+    ;[60, 64, 67, 72].forEach((n) => tone(note(n), 0, 0.6, 'square', 0.35))
+    noise(0, 0.4, 0.6, 5000, 300, 'lowpass')
   },
   drumroll(dur = 1.2) {
     for (let t = 0; t < dur; t += 0.05) tone(80 + Math.random() * 40, t, 0.04, 'sawtooth', 0.3)

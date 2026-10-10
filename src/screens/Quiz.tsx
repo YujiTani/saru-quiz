@@ -3,75 +3,112 @@ import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { makeRound, type Question, type Round } from '../lib/quiz'
 import { sfx } from '../lib/sound'
-import { speak, stopSpeaking } from '../lib/speech'
+import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
 
 export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[] }
 
-type Phase = 'reading' | 'answering' | 'correct' | 'wrong'
-type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' }
+type Phase = 'reading' | 'answering' | 'correct' | 'wrong' | 'end'
+type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' | 'end' }
 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
-const SESSION_EXTRA = 3 // まちがえた問題をもう一度出す上限
 const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow']
+const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
+// 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
+// テスト用に ?time=秒 で短くできる
+const TIME_MAX = (Number(new URLSearchParams(location.search).get('time')) || 60) * 1000
+const TIME_BONUS = 3_000
+const TICK = 100
 
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
-  const [queue, setQueue] = useState(questions)
   const queueRef = useRef(questions)
   const [index, setIndex] = useState(0)
   const [round, setRound] = useState<Round>(() => makeRound(questions[0], level))
   const [phase, setPhase] = useState<Phase>('reading')
+  const phaseRef = useRef<Phase>('reading')
+  phaseRef.current = phase
   const [reading, setReading] = useState(-1)
   const [picked, setPicked] = useState<string | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const choiceRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [combo, setCombo] = useState(0)
   const [coins, setCoins] = useState(0)
+  const coinsRef = useRef(0)
+  coinsRef.current = coins
   const [gain, setGain] = useState<{ n: number; key: number } | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
   const [fever, setFever] = useState(false)
   const [helper, setHelper] = useState<CharId | null>(null)
   const [bubble, setBubble] = useState('これ なあに？')
   const [peeker, setPeeker] = useState<{ char: CharId; key: number } | null>(null)
-  // 1回の中でときどき「ボーナス問題」（金色・バナナ3ばい）
-  const bonusAt = useRef(Math.random() < 0.7 ? 2 + Math.floor(Math.random() * Math.max(1, questions.length - 2)) : -1)
-  const isBonus = index === bonusAt.current
-  const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[], retried: 0 })
+  const [timeLeft, setTimeLeft] = useState(TIME_MAX)
+  const timeRef = useRef(TIME_MAX)
+  const [timeGain, setTimeGain] = useState(0)
+  // ときどき「ボーナス問題」（金色・バナナ3ばい）。最初の2問は普通
+  const [isBonus, setIsBonus] = useState(false)
+  const stats = useRef({ correct: 0, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
   const token = useRef(0) // 読み上げ途中で次へ進んだとき、古い非同期処理を止める
 
-  // 問題が変わったら「これなあに？」→ 選択肢を順番に読み上げ
+  // 問題が変わったら「じゃじゃーん」→「これなあに？」→ 選択肢を順番に読み上げ
   useEffect(() => {
     const my = ++token.current
     setPhase('reading')
     setPicked(null)
     setSelected(null)
     setBubble('これ なあに？')
-    const bonus = index === bonusAt.current
+    preloadSpeech(round.choices)
+    const bonus = index >= 2 && Math.random() < 0.15
+    setIsBonus(bonus)
+    sfx.whoosh()
     if (bonus) {
       setBanner({ text: 'ぼーなす！', kind: 'bonus', key: Date.now() })
-      setTimeout(() => setBanner(null), 1600)
+      setTimeout(() => setBanner(null), 1500)
       sfx.bonus()
       rain('star', 40)
     } else sfx.jajan()
     ;(async () => {
-      await wait(bonus ? 1500 : 450)
+      if (bonus) await speak('ぼーなす！')
+      await wait(250)
       await speak('これ、なあに？')
       for (let i = 0; i < round.choices.length; i++) {
         if (token.current !== my) return
         setReading(i)
         await speak(round.choices[i])
-        await wait(150)
+        await wait(120)
       }
       if (token.current !== my) return
       setReading(-1)
       setPhase('answering')
     })()
     return () => stopSpeaking()
-  }, [round])
+  }, [round, index])
 
-  useEffect(() => () => document.body.classList.remove('fever'), [])
+  // 時間ゲージ
+  useEffect(() => {
+    const id = setInterval(() => {
+      const p = phaseRef.current
+      if (p !== 'reading' && p !== 'answering') return
+      const t = Math.max(0, timeRef.current - TICK)
+      if (t <= 10_000 && t % 1000 === 0 && t > 0) sfx.tick(t <= 5_000)
+      timeRef.current = t
+      setTimeLeft(t)
+      if (t === 0) endGame()
+    }, TICK)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(
+    () => () => {
+      document.body.classList.remove('fever')
+      sfx.stopFever()
+    },
+    [],
+  )
   useEffect(() => {
     document.body.classList.toggle('fever', fever)
+    if (fever) sfx.startFever()
+    else sfx.stopFever()
   }, [fever])
 
   function center(el: Element) {
@@ -82,7 +119,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   // 3歳児はひらがなが読めないので、1回目のタップは「選ぶ＋読み上げ」、
   // 同じボタンをもう一度 or「これ！」ボタンで回答する
   function select(i: number) {
-    if (phase === 'correct' || phase === 'wrong') return
+    if (phase !== 'reading' && phase !== 'answering') return
     const el = choiceRefs.current[i]
     if (selected === i && el) return answer(round.choices[i], el)
     token.current++
@@ -91,7 +128,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     setSelected(i)
     setPhase('answering')
     setBubble('これかな？')
-    sfx.tap()
+    sfx.select()
     void speak(round.choices[i])
   }
 
@@ -102,7 +139,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
   }
 
   function answer(choice: string, el: HTMLElement) {
-    if (phase === 'correct' || phase === 'wrong') return
+    if (phase !== 'reading' && phase !== 'answering') return
     token.current++
     stopSpeaking()
     setReading(-1)
@@ -112,28 +149,33 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
     if (choice === q.a) {
       const c = combo + 1
-      const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1)
+      const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (fever ? 2 : 1)
       setCombo(c)
       setCoins((v) => v + add)
       setGain({ n: add, key: Date.now() })
+      timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
+      setTimeLeft(timeRef.current)
+      setTimeGain(Date.now())
       stats.current.correct++
       stats.current.bestCombo = Math.max(stats.current.bestCombo, c)
       stats.current.answers.push({ id: q.id, ok: true })
       setPhase('correct')
-      setBubble(PRAISE[(Math.random() * PRAISE.length) | 0])
+      let shout = PRAISE[(Math.random() * PRAISE.length) | 0]
+      setBubble(shout)
 
       sfx.correct(c)
+      sfx.coinCascade(Math.min(4 + c, 14))
+      if (c >= 2) sfx.comboUp(c)
       flash()
       burst(x, y, 'confetti', 60)
       burst(x, y, 'coin', 8 + Math.min(c, 10) * 2, 0.9)
-      for (let i = 0; i < 4; i++) sfx.coin(0.35 + i * 0.09)
-      if (c === 3 || (c > 3 && c % 3 === 0 && c < 5)) celebrate('すごい！', 'combo', 'mandrill', x, y)
+      if (c === 3) shout = celebrate('すごい！', 'combo', 'mandrill', x, y)
       if (c === 5) {
-        celebrate('ふぃーばー！', 'fever', 'gorilla', x, y)
+        shout = celebrate('ふぃーばー！', 'fever', 'gorilla', x, y)
         setFever(true)
       }
-      if (c === 8) celebrate('でんせつ！', 'legend', 'rainbow', x, y)
-      if (c > 5 && c !== 8) rain('banana', 6)
+      if (c === 8 || (c > 8 && c % 5 === 3)) shout = celebrate('でんせつ！', 'legend', 'rainbow', x, y)
+      if (fever) rain('banana', 8)
       if (isBonus) {
         fountain('coin', 50)
         sfx.bonus()
@@ -145,8 +187,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       }
 
       ;(async () => {
-        await speak(`せいかい！ ${q.a}！`)
-        await wait(500)
+        await speak([shout, q.a])
+        await wait(350)
         next()
       })()
     } else {
@@ -158,15 +200,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       sfx.wrong()
       sfx.boing()
       shake('small')
-      // まちがえた問題は最後にもう一度
-      if (stats.current.retried < SESSION_EXTRA) {
-        stats.current.retried++
-        queueRef.current = [...queueRef.current, q]
-        setQueue(queueRef.current)
-      }
+      // まちがえた問題はあとでもう一度
+      const qs = queueRef.current
+      queueRef.current = [...qs.slice(0, index + 4), q, ...qs.slice(index + 4)]
       ;(async () => {
-        await speak(`おしい！ これは、${q.a}、だよ`)
-        await wait(900)
+        await speak(['おしい！ これは、', q.a, 'だよ'])
+        await wait(600)
         next()
       })()
     }
@@ -177,7 +216,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     setHelper(who)
     setTimeout(() => setHelper(null), 2600)
     setTimeout(() => setBanner(null), 1800)
-    sfx.combo(kind === 'combo' ? 1 : kind === 'fever' ? 3 : 6)
+    if (kind === 'fever') sfx.feverStart()
+    else sfx.combo(kind === 'combo' ? 1 : 6)
     shake(kind === 'combo' ? 'small' : 'big')
     burst(x, y, 'star', 30, 1.3)
     if (kind !== 'combo') {
@@ -185,34 +225,45 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       rain('confetti', 120)
     }
     if (kind === 'legend') rain('banana', 30)
+    return text
+  }
+
+  function endGame() {
+    if (phaseRef.current === 'end') return
+    phaseRef.current = 'end'
+    setPhase('end')
+    token.current++
+    stopSpeaking()
+    setFever(false)
+    setBanner({ text: 'しゅうりょうー！', kind: 'end', key: Date.now() })
+    sfx.whistle()
+    void speak('しゅうりょうー！')
+    setTimeout(() => {
+      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers })
+    }, 2300)
   }
 
   function next() {
+    if (phaseRef.current === 'end') return
+    if (timeRef.current <= 0) return endGame()
     const qs = queueRef.current
-    const ni = index + 1
-    if (ni >= qs.length) {
-      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers })
-    } else {
-      setIndex(ni)
-      setRound(makeRound(qs[ni], level))
-    }
+    const ni = (index + 1) % qs.length
+    setIndex(index + 1)
+    setRound(makeRound(qs[ni], level))
   }
-
-  // next() は非同期で呼ばれるので最新のコインを ref で持つ
-  const coinsRef = useRef(0)
-  coinsRef.current = coins
 
   const mood: Mood = phase === 'correct' ? 'happy' : phase === 'wrong' ? 'sad' : 'normal'
   const q = round.q
+  const pct = (timeLeft / TIME_MAX) * 100
 
   return (
-    <div className="screen quiz">
+    <div className={`screen quiz ${fever ? 'is-fever' : ''}`}>
       <header className="quiz-top">
         <button className="quit" onClick={onQuit} aria-label="もどる">✕</button>
-        <div className="dots">
-          {queue.map((_, i) => (
-            <span key={i} className={`dot ${i < index ? 'done' : i === index ? 'now' : ''}`} />
-          ))}
+        <div className={`gauge ${pct < 17 ? 'low' : pct < 40 ? 'mid' : ''}`}>
+          <div className="gauge-fill" style={{ width: `${pct}%` }} />
+          <span className="gauge-icon">⏰</span>
+          {timeGain > 0 && <span key={timeGain} className="time-gain">+3</span>}
         </div>
         <div className="coin-badge">
           🍌 {coins}
@@ -223,11 +274,12 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       <div className="stage">
         <div className="host">
           <div className="host-monkey">
-            <PixelMonkey char={fever ? 'rainbow' : 'monchan'} mood={mood} size={84} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
+            <PixelMonkey char={fever ? 'rainbow' : 'monchan'} mood={mood} size={60} anim={phase === 'correct' ? 'jump' : phase === 'wrong' ? 'slip' : 'idle'} />
             {phase === 'wrong' && <span className="peel">🍌</span>}
           </div>
           <div className={`bubble ${phase}`}>{bubble}</div>
         </div>
+        {fever && <div className="fever-badge">ふぃーばー ×2</div>}
         {combo >= 2 && (
           <div className="combo" key={combo}>
             <span className="num">{combo}</span>
@@ -246,7 +298,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
 
       <div className="choices">
         {round.choices.map((c, i) => {
-          const done = phase === 'correct' || phase === 'wrong'
+          const done = phase === 'correct' || phase === 'wrong' || phase === 'end'
           const state = done ? (c === q.a ? 'is-answer' : c === picked ? 'is-wrong' : 'is-dim') : selected === i ? 'is-selected' : reading === i ? 'is-reading' : ''
           return (
             <button
@@ -255,7 +307,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
                 choiceRefs.current[i] = el
               }}
               className={`btn choice ${state}`}
-              style={{ fontSize: `min(36px, ${(78 / c.length).toFixed(1)}vw)` }}
+              style={{ fontSize: `min(30px, ${(74 / c.length).toFixed(1)}vw)` }}
               onClick={() => select(i)}
             >
               {c}
@@ -268,6 +320,16 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
         </button>
       </div>
 
+      {fever && (
+        <>
+          <div className="fever-frame" />
+          <div className="fever-dancers">
+            {DANCERS.map((c, i) => (
+              <PixelMonkey key={c} char={c} mood="happy" size={34} anim="dance" style={{ animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
+        </>
+      )}
       {banner && (
         <div className={`banner ${banner.kind}`} key={banner.key}>
           {banner.text}

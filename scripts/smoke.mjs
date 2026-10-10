@@ -18,7 +18,7 @@ try {
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-  await page.goto('http://localhost:5199/', { waitUntil: 'networkidle0' })
+  await page.goto('http://localhost:5199/?time=15', { waitUntil: 'networkidle0' })
   await page.click('.tap-start')
   await sleep(800)
   await page.screenshot({ path: `${OUT}/1-title.png` })
@@ -26,7 +26,7 @@ try {
   await sleep(1200)
   await page.screenshot({ path: `${OUT}/2-quiz.png` })
   let answered = 0
-  for (let i = 0; i < 14 && (await page.$('.picture')); i++) {
+  for (let i = 0; i < 8 && (await page.$('.picture')); i++) {
     const key = await page.$eval('.picture', (el) => el.querySelector('img')?.getAttribute('src') ?? el.textContent)
     const q = data.questions.find((q) => q.img === key || q.e === key)
     if (!q) throw new Error(`絵から問題が特定できません: ${key}`)
@@ -48,7 +48,10 @@ try {
     await page.waitForFunction(() => !document.querySelector('.choice.is-answer'), { timeout: 20000 })
     await sleep(300)
   }
-  await sleep(3500)
+  // あとは答えずに待つ → ゲージが切れて「しゅうりょうー！」→ 結果発表
+  await page.waitForSelector('.banner.end', { timeout: 60000 })
+  await page.screenshot({ path: `${OUT}/3b-end.png` })
+  await page.waitForSelector('.result-actions.show', { timeout: 40000 })
   await page.screenshot({ path: `${OUT}/4-result.png` })
   if (!(await page.$('.result'))) errors.push('結果画面に到達しませんでした')
   console.log(`${answered}問回答`)
