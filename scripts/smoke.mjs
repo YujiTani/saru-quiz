@@ -51,7 +51,7 @@ try {
   // あとは答えずに待つ → ゲージが切れて「しゅうりょうー！」→ 結果発表
   await page.waitForSelector('.banner.end', { timeout: 60000 })
   await page.screenshot({ path: `${OUT}/3b-end.png` })
-  await page.waitForSelector('.result-actions.show', { timeout: 40000 })
+  await page.waitForSelector('.again-pop', { timeout: 40000 })
   await page.screenshot({ path: `${OUT}/4-result.png` })
   if (!(await page.$('.result'))) errors.push('結果画面に到達しませんでした')
   console.log(`${answered}問回答`)

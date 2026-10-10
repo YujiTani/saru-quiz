@@ -12,6 +12,7 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
   const [stage, setStage] = useState<Stage>(0)
   const [stars, setStars] = useState(0)
   const [shown, setShown] = useState(0)
+  const [ask, setAsk] = useState(false)
   const n = result.correct
   const perfect = n >= 5 && result.answers.every((a) => a.ok)
 
@@ -71,6 +72,12 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
           rain('banana', 30)
           void speak('ぱーふぇくと！ ぜんぶ、せいかい！ すごーい！')
         } else void speak('よくできました！')
+        // 発表が終わってから少し間をおいて「まだ あそぶ〜？」
+        at(perfect ? 4200 : 2400, () => {
+          setAsk(true)
+          sfx.coin()
+          void speak('まだ、あそぶー？')
+        })
       })
     })
     return () => {
@@ -121,10 +128,16 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
         </div>
       )}
       {stage >= 4 && <div className="result-total">ぜんぶで 🍌 {totalCoins}</div>}
-      <div className={`result-actions ${stage === 4 ? 'show' : ''}`}>
-        <button className="btn again" onClick={() => { sfx.tap(); onAgain() }}>もういっかい！</button>
-        <button className="btn home" onClick={() => { sfx.tap(); onHome() }}>おわり</button>
-      </div>
+      {ask && (
+        <div className="again-pop">
+          <div className="again-card">
+            <PixelMonkey char="monchan" mood="happy" size={72} anim="jump" />
+            <p className="again-q">まだ、あそぶー？</p>
+            <button className="btn again" onClick={() => { sfx.tap(); onAgain() }}>もういっかい！</button>
+            <button className="btn home" onClick={() => { sfx.tap(); onHome() }}>おわり</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

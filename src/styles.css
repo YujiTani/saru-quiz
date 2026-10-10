@@ -614,3 +614,34 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 .time-num { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 46px; }
 .time-unit { font-size: 26px; }
 .back-btn { --c: #fff; height: 62px; font-size: 26px; width: 100%; max-width: 360px; }
+
+/* ---------- ゲーム終了後のポップアップ ---------- */
+.again-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 8, 40, 0.6);
+  animation: fade-in 0.3s;
+}
+.again-card {
+  width: min(92vw, 380px);
+  background: var(--card);
+  border: 5px solid var(--ink);
+  border-radius: 28px;
+  box-shadow: 0 10px 0 var(--ink);
+  padding: 18px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: pop-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+@keyframes pop-in { from { transform: scale(0.4); opacity: 0; } }
+.again-q { margin: 0; font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 36px; color: var(--ink); }
+.again-card .btn { width: 100%; }
+.again-card .again { height: 88px; font-size: 36px; --c: var(--yellow); }
+.again-card .home { height: 76px; font-size: 32px; --c: #fff; }
