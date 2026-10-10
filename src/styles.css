@@ -871,7 +871,25 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .player-edit .settings-foot { flex-direction: column; flex-shrink: 0; }
 .player-edit .settings-foot .back-btn { width: 100%; }
 .delete-btn { --c: #ffd0d4; width: 100%; height: 46px; font-size: 16px; color: #c0303a; }
-.delete-btn.is-confirm { --c: #ff5a6a; color: #fff; }
+.delete-btn.step1 { --c: #ff9aa4; color: #fff; }
+.delete-btn.step2 { --c: #ff5a6a; color: #fff; }
+.delete-btn.step3 { --c: #c0102a; color: #fff; animation: shake-x 0.5s ease-in-out 2; }
+.keep-btn { --c: var(--green); width: 100%; height: 56px; font-size: 22px; }
+.delete-warn {
+  margin: 0;
+  padding: 10px 12px;
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  background: #fff4c8;
+  color: #c0102a;
+  font-size: 17px;
+  font-weight: 900;
+  text-align: center;
+  animation: pop 0.4s;
+}
+.delete-warn.step2 { background: #ffe0e4; font-size: 18px; }
+.delete-warn.step3 { background: #2a1a2a; color: #ffec4a; font-size: 19px; }
+@keyframes shake-x { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 .settings-player { display: flex; align-items: center; gap: 10px; width: 100%; }
 .settings-player .player-plate { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 .edit-player-btn { --c: var(--yellow); height: 46px; padding: 0 14px; font-size: 18px; }
@@ -896,13 +914,13 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
   paint-order: stroke fill;
   text-shadow: 0 10px 0 var(--ink);
   opacity: 0.85;
-  animation: countdown-pop 2s ease-out both;
+  animation: countdown-pop 2s cubic-bezier(0.3, 0, 0.6, 1) both;
 }
 @keyframes countdown-pop {
-  0% { transform: scale(2.2); opacity: 0; }
-  12% { transform: scale(1); opacity: 0.8; }
-  80% { transform: scale(0.95); opacity: 0.65; }
-  100% { transform: scale(0.7); opacity: 0.15; }
+  0% { transform: scale(2.4) rotate(0deg); opacity: 0; }
+  8% { transform: scale(2.2) rotate(-8deg); opacity: 0.85; }
+  100% { transform: scale(0.45) rotate(-150deg); opacity: 0.7; }
+}
 }
 @media (prefers-reduced-motion: reduce) {
   .countdown span { animation: none; }

@@ -175,7 +175,25 @@ try {
   await sleep(400)
   if ((await page.$eval('.player-plate.big', (e) => e.textContent)) !== 'ゆうちゃん') errors.push('キャラの切りかえができません')
   if (await page.$('.level-btn.is-locked')) errors.push('もとのキャラの ふつう解放が消えています')
-  console.log('3b. キャラ切りかえ: OK')
+  // けすときは3回たしかめる（とちゅうで やめられる）
+  await page.click('.gear-btn')
+  await sleep(300)
+  await page.click('.edit-player-btn')
+  await sleep(300)
+  for (let i = 1; i <= 3; i++) {
+    await page.click('.delete-btn')
+    await sleep(250)
+    if (!(await page.$(`.delete-warn.step${i}`))) errors.push(`けすときの ${i}かいめの けいこくが 出ていません`)
+  }
+  await page.screenshot({ path: `${OUT}/7c-delete-warn.png` })
+  await page.click('.keep-btn')
+  await sleep(250)
+  if (await page.$('.delete-warn')) errors.push('「やっぱり けさない」で もとに もどりません')
+  const n = await page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/players')).list.length)
+  if (n !== 2) errors.push(`キャラが けされてしまいました（${n}人）`)
+  await page.click('.home-btn')
+  await sleep(300)
+  console.log('3b. キャラ切りかえ・けす確認: OK')
 
   // 4. ランキング画面（接続先が未設定なら「じゅんびちゅう」、設定済みなら一覧かメッセージ）
   await page.click('.title-btns .gear-btn:nth-child(2)')

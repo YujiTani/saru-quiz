@@ -21,7 +21,8 @@ export function PlayerEdit({ player, first = false, onDone, onBack }: Props) {
   const [char, setChar] = useState<CharId>(player?.char ?? 'monchan')
   const [color, setColor] = useState(player?.color ?? COLORS[getPlayers().length % COLORS.length])
   const [msg, setMsg] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  // けすときは3回たしかめる（だんだん こわく）
+  const [confirmStep, setConfirmStep] = useState(0)
 
   // 入力中（変換中）ははじかず、「けってい」で確かめる（iPhone のかな入力を邪魔しないため）
   function decide() {
@@ -46,11 +47,23 @@ export function PlayerEdit({ player, first = false, onDone, onBack }: Props) {
     void speak(CHARS.find((c) => c.id === id)?.name ?? '')
   }
 
+  const who = player?.name ?? ''
+  const WARN = [
+    '',
+    `ほんとうに けすの？ ${who}の バナナが ぜんぶ なくなっちゃうよ！`,
+    `${who}が ないてるよ… ふつうも むずかしいも また さいしょから やりなおしだよ！`,
+    `さいごだよ！ けしたら もう ぜったいに もどってこないよ！ ほんとうに ほんとうに けす？`,
+  ]
+  const DELETE_LABEL = ['このキャラを けす', 'それでも けす', 'まだ けす…', 'ぜったい けす']
+
   function remove() {
     if (!player) return
-    if (!confirmDelete) {
+    if (confirmStep < 3) {
+      const next = confirmStep + 1
+      setConfirmStep(next)
       sfx.boing()
-      setConfirmDelete(true)
+      stopSpeaking()
+      void speak(WARN[next])
       return
     }
     deletePlayer(player.id)
@@ -63,7 +76,7 @@ export function PlayerEdit({ player, first = false, onDone, onBack }: Props) {
       <h1 className="settings-title">{player ? 'キャラを なおす' : first ? 'キャラを つくろう！' : 'あたらしい キャラ'}</h1>
 
       <div className="player-preview">
-        <PixelMonkey char={char} mood="happy" size={72} anim="jump" />
+        <PixelMonkey char={char} mood={confirmStep ? 'sad' : 'happy'} size={72} anim={confirmStep >= 2 ? 'fall' : 'jump'} />
         <span className="player-plate">{name.trim() || 'なまえ'}</span>
       </div>
 
@@ -118,9 +131,21 @@ export function PlayerEdit({ player, first = false, onDone, onBack }: Props) {
       </button>
       <div className="settings-foot">
         {player && getPlayers().length > 1 && (
-          <button className={`btn delete-btn ${confirmDelete ? 'is-confirm' : ''}`} onClick={remove}>
-            {confirmDelete ? 'ほんとうに けす？（もういちど おす）' : 'このキャラを けす'}
-          </button>
+          <>
+            {confirmStep > 0 && (
+              <p key={confirmStep} className={`delete-warn step${confirmStep}`}>
+                {'⚠️'.repeat(confirmStep)} {WARN[confirmStep]}
+              </p>
+            )}
+            <button className={`btn delete-btn step${confirmStep}`} onClick={remove}>
+              {DELETE_LABEL[confirmStep]}
+            </button>
+            {confirmStep > 0 && (
+              <button className="btn keep-btn" onClick={() => { sfx.fanfare(); stopSpeaking(); void speak('よかった！'); setConfirmStep(0) }}>
+                やっぱり けさない！
+              </button>
+            )}
+          </>
         )}
         {!first && onBack && (
           <button className="btn back-btn" onClick={() => { sfx.tap(); onBack() }}>
