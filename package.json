@@ -10,7 +10,8 @@
     "questions": "python3 scripts/build_questions.py",
     "smoke": "node scripts/smoke.mjs",
     "sheet": "node scripts/sheet.mjs",
-    "check": "python3 scripts/build_questions.py && tsc -b && vite build --logLevel error && node scripts/smoke.mjs"
+    "test": "vitest run",
+    "check": "python3 scripts/build_questions.py && vitest run && tsc -b && vite build --logLevel error && node scripts/smoke.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -23,6 +24,7 @@
     "puppeteer-core": "^25.13.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "vite-plugin-pwa": "^2.0.0"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
   }
 }

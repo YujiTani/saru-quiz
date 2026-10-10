@@ -6,6 +6,9 @@ import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
 import { getCurrent, onPlayersChange, savePlayerData, selectPlayer } from './lib/players'
 import { emptySave } from './lib/storage'
+import { now } from './lib/day'
+import { applyResult, type ResultEvents } from './lib/progress'
+import { isTestRun } from './lib/testflags'
 import { flushPending } from './lib/ranking'
 import { Quiz, type QuizResult } from './screens/Quiz'
 import { Ranking } from './screens/Ranking'
@@ -24,7 +27,7 @@ type Screen =
   | { name: 'player'; edit: boolean; first?: boolean; back: 'title' | 'settings' }
   | { name: 'ranking'; course: number }
   | { name: 'quiz'; level: number; questions: Question[]; key: number }
-  | { name: 'result'; level: number; result: QuizResult }
+  | { name: 'result'; level: number; result: QuizResult; events: ResultEvents }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
@@ -54,15 +57,10 @@ export default function App() {
   }
 
   function finish(level: number, result: QuizResult) {
-    const stats = { ...data.stats }
-    for (const a of result.answers) {
-      const s = stats[a.id] ?? { ok: 0, ng: 0, last: 0 }
-      stats[a.id] = { ok: s.ok + (a.ok ? 1 : 0), ng: s.ng + (a.ok ? 0 : 1), last: Date.now() }
-    }
-    const cleared = result.cleared && !data.cleared.includes(level) ? [...data.cleared, level] : data.cleared
-    const next = { coins: data.coins + result.coins, bestCombo: Math.max(data.bestCombo, result.bestCombo), plays: data.plays + 1, cleared, stats }
-    if (player) savePlayerData(player.id, next)
-    setScreen({ name: 'result', level, result })
+    const { save, events } = applyResult(data, result, now(), level)
+    // テスト用のURLのときは記録しない
+    if (player && !isTestRun()) savePlayerData(player.id, save)
+    setScreen({ name: 'result', level, result, events })
   }
 
   return (
@@ -125,6 +123,7 @@ export default function App() {
         <Result
           level={screen.level}
           result={screen.result}
+          events={screen.events}
           totalCoins={data.coins}
           onAgain={() => startQuiz(screen.level)}
           onHome={() => setScreen({ name: 'title' })}

@@ -1,5 +1,7 @@
 import data from '../data/questions.json'
+import { rng } from './rng'
 import type { WordStat } from './storage'
+import { catParam } from './testflags'
 
 export type Question = { id: string; a: string; c: string; l: number; img?: string; e?: string }
 export type Round = { q: Question; choices: string[] }
@@ -20,7 +22,7 @@ export const playable = allQuestions.filter((q) => q.img || q.e)
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rng() * (i + 1))
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
@@ -28,13 +30,16 @@ const shuffle = <T,>(arr: T[]): T[] => {
 
 /** まだ出ていない・まちがえた単語を優先して出題を選ぶ */
 export function pickSession(level: number, count: number, stats: Record<string, WordStat>): Question[] {
-  const pool = playable.filter((q) => q.l <= level)
+  // ?cat=カテゴリ名 のときは、そのカテゴリだけ（テスト用）
+  const cat = catParam()
+  const byCat = cat ? playable.filter((q) => q.c === cat) : []
+  const pool = byCat.length > 0 ? byCat : playable.filter((q) => q.l <= level)
   const weight = (q: Question) => {
     const s = stats[q.id]
     if (!s) return q.l === level ? 6 : 3
     return 1 + s.ng * 3 - Math.min(s.ok, 3) * 0.3
   }
-  const scored = pool.map((q) => ({ q, k: Math.random() * Math.max(weight(q), 0.2) }))
+  const scored = pool.map((q) => ({ q, k: rng() * Math.max(weight(q), 0.2) }))
   scored.sort((x, y) => y.k - x.k)
   return scored.slice(0, count).map((s) => s.q)
 }

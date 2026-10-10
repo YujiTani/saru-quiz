@@ -3,6 +3,8 @@ import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake } from '../lib/effects'
 import { rankingEnabled, submitScore, type SubmitResult } from '../lib/ranking'
 import { getPlayerName } from '../lib/players'
+import type { ResultEvents } from '../lib/progress'
+import { isTestRun } from '../lib/testflags'
 import { sfx } from '../lib/sound'
 import { speak } from '../lib/speech'
 import type { QuizResult } from './Quiz'
@@ -10,7 +12,7 @@ import type { QuizResult } from './Quiz'
 // 0: けっかはっぴょうー！ 1: せいかい数 2: れんぞく 3: バナナ集計 4: おわり（ボタン表示）
 type Stage = 0 | 1 | 2 | 3 | 4
 
-type Props = { level: number; result: QuizResult; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
+type Props = { level: number; result: QuizResult; events?: ResultEvents; totalCoins: number; onAgain: () => void; onHome: () => void; onRanking: () => void }
 
 export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }: Props) {
   const [stage, setStage] = useState<Stage>(0)
@@ -24,6 +26,7 @@ export function Result({ level, result, totalCoins, onAgain, onHome, onRanking }
 
   // ランキングに送る（クリアしたらクリアタイム、しなかったら正解数。どちらもバナナ数つき）
   useEffect(() => {
+    if (isTestRun()) return // テスト用のURLのときはランキングに送らない
     void submitScore({ course: level, cleared: result.cleared, clearMs: result.clearMs ?? null, correct: result.correct, bananas: result.coins, bestCombo: result.bestCombo }).then((r) => {
       rankRef.current = r
       setRank(r)

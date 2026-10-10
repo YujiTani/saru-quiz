@@ -43,7 +43,14 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
 
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/fit_illust.mjs <id…>`（描いた範囲を測って中央・同じ大きさにそろえる。何度実行しても同じ）→ `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
-- コード変更後: `npm run check`（問題JSON再生成 + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
+- コード変更後: `npm run check`（問題JSON再生成 + 単体テスト + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
+- 単体テスト: `npm run test`（vitest。`src/lib/*.test.ts`。進捗・ライトナー式の箱・乱数・日付。設定は `vitest.config.ts`）
+- テスト用のURLパラメータ（`src/lib/testflags.ts`）
+  - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
+  - `?show=<id>` `?demo` 保存もランキングへの送信もしない
+  - `?cat=カテゴリ名` そのカテゴリだけ出題（保存もランキングもなし）
+  - `?time=秒` `?goal=問題数` は今までどおり（これらは記録する）
+- 進捗の更新は `src/lib/progress.ts` の `applyResult`（純粋）。単語の箱（☆・くもり）は `src/lib/leitner.ts`。日付は `src/lib/day.ts`（テストでは `setNow`）
 - ヘッドレスChromeは `~/.cache/saru-quiz/` にある（`scripts/browser.mjs`）
 
 ## 演出の約束（子ども向けの安全）
