@@ -6,7 +6,6 @@ const PARADE: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshi
 const LEVELS = [
   { level: 1, stars: '⭐', label: 'かんたん', color: '#3ee07a' },
   { level: 2, stars: '⭐⭐', label: 'ふつう', color: '#38b6ff' },
-  { level: 3, stars: '⭐⭐⭐', label: 'むずかしい', color: '#a066ff' },
 ]
 
 export function Title({ coins, onStart }: { coins: number; onStart: (level: number) => void }) {
