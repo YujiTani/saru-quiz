@@ -2,7 +2,7 @@
 //  . 透明  K りんかく  F 毛  L 顔・おなか  E 目  W 目のハイライト
 //  M ほっぺ  N 鼻  R 口の中  T なみだ
 export type Mood = 'normal' | 'happy' | 'sad'
-export type CharId = 'monchan' | 'mandrill' | 'orangutan' | 'kinshikou' | 'rainbow' | 'gorilla'
+export type CharId = 'monchan' | 'sora' | 'mint' | 'choco' | 'mandrill' | 'orangutan' | 'kinshikou' | 'rainbow' | 'gorilla'
 
 const MONKEY = [
   '.....KKKKKK.....',
@@ -49,6 +49,10 @@ const base: Palette = { K: '#2b1a2e', E: '#2b1a2e', W: '#ffffff', N: '#2b1a2e', 
 export type Shape = 'monkey' | 'gorilla' | 'mandrill' | 'orangutan' | 'kinshikou'
 export const CHARACTERS: Record<CharId, { name: string; shape: Shape; palette: Palette; rainbow?: boolean }> = {
   monchan: { name: 'もんちゃん', shape: 'monkey', palette: { ...base, F: '#ff5fa8', L: '#ffe27a', M: '#ff2d6f' } },
+  // もんちゃんの色ちがい
+  sora: { name: 'そらちゃん', shape: 'monkey', palette: { ...base, F: '#3f9cff', L: '#ffe6cc', M: '#ff7a9a' } },
+  mint: { name: 'みんとちゃん', shape: 'monkey', palette: { ...base, F: '#2fd0a0', L: '#fff6d8', M: '#ff8ab8' } },
+  choco: { name: 'ちょこちゃん', shape: 'monkey', palette: { ...base, F: '#9a5a32', L: '#ffd2a0', M: '#ff7a6a' } },
   // まんどりる: オリーブの毛・青い顔・赤い鼻すじ・黄色いあごひげ
   mandrill: { name: 'まんどりるくん', shape: 'mandrill', palette: { ...base, F: '#6f8f3a', L: '#3f8cff', P: '#6a4ad8', N: '#ff2a3a', Y: '#ffc42a', M: '#ff7a8a', S: '#ffe0c0' } },
   // おらんうーたん: 赤オレンジの長い毛・大きなほっぺ（フランジ）

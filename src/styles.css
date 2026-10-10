@@ -667,3 +667,51 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 /* ---------- フィーバー9段階（背景の回る速さはレベルで変わる） ---------- */
 body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .fever-frame.lv9 { animation-duration: 0.5s; border-width: 22px; }
+
+/* ---------- せってい（なまえ・こえ・おと） ---------- */
+.settings { justify-content: flex-start; gap: 12px; overflow-y: auto; }
+.settings .settings-card { padding: 12px 14px 14px; gap: 6px; }
+.settings .settings-label { font-size: 22px; }
+.name-row { width: 100%; display: flex; gap: 8px; }
+.name-input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  font: inherit;
+  font-size: 24px;
+  padding: 0 12px;
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+}
+.name-save { --c: var(--green); height: 52px; padding: 0 14px; font-size: 20px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.name-msg { margin: 0; font-size: 16px; }
+.name-msg.ok { color: #1f9a50; }
+.name-msg.ng { color: #e0303a; }
+.voice-options { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.voice-btn { --c: #fff; height: 50px; font-size: 17px; }
+.voice-btn.is-on { --c: var(--yellow); }
+.sound-row { width: 100%; display: flex; gap: 10px; }
+.sound-btn { --c: #fff; flex: 1; height: 50px; font-size: 22px; }
+.sound-btn.is-on { --c: var(--yellow); }
+.volume-row { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 22px; }
+.volume-row input { flex: 1; height: 32px; accent-color: #ff5fa8; }
+.volume-row input:disabled { opacity: 0.4; }
+.settings-foot { width: 100%; display: flex; align-items: center; gap: 10px; }
+.settings-foot .back-btn { flex: 1; }
+
+/* ---------- クリア ---------- */
+.banner.clear {
+  color: #fff;
+  font-size: min(60px, 14vw);
+  white-space: nowrap;
+  background: linear-gradient(90deg, #ff4f9a, #ffb81c, #3ee07a, #38b6ff);
+  padding: 12px 0;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  animation: banner-end 2.6s ease-out forwards;
+}
+.result-cleartime { display: flex; flex-direction: column; align-items: center; color: #fff; text-shadow: 0 3px 0 var(--ink); font-size: 22px; }
+.result-cleartime .time { white-space: nowrap; font-size: 26px; color: #fff; animation: pop 0.4s; }
+.result-cleartime .time b { font-family: 'DotGothic16', monospace; font-weight: 400; font-size: 60px; color: #7ff0ff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; margin: 0 4px; }

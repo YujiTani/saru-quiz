@@ -20,7 +20,9 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
     let alive = true
     const timers: ReturnType<typeof setTimeout>[] = []
     const at = (ms: number, f: () => void) => timers.push(setTimeout(() => alive && f(), ms))
-    const per = Math.max(60, Math.min(160, 1600 / Math.max(n, 1)))
+    // ★は約1.6秒で数え終わるように（100問クリアでも長くならない）
+    const per = Math.max(16, Math.min(160, 1600 / Math.max(n, 1)))
+    const tickEvery = Math.max(1, Math.ceil(n / 30))
 
     // けっかはっぴょうー！（ドラムロール）
     sfx.drumroll(1.6)
@@ -34,16 +36,20 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
       for (let i = 1; i <= n; i++)
         at(i * per, () => {
           setStars(i)
-          sfx.tick()
+          if (i % tickEvery === 0) sfx.tick()
         })
       at(n * per + 200, () => {
         sfx.combo(2)
         burst(innerWidth / 2, innerHeight * 0.4, 'star', 30, 1.2)
-        void speak(n > 0 ? `${n}こ、せいかい！` : 'よくがんばったね！')
+        if (result.cleared && result.clearMs) {
+          const sec = Math.floor(result.clearMs / 1000)
+          const m = Math.floor(sec / 60)
+          void speak([`${n}こ、せいかい！`, 'くりあたいむは', ...(m > 0 ? [`${m}ふん`] : []), `${sec % 60}びょう`, 'だよ'])
+        } else void speak(n > 0 ? `${n}こ、せいかい！` : 'よくがんばったね！')
       })
     })
 
-    const t2 = 1800 + per * n + 1700
+    const t2 = 1800 + per * n + (result.cleared ? 4200 : 1700)
     // さいこう れんぞく
     at(t2, () => {
       setStage(2)
@@ -102,6 +108,14 @@ export function Result({ result, totalCoins, onAgain, onHome }: { result: QuizRe
         <PixelMonkey char="monchan" mood="happy" size={100} anim={stage === 4 ? 'jump' : stage >= 1 ? 'dance' : 'idle'} />
         <PixelMonkey char="gorilla" mood="happy" size={66} anim={stage >= 1 ? 'dance' : 'idle'} />
       </div>
+      {stage >= 1 && result.cleared && result.clearMs !== undefined && (
+        <div className="result-cleartime">
+          <span>⏱ くりあたいむ</span>
+          <span className="time">
+            <b>{Math.floor(result.clearMs / 60000)}</b>ふん<b>{String(Math.floor(result.clearMs / 1000) % 60).padStart(2, '0')}</b>びょう
+          </span>
+        </div>
+      )}
       {stage >= 1 && (
         <div className="result-count">
           <span>せいかい</span>

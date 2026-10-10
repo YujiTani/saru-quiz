@@ -1,5 +1,5 @@
 // ファミコン風の効果音を WebAudio で合成（音声ファイル不要）
-import { isMuted, onMutedChange } from './settings'
+import { getVolume, isMuted, onSettingsChange } from './settings'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
@@ -13,13 +13,9 @@ export function unlockAudio() {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     ctx = new AC()
     master = ctx.createGain()
-    master.gain.value = isMuted() ? 0 : 0.25
     voiceGain = ctx.createGain()
-    voiceGain.gain.value = isMuted() ? 0 : 1
-    onMutedChange((m) => {
-      if (master) master.gain.value = m ? 0 : 0.25
-      if (voiceGain) voiceGain.gain.value = m ? 0 : 1
-    })
+    applyVolume()
+    onSettingsChange(applyVolume)
     master.connect(ctx.destination)
     voiceGain.connect(ctx.destination)
     allowWithSilentSwitch()
@@ -31,6 +27,13 @@ export function unlockAudio() {
   src.buffer = b
   src.connect(ctx.destination)
   src.start(0)
+}
+
+/** 音のあり/なし・音量を反映（効果音は声より小さめ） */
+function applyVolume() {
+  const v = isMuted() ? 0 : getVolume()
+  if (master) master.gain.value = 0.25 * v
+  if (voiceGain) voiceGain.gain.value = v
 }
 
 /** アプリを裏に回して戻ると iOS が音を止めることがあるので、タップのたびに復帰させる */

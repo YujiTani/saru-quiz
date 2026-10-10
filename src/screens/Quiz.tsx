@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { burst, fountain, rain, shake, flash } from '../lib/effects'
-import { makeRound, type Question, type Round } from '../lib/quiz'
-import { getTimeLimit } from '../lib/settings'
+import { COURSE, makeRound, type Question, type Round } from '../lib/quiz'
 import { sfx } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
 
-export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[] }
+export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[]; cleared: boolean; clearMs?: number }
 
 type Phase = 'reading' | 'answering' | 'correct' | 'wrong' | 'end'
-type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' | 'end' }
+type Banner = { text: string; key: number; kind: 'combo' | 'fever' | 'legend' | 'bonus' | 'end' | 'clear' }
 
 const PRAISE = ['せいかい！', 'すごーい！', 'やったね！', 'あたり！', 'てんさい！']
-const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow']
+const PEEKERS: CharId[] = ['mandrill', 'orangutan', 'kinshikou', 'gorilla', 'rainbow', 'sora', 'mint', 'choco']
 // フィーバーのレベル（1〜3）。「ねつ」で決まる
 const FEVER_MAX = 9
 const FEVER_TEXT = ['', 'ふぃーばー！', 'すーぱーふぃーばー！', 'めがふぃーばー！', 'ぱわーふぃーばー！', 'うるとらふぃーばー！', 'ごっどふぃーばー！', 'はいぱーふぃーばー！', 'おーばーふぃーばー！', 'まっくすふぃーばー！']
@@ -28,11 +27,13 @@ const feverLevelOf = (h: number) => {
 // BGMは3レベルごとに変わる（1〜3 / 4〜6 / 7〜9）
 const feverGroup = (lv: number) => (lv <= 3 ? 1 : lv <= 6 ? 2 : 3)
 const FEVER_CLASSES = Array.from({ length: FEVER_MAX - 1 }, (_, i) => `fever-${i + 2}`)
-const DANCERS: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
+const DANCERS: CharId[] = ['mandrill', 'sora', 'orangutan', 'monchan', 'mint', 'gorilla', 'choco', 'kinshikou', 'rainbow']
 // 時間ゲージ。出題中（読み上げ・回答中）だけ減り、正解すると少し回復する
 // テスト用に ?time=秒 で短くできる
 // テスト用に ?time=秒 で上書きできる（ふだんは設定画面の制限時間）
 const TIME_OVERRIDE = Number(new URLSearchParams(location.search).get('time')) || 0
+// テスト用に ?goal=問題数 でクリア条件を上書きできる
+const GOAL_OVERRIDE = Number(new URLSearchParams(location.search).get('goal')) || 0
 const TIME_BONUS = 3_000 // 正解で +3秒
 const TIME_PENALTY = 3_000 // まちがいで -3秒
 const TICK = 100
@@ -58,7 +59,10 @@ function FeverRing({ level }: { level: number }) {
 }
 
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
-  const TIME_MAX = (TIME_OVERRIDE || getTimeLimit()) * 1000
+  const course = COURSE[level] ?? COURSE[1]
+  const TIME_MAX = (TIME_OVERRIDE || course.time) * 1000
+  const GOAL = GOAL_OVERRIDE || course.goal
+  const startedAt = useRef(performance.now())
   const queueRef = useRef(questions)
   const [index, setIndex] = useState(0)
   const [round, setRound] = useState<Round>(() => makeRound(questions[0], level))
@@ -239,6 +243,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       setTimeLeft(timeRef.current)
       setTimeGain({ key: Date.now(), plus: true })
       stats.current.correct++
+      // 決まった問題数に届いたらクリア（クリアタイムは実際にかかった時間）
+      const clearMs = stats.current.correct >= GOAL ? Math.round(performance.now() - startedAt.current) : null
       stats.current.bestCombo = Math.max(stats.current.bestCombo, c)
       stats.current.answers.push({ id: q.id, ok: true })
       setPhase('correct')
@@ -267,7 +273,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       ;(async () => {
         await speak(levelUp ? [shout, q.a, levelUp] : [shout, q.a])
         await wait(350)
-        next()
+        if (clearMs !== null) clearGame(clearMs)
+        else next()
       })()
     } else {
       setCombo(0)
@@ -337,8 +344,26 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     sfx.whistle()
     void speak('しゅうりょうー！')
     setTimeout(() => {
-      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers })
+      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: false })
     }, 2300)
+  }
+
+  function clearGame(clearMs: number) {
+    if (phaseRef.current === 'end') return
+    phaseRef.current = 'end'
+    setPhase('end')
+    token.current++
+    stopSpeaking()
+    setHeatBoth(0)
+    setBanner({ text: 'くりあー！', kind: 'clear', key: Date.now() })
+    sfx.fanfare()
+    fountain('coin', 80)
+    rain('star', 150)
+    rain('confetti', 200)
+    void speak('くりあー！')
+    setTimeout(() => {
+      onFinish({ correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: true, clearMs })
+    }, 2800)
   }
 
   function next() {

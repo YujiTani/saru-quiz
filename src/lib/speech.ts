@@ -1,6 +1,6 @@
 // 日本語の読み上げ（端末の標準合成音声）。のちに親の録音で差し替える予定
 import voices from '../data/voices.json'
-import { isMuted, onMutedChange } from './settings'
+import { getVolume, isMuted, onSettingsChange } from './settings'
 import { playVoice, preloadVoice, stopVoice } from './sound'
 
 // VOICEVOX（ずんだもん）で作った音声。無いセリフは端末の合成音声で読む
@@ -31,7 +31,7 @@ export function unlockSpeech() {
   speechSynthesis.speak(u)
 }
 
-onMutedChange((m) => m && stopSpeaking())
+onSettingsChange(() => isMuted() && stopSpeaking())
 
 let speakToken = 0
 
@@ -60,6 +60,7 @@ function speakTTS(text: string, { rate = 0.95, pitch = 1.08 } = {}): Promise<voi
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'ja-JP'
+    u.volume = getVolume()
     if (voice) u.voice = voice
     u.rate = rate
     u.pitch = pitch

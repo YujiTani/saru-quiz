@@ -2,7 +2,7 @@ import { PixelMonkey } from '../components/PixelMonkey'
 import { sfx } from '../lib/sound'
 import type { CharId } from '../sprites/monkeys'
 
-const PARADE: CharId[] = ['mandrill', 'orangutan', 'monchan', 'gorilla', 'kinshikou', 'rainbow']
+const PARADE: CharId[] = ['mandrill', 'sora', 'orangutan', 'monchan', 'gorilla', 'mint', 'kinshikou', 'choco', 'rainbow']
 const LEVELS = [
   { level: 1, stars: '⭐', label: 'かんたん', color: '#3ee07a' },
   { level: 2, stars: '⭐⭐', label: 'ふつう', color: '#38b6ff' },
@@ -22,7 +22,7 @@ export function Title({ coins, onStart, onSettings }: { coins: number; onStart: 
       </h1>
       <div className="parade">
         {PARADE.map((c, i) => (
-          <PixelMonkey key={c} char={c} size={c === 'monchan' ? 88 : 56} anim="dance" style={{ animationDelay: `${i * 0.12}s` }} />
+          <PixelMonkey key={c} char={c} size={c === 'monchan' ? 64 : 38} anim="dance" style={{ animationDelay: `${i * 0.12}s` }} />
         ))}
       </div>
       <div className="levels">

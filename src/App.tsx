@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { MuteButton } from './components/MuteButton'
 import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects, burst } from './lib/effects'
-import { pickSession, type Question } from './lib/quiz'
+import { COURSE, pickSession, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
 import { load, save, type Save } from './lib/storage'
@@ -11,7 +10,8 @@ import { Result } from './screens/Result'
 import { Settings } from './screens/Settings'
 import { Title } from './screens/Title'
 
-const SESSION_SIZE = 60 // 時間ゲームなので多めに用意（足りなければ先頭に戻る）
+// 出題はクリアに必要な数＋予備（足りなければ先頭に戻る）
+const sessionSize = (level: number) => (COURSE[level]?.goal ?? 100) + 30
 
 type Screen = { name: 'tap' } | { name: 'title' } | { name: 'settings' } | { name: 'quiz'; level: number; questions: Question[]; key: number } | { name: 'result'; level: number; result: QuizResult }
 
@@ -33,7 +33,7 @@ export default function App() {
   }, [])
 
   function startQuiz(level: number) {
-    setScreen({ name: 'quiz', level, questions: pickSession(level, SESSION_SIZE, data.stats), key: Date.now() })
+    setScreen({ name: 'quiz', level, questions: pickSession(level, sessionSize(level), data.stats), key: Date.now() })
   }
 
   function finish(level: number, result: QuizResult) {
@@ -52,7 +52,6 @@ export default function App() {
     <>
       <header className="app-header">
         <span className="app-title">おさるのなあに？クイズ</span>
-        <MuteButton />
       </header>
       {screen.name === 'tap' && (
         <button

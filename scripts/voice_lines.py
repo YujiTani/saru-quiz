@@ -23,6 +23,12 @@ PHRASES = [
     'しゅうりょうー！',
     'けっかはっぴょうー！',
     'まだ、あそぶー？',
+    'くりあー！',
+    'くりあたいむは',
+    'きょうの',
+    *[f'{m}ふん' for m in range(1, 16)],
+    *[f'{s}びょう' for s in range(0, 60)],
+    *[f'{n}い！' for n in range(1, 51)],
     *PRAISE,
-    *[f'{n}こ、せいかい！' for n in range(1, 41)],
+    *[f'{n}こ、せいかい！' for n in range(1, 121)],
 ]
