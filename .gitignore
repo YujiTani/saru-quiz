@@ -5,3 +5,4 @@ assets_raw
 .smoke
 .sheets
 .env.local
+supabase/.temp
