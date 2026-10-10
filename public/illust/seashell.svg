@@ -1,3 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M128 220c-50 0-100-40-100-100 0-50 50-90 100-90s100 40 100 90c0 60-50 100-100 100z" fill="#ffc8d8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(1.038 0 0 1.038 -4.923 -4.923)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M128 220c-50 0-100-40-100-100 0-50 50-90 100-90s100 40 100 90c0 60-50 100-100 100z" fill="#ffc8d8"/>
 <path d="M128 220L60 70M128 220l-30-170M128 220V36M128 220l30-170M128 220L196 70M128 220L40 120M128 220l88-100" fill="none" stroke-width="4"/>
-<path d="M96 226h64l-10-20h-44z" fill="#ffb3c4"/></g><ellipse cx="80" cy="90" rx="10" ry="20" fill="#fff" opacity=".5" transform="rotate(-30 80 90)"/></svg>
+<path d="M96 226h64l-10-20h-44z" fill="#ffb3c4"/></g><ellipse cx="80" cy="90" rx="10" ry="20" fill="#fff" opacity=".5" transform="rotate(-30 80 90)"/></g></svg>

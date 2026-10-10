@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(0.964 0 0 0.964 -3.143 0.714)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
 <path d="M28 168v-30c0-10 8-18 18-20l26-6 22-34c4-6 10-8 16-8h52c8 0 14 4 18 10l20 32 26 6c10 2 18 10 18 20v30z" fill="#4aa8ff"/>
 <path d="M104 82h22v30H86zM138 82h20c4 0 8 2 10 6l14 24h-44z" fill="#d8f0ff"/>
 <circle cx="76" cy="172" r="22" fill="#4a4a5a"/><circle cx="182" cy="172" r="22" fill="#4a4a5a"/></g>
 <circle cx="76" cy="172" r="8" fill="#ddd"/><circle cx="182" cy="172" r="8" fill="#ddd"/>
-<rect x="210" y="128" width="16" height="10" rx="4" fill="#ffe27a"/><path d="M50 128h40" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".5"/></svg>
+<rect x="210" y="128" width="16" height="10" rx="4" fill="#ffe27a"/><path d="M50 128h40" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".5"/></g></svg>

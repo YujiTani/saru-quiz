@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M30 116h120v24H30z" fill="#ffc43a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(1.009 0 0 1.009 5.869 -1.196)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M30 116h120v24H30z" fill="#ffc43a"/>
 <path d="M150 116l60-40v104l-60-40z" fill="#ffc43a"/>
 <ellipse cx="210" cy="128" rx="14" ry="52" fill="#ffd96a"/>
 <rect x="70" y="90" width="12" height="26" fill="#ffc43a"/><rect x="92" y="90" width="12" height="26" fill="#ffc43a"/><rect x="114" y="90" width="12" height="26" fill="#ffc43a"/>
 <path d="M60 140c0 30 90 30 90 0" fill="none"/>
-<rect x="18" y="112" width="16" height="32" rx="4" fill="#e8a81a"/></g></svg>
+<rect x="18" y="112" width="16" height="32" rx="4" fill="#e8a81a"/></g></g></svg>

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="40" y="30" width="176" height="180" rx="6" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(1.059 0 0 1.059 -7.529 0.941)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="40" y="30" width="176" height="180" rx="6" fill="#ffffff"/>
 <rect x="54" y="44" width="148" height="152" fill="#9fdcff"/>
 <path d="M128 44v152M54 120h148" fill="none"/>
-<path d="M30 210h196" fill="none" stroke-width="12"/></g><circle cx="90" cy="80" r="16" fill="#fff" opacity=".9"/><circle cx="104" cy="84" r="12" fill="#fff" opacity=".9"/><path d="M150 70l30 30M160 60l30 30" stroke="#fff" stroke-width="6" opacity=".7"/></svg>
+<path d="M30 210h196" fill="none" stroke-width="12"/></g><circle cx="90" cy="80" r="16" fill="#fff" opacity=".9"/><circle cx="104" cy="84" r="12" fill="#fff" opacity=".9"/><path d="M150 70l30 30M160 60l30 30" stroke="#fff" stroke-width="6" opacity=".7"/></g></svg>

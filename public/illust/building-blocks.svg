@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="30" y="150" width="70" height="70" rx="6" fill="#ef4b4b"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(1.038 0 0 1.038 -7 1.308)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="30" y="150" width="70" height="70" rx="6" fill="#ef4b4b"/>
 <rect x="100" y="150" width="70" height="70" rx="6" fill="#4fb4ff"/>
 <rect x="64" y="80" width="70" height="70" rx="6" fill="#ffd21c"/>
 <path d="M170 220h60l-30-60z" fill="#6cc05a"/>
-<path d="M64 80l35-56 35 56z" fill="#ff8ac8"/></g><circle cx="65" cy="185" r="14" fill="#fff" opacity=".7"/><rect x="122" y="172" width="26" height="26" fill="#fff" opacity=".7"/><path d="M99 102l12 22H87z" fill="#fff" opacity=".7"/></svg>
+<path d="M64 80l35-56 35 56z" fill="#ff8ac8"/></g><circle cx="65" cy="185" r="14" fill="#fff" opacity=".7"/><rect x="122" y="172" width="26" height="26" fill="#fff" opacity=".7"/><path d="M99 102l12 22H87z" fill="#fff" opacity=".7"/></g></svg>

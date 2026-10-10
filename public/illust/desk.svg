@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="20" y="80" width="216" height="24" rx="4" fill="#d9a55e"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g data-fit="1" transform="matrix(0.964 0 0 0.964 4.571 -2.179)"><g stroke="#5b3a29" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="20" y="80" width="216" height="24" rx="4" fill="#d9a55e"/>
 <rect x="140" y="104" width="80" height="110" fill="#c98a4a"/>
 <path d="M36 104v110" fill="none" stroke-width="14"/>
 <path d="M140 140h80M140 176h80" fill="none"/>
-<rect x="60" y="56" width="50" height="24" rx="4" fill="#4fb4ff"/></g><circle cx="180" cy="122" r="5" fill="#5b3a29"/><circle cx="180" cy="158" r="5" fill="#5b3a29"/><circle cx="180" cy="194" r="5" fill="#5b3a29"/></svg>
+<rect x="60" y="56" width="50" height="24" rx="4" fill="#4fb4ff"/></g><circle cx="180" cy="122" r="5" fill="#5b3a29"/><circle cx="180" cy="158" r="5" fill="#5b3a29"/><circle cx="180" cy="194" r="5" fill="#5b3a29"/></g></svg>
