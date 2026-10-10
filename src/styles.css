@@ -645,3 +645,21 @@ body.fever-3::before { animation-duration: 0.8s; opacity: 0.85; }
 .again-card .btn { width: 100%; }
 .again-card .again { height: 88px; font-size: 36px; --c: var(--yellow); }
 .again-card .home { height: 76px; font-size: 32px; --c: #fff; }
+
+/* ---------- 画面を囲むおさる / 最高のフィーバーのレインボーの縁 ---------- */
+.fever-ring { position: fixed; inset: 0; pointer-events: none; z-index: 16; }
+.ring-monkey { position: absolute; transform: translate(-50%, -50%); }
+/* 最高（レベル3）は縁がレインボーに点滅（1秒に1回程度。点滅は光過敏に配慮してゆっくり） */
+.fever-frame.lv3 {
+  border: 14px solid transparent;
+  border-image: linear-gradient(90deg, #ff3a3a, #ffb81c, #ffe24a, #3ee07a, #38b6ff, #a066ff, #ff4fa0, #ff3a3a) 1;
+  box-shadow: none;
+  animation: rainbow-blink 1.2s ease-in-out infinite alternate;
+}
+@keyframes rainbow-blink {
+  from { opacity: 0.35; filter: hue-rotate(0deg); }
+  to { opacity: 1; filter: hue-rotate(160deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fever-frame.lv3 { animation: none; }
+}

@@ -27,6 +27,26 @@ const TIME_BONUS = 3_000 // 正解で +3秒
 const TIME_PENALTY = 3_000 // まちがいで -3秒
 const TICK = 100
 
+/** 画面の四辺をぐるっと囲むおさる。フィーバーのレベルが上がるほど数も大きさも増える */
+function FeverRing({ level }: { level: number }) {
+  const n = 4 + level * 4 // レベル1: 8匹 / 2: 12匹 / 3: 16匹
+  const size = 26 + level * 4
+  return (
+    <div className="fever-ring">
+      {Array.from({ length: n }, (_, i) => {
+        // 四辺の上を等間隔に並べる（0〜4 の周回パラメータを座標に変換）
+        const t = (i / n) * 4
+        const [x, y] = t < 1 ? [t, 0] : t < 2 ? [1, t - 1] : t < 3 ? [3 - t, 1] : [0, 4 - t]
+        return (
+          <div key={i} className="ring-monkey" style={{ left: `${3 + x * 94}%`, top: `${3 + y * 94}%` }}>
+            <PixelMonkey char={DANCERS[i % DANCERS.length]} mood="happy" size={size} anim="dance" style={{ animationDelay: `${(i % 4) * 0.12}s` }} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Quiz({ level, questions, onFinish, onQuit }: { level: number; questions: Question[]; onFinish: (r: QuizResult) => void; onQuit: () => void }) {
   const TIME_MAX = (TIME_OVERRIDE || getTimeLimit()) * 1000
   const queueRef = useRef(questions)
@@ -377,11 +397,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       {feverLv > 0 && (
         <>
           <div className={`fever-frame lv${feverLv}`} />
-          <div className="fever-dancers">
-            {(feverLv === 3 ? [...DANCERS, ...DANCERS] : DANCERS).map((c, i) => (
-              <PixelMonkey key={`${c}${i}`} char={c} mood="happy" size={34} anim="dance" style={{ animationDelay: `${i * 0.1}s` }} />
-            ))}
-          </div>
+          <FeverRing level={feverLv} />
         </>
       )}
       {banner && (
