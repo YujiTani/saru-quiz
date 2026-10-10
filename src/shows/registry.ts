@@ -2,13 +2,18 @@
 import type { Rng } from '../lib/rng'
 import type { Show, ShowCat, UnlockCtx } from './types'
 import { BANANA_SHOWS } from './banana'
+import { DETEKU_SHOWS } from './deteku'
 import { FINALE_SHOWS } from './finale'
+import { FINALE_MORE } from './finaleMore'
+import { HAPPENING_SHOWS } from './happening'
 import { MICHI_SHOWS } from './michi'
 import { ONGAKU_SHOWS } from './ongaku'
+import { OUEN_SHOWS } from './ouen'
 import { UGOKU_SHOWS } from './ugoku'
 import { ZUKKOKE_SHOWS } from './zukkoke'
 
-export const SHOWS: Show[] = [...UGOKU_SHOWS, ...ZUKKOKE_SHOWS, ...MICHI_SHOWS, ...ONGAKU_SHOWS, ...FINALE_SHOWS, ...BANANA_SHOWS]
+// 登録の順が、ずかんの並びの順
+export const SHOWS: Show[] = [...UGOKU_SHOWS, ...ZUKKOKE_SHOWS, ...MICHI_SHOWS, ...ONGAKU_SHOWS, ...DETEKU_SHOWS, ...OUEN_SHOWS, ...FINALE_SHOWS, ...FINALE_MORE, ...HAPPENING_SHOWS, ...BANANA_SHOWS]
 
 export const getShow = (id: string): Show | undefined => SHOWS.find((s) => s.id === id)
 
@@ -38,3 +43,6 @@ export function pickShow(cat: ShowCat, pick: Record<string, string>, u: UnlockCt
 export function ugokuFor(catName: string, u: UnlockCtx): Show {
   return SHOWS.find((s) => s.cat === 'ugoku' && s.forCat === catName && isUnlocked(s, u)) ?? getShow('ugoku:pika')!
 }
+
+/** ふぃなーれを打ち切る時間（ms）。演出ごとに決められる（なければ 5秒） */
+export const finaleLimit = (show: Show): number => show.maxMs ?? 5000

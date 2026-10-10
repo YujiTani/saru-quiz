@@ -49,6 +49,7 @@ const photo: Show = {
   name: 'きねんしゃしん',
   icon: '📷',
   base: true,
+  maxMs: 5000,
   async play(ctx: ShowCtx) {
     const L = ctx.layer
     const words = (ctx.today ?? []).slice(-PHOTO_MAX)

@@ -59,21 +59,28 @@ Vite + React + TypeScript。サーバーなし・進捗は端末内保存。
   - プレゼント（`components/ShowGift.tsx`）: 結果の最後（「まだ あそぶー？」の前）。おさるが箱を持ってくる → ゆれる → パカッ → アイコンと名前＋「あたらしい、えんしゅつ！」→ その演出を1回ためす。1回のプレイで3つまで、あとは「ほかにも N こ！」。解放条件は読み上げない
   - ずかん: 上は「ためす」の舞台（`components/ShowStage.tsx` ＋ `shows/preview.ts` の `runPreview`。司会のおさる・吹き出し・絵のカードに、その演出の `play` を `makeCtx({ pic, host, preview: true })` で流す。みちのりは Road を E 0→1、おんがくは `startBgm` → E を上げながら7秒 → `stopBgm`）。タブは `BOOK_CATS`（9つ。0件は「もうすぐ」）、集計は `bookCounts`。まだのカードは 黒い影（`filter: brightness(0)`）と「？？？」＋親向けの小さなヒント（読み上げない）。うごくえ以外は `.pin-btn` で「こてい」⇄「おまかせ」（`save.shows.pick[cat]` = id か 'auto'。固定中のカードに `.card-mark`「えらんでる」）
   - `ShowCtx.preview` が true のとき、`say(ctx, 文, x, y)`（`shows/util.ts`）は吹き出しに加えて読み上げる（ゲーム中は ほめ言葉の読み上げと ぶつかるので 吹き出しだけ）。この言葉は voice_lines.py に足す（「にあう？」「ありがとう！」など）
-  - 4b のメモ: でてくる・おうえん・ハプニングは `Show` を登録（`registry.ts` の `SHOWS`）すれば、ずかんのタブ・集計・プレゼント・ためすに自動で出る。ためすの舞台は `.picture` と `.host-monkey` を `ctx.pic` / `ctx.host` で渡している（演出が `document.querySelector` で探すと舞台ではなく クイズ画面を見てしまう）
+  - 4b（できた）: でてくる・おうえん・ハプニングは `Show` を登録（`registry.ts` の `SHOWS`）すれば、ずかんのタブ・集計・プレゼント・ためすに自動で出る。ためすの舞台は `.picture` と `.host-monkey` を `ctx.pic` / `ctx.host` で渡している（演出が `document.querySelector` で探すと舞台ではなく クイズ画面を見てしまう）
 - **うごくえ**（`shows/ugoku.ts` ＋ `shows/ugokuMore.ts`）: questions.json の21カテゴリすべてに専用の動き＋基本の「ぴかっ」。どれも そのカテゴリの単語を3つおぼえたら。単語や月で変わるもの: てんき `weatherOf`（id → あめ・ゆき・にじ・たいよう・かみなり・かぜ・きらきら）、がっき `lib/instruments.ts` の `instrumentOf` / `PHRASES`（たいこ・ぴあの・らっぱ・すず・木琴）、きせつ `seasonOf(月)`（はる 花びら・なつ 泡・あき 葉っぱ・ふゆ 雪）、ふく `wearsOnHead`（頭のものは頭に重なる）。長い動きは次の問題に入ると片づけられるので、Quiz は 読み上げのあと 最大1.2秒だけ うごくえの終わりを待つ。確かめるのは `node scripts/show_shots.mjs <id>`（単語・月の見分けも `tenki-rain` `gakki-drum` `kisetsu-winter` などで撮れる。`?word=<単語id>` で その1語だけ出題、`?month=N` は show_shots 用）
 - **ずっこけ**（8種。`zukkoke:slip|hakushon|guruguru|hiyoko|hanabanana|gunya|puri|neko`）: playDays が 0・0・2・4・6・8・10・12 で手に入る。おさるが自分で変なことをするだけ（痛い・こわい表現なし）
+- **でてくる**（5種。`deteku:baa|present|ki|shabon|tsuchi`、`shows/deteku.ts`）: 問題の絵（`.picture`）の出かた。遊び始めに `chooseShow('deteku')` で1つ選び、そのプレイは同じもの。`Quiz` の `useLayoutEffect`（問題が変わるたび。先に `layer.clear()`）で絵が見える前に `play`。0.8秒以内（`DETEKU_MS`）・読み上げは止めない・E が上がるほど はねる高さ・粒が増える。絵そのもの（`ctx.pic`）を `layer.go` で動かす（終わると もとの見た目。CSS の `picture-in` は `.quiz .picture.reading/.answering` では止めてある）。答えた瞬間に動きかけの WAAPI は `cancel`（CSS のアニメは残す）。動きの強さ 0 は ふわっと出るだけ。解放: baa は はじめから / present plays>=3 / ki playDays>=3 / shabon clears>=1 / tsuchi masteredTotal>=10
+- **おうえん**（3種。`ouen:nakama|osaru|kotori`、`shows/ouen.ts` ＋ `components/Cheer.tsx`）: 絵のカードのふち（`.picture-wrap` の中。左右のふち・カードの上の電線）に出る観客。選択肢・画面下のリーチのおさる（`.reach-crowd`）とは重ならない場所だけ使う（`cheerSlot(k)` は左右に交互・下から上。`.cheer` は `container-type: size` で大きさを `cqh` で決める）。`FeverRing` は フィーバーの演出として そのまま。なかま=そのプレイで正解した絵（最大12・新しいものを残す。カードの真ん中から飛んでくる）/ おさる=`osaruCount(E)`（masteredTotal>=20）/ ことり=`birdCount(正解数)` 最大5羽・正解のたび `sfx.chirp(n)` で音階が上がる（とり5語）。動きの強さ 0 は `.cheer.still`（跳ねずに並ぶ）。図鑑の「ためす」は `runPreview` が E を 0→1 に上げながら ShowStage の `<Cheer>` に渡す
+- **ふぃなーれ**（4種）: `finale:photo`（5秒）の ほか `finale:parade`（clears>=2・最大8語・`paradeMs(n)` は 8語で8秒以内・1語ずつ `speak(q.a)`）`finale:bananatree`（coins>=1500・4秒）`finale:rocket`（clears>=5・4秒。星のキラッは1回）。`Show.maxMs`（なければ 5000。`finaleLimit(show)`）が Quiz の打ち切り時間。新しいふぃなーれは maxMs を決める（`stage4b.test.ts` が確かめる）
+- **ハプニング**（10種。`hap:ufo|kirin|kisha|niji|obake|mochi|kujira|hato|fusen|nagareboshi`、`shows/happening.ts` ＋ 決めかた `shows/hapPlan.ts`）: 遊んでいるあいだに たまに起きる、得点・問題には関係ない出来事。3秒以内（`HAP_MAX`・`maxMs`）・`pointer-events: none`・こわい見た目なし。`.hap-arena`（クイズでは画面全体、ずかんの「ためす」では舞台だけ。外にはみ出さない）の中に置く。起きるか・どれか・何問目か は遊び始めに `planHappening`（日付・キャラID・その日の遊んだ回数 `diary[日].plays` と `?seed` から `seeded`。確率は `hapChance`＝1回目 0.6・2回目 0.5・3回目 0.4・あと 0.3で、1日に1回くらい。まだ見ていないものを優先。何問目かは 2〜9）。出るのは その問題の読み上げ中（はじめて見るものだけ「みつけた！」と読み上げ＋`sfx.kirarin`）。見たら カードの左上に「みつけた！」のバッジ（`.hap-badge`）。見たものは `QuizResult.happenings` → `applyResult` が `save.shows.seen[id]`（はじめてのときだけ時刻）に入れ、`newlyUnlocked`（seen で決まる）が `events.newShows` に出す（結果のプレゼントでためす）。テスト用: `?hap=<id>` は かならず2問目（記録しない＝`isTestRun`）、`?hap=off` は起こさない（記録はする。smoke は `start()` が自動で付ける）、`?show` `?cat` などのテスト実行でも起きない。UFO だけ絵のカード（`ctx.pic`）を吸い上げる。動きの強さ 0 は アイコンが ふわっと出て消えるだけ
+- 新しいセリフ: 「みつけた！」「ばあ！」（`voice_lines.py`）。ゲーム中の吹き出し（`say`）は読み上げず、ずかんの「ためす」のときだけ読む
+- 目で確かめる: `node scripts/show_shots.mjs deteku`（5種×E=0/0.9）`ouen`（ok,ok,ng の順に答えて フィーバーに入らない状態。リーチとの重なりも）`finale-parade` `finale-bananatree` `finale-rocket` `hap`（バッジが出た時刻から。`MOTION=0` でも）。smoke の `17-*`（でてくる5・おうえん・ハプニング・ずかんの「ためす」）。ハプニングの保存は smoke が `planHappening` で その日を探して、今を その日にして遊び、`seen` とプレゼントを確かめる
 - のこり5秒からは時間の進みが半分（5→0 を10秒かけて大きくカウントダウン）。`Quiz.tsx` の `COUNTDOWN_MS`
 
 ## 確認手順（変更したら必ず）
 - イラスト追加後: `node scripts/fit_illust.mjs <id…>`（描いた範囲を測って中央・同じ大きさにそろえる。何度実行しても同じ）→ `node scripts/sheet.mjs <カテゴリ名>` → `.sheets/*.png` を目視確認（構文チェック込み）
 - コード変更後: `npm run check`（問題JSON再生成 + 単体テスト + 型チェック + iPhoneサイズの通しテスト。スクショは `.smoke/`）
-- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・シール・バナナの段階・えにっきの月の並び・ひな壇・演出の解放と選び方・ずかんの集計と解放の記録・天気/楽器/季節の見分け。設定は `vitest.config.ts`）。出力の解析に失敗するときは `rtk proxy npx vitest run`（`npm run check` も `rtk proxy npm run check`）
+- 単体テスト: `npm run test`（vitest。`src/**/*.test.ts`。進捗・ライトナー式の箱・乱数・日付・シール・バナナの段階・えにっきの月の並び・ひな壇・演出の解放と選び方・ずかんの集計と解放の記録・天気/楽器/季節の見分け・ハプニングの確率と seen の記録・でてくる/おうえん/ふぃなーれの解放と選びかた。設定は `vitest.config.ts`）。出力の解析に失敗するときは `rtk proxy npx vitest run`（`npm run check` も `rtk proxy npm run check`）
 - テスト用のURLパラメータ（`src/lib/testflags.ts`）
   - `?seed=数値` 乱数を固定（`src/lib/rng.ts`。`Math.random` のかわりに `rng()` を使う）
   - `?show=<id>` `?demo` 保存もランキングへの送信もしない
   - `?cat=カテゴリ名` そのカテゴリだけ出題（保存もランキングもなし）
   - `?word=<単語id>` その1語だけ出題（保存もランキングもなし。天気・楽器の見分けの確認用）
   - `?start=数` せいかい数をその数から始める（みちのり・リーチの確認用。記録しない）
+  - `?hap=<ハプニングid>` 2問目に そのハプニングを起こす（保存もランキングもなし）。`?hap=off` はハプニングを起こさない（こちらは記録する。smoke 用）
   - `?time=秒` `?goal=問題数` は今までどおり（これらは記録する）
 - 進捗の更新は `src/lib/progress.ts` の `applyResult`（純粋）。単語の箱（☆・くもり）は `src/lib/leitner.ts`。日付は `src/lib/day.ts`（テストでは `setNow`）
 - ヘッドレスChromeは `~/.cache/saru-quiz/` にある（`scripts/browser.mjs`）

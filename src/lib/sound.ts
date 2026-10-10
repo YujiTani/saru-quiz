@@ -561,4 +561,39 @@ export const sfx = {
     tone(note(88), 0, 0.07, 'triangle', 0.5, note(94))
     tone(note(91), 0.1, 0.07, 'triangle', 0.5, note(96))
   },
+  /** ことりの「ぴっ」。n（0から）が増えるたびに 音階が1つずつ上がる（ドレミソラ…を2オクターブ。上がりきったらまた ひくく） */
+  chirp(n = 0) {
+    const m = 79 + CHIRP_SCALE[Math.abs(Math.floor(n)) % CHIRP_SCALE.length]
+    tone(note(m), 0, 0.06, 'sine', 0.4, note(m + 3))
+    tone(note(m + 5), 0.08, 0.05, 'sine', 0.25)
+  },
+  /** 「キラリン」（ハプニングを はじめてみつけた。やさしい音） */
+  kirarin() {
+    ;[91, 95, 98, 103].forEach((n, i) => tone(note(n), i * 0.07, 0.3, 'sine', 0.35))
+    tone(note(110), 0.3, 0.4, 'sine', 0.15)
+  },
+  /** きしゃの「ポッポー」 */
+  poppo() {
+    tone(note(65), 0, 0.2, 'triangle', 0.4)
+    tone(note(69), 0.24, 0.4, 'triangle', 0.4)
+  },
+  /** くじらの しおふき（やさしいシューッ） */
+  spout() {
+    noise(0, 0.7, 0.22, 700, 3500, 'bandpass')
+    tone(300, 0, 0.5, 'sine', 0.2, 620)
+  },
+  /** UFO の「ウィーン」（ゆらゆら上がる音） */
+  ufo() {
+    tone(330, 0, 0.5, 'sine', 0.25, 520)
+    tone(335, 0, 0.5, 'triangle', 0.15, 530)
+    tone(520, 0.5, 0.5, 'sine', 0.2, 330)
+  },
+  /** はとの「くるっぽー」 */
+  coo() {
+    tone(380, 0, 0.12, 'sine', 0.3, 300)
+    tone(340, 0.16, 0.24, 'sine', 0.3, 260)
+  },
 }
+
+// ことりの音階（半音の数。ペンタトニックで2オクターブ）
+const CHIRP_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21]

@@ -9,6 +9,8 @@
 //  7. 毎日の楽しみ: 1回目のあとにシールのカード（12-sticker）→ ?goal=3 のクリアで きねんしゃしん（12-finale-*）→ えにっき（月・日のページ。13-diary-*）
 //     → 7枚そろう＋バナナのやま（トラック）のカード（14-*）
 //  8. えんしゅつ図鑑: タイトルの並び（アイコンの1行・ロゴと重ならない）→ ずかん（タブ9つ・集計・影のカード・もうすぐ）→ ためす → こてい/おまかせ（15-*.png）
+// 10. でてくる・おうえん: クイズ画面に出る（5種・3種。ふちの観客が選択肢・リーチのおさると重ならない）→ ハプニング（?hap=hap:ufo で2問目に起きる・
+//     「みつけた！」のバッジ・選択肢はおせる）→ ふつうに遊んで seen が保存されてプレゼントに出る → ずかんで でてくる・おうえん・ハプニングが「ためす」で動く（17-*.png）
 //  9. プレゼント: 解放の直前から遊んで、箱が開く →「あたらしい えんしゅつ！」→ ためす（3つまで・ほかにも N こ）。ふつうに遊んで got の保存も（16-*.png）
 import { createServer } from 'vite'
 import fs from 'fs'
@@ -74,8 +76,10 @@ async function typeName(page, v) {
   }, v)
 }
 
-async function start(page, query) {
-  await page.goto(`http://localhost:5199/${query}`, { waitUntil: 'networkidle0' })
+/** ハプニングは ふつうは日付で起きるので、smoke では 起こさない（?hap=off）。hap を決めたい（または ふつうに起こしたい）ときは opts.hap = false */
+async function start(page, query, opts = {}) {
+  const q = opts.hap === false || /[?&]hap=/.test(query) ? query : `${query}${query.includes('?') ? '&' : '?'}hap=off`
+  await page.goto(`http://localhost:5199/${q}`, { waitUntil: 'networkidle0' })
   await page.click('.tap-start')
   await sleep(800)
   // はじめてなら キャラをつくる
@@ -373,6 +377,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('.choice.is-answer'), { timeout: 20000 })
   await sleep(300)
   if ((await page.$eval('.picture img', (el) => getComputedStyle(el).opacity)) !== '1') errors.push('次の問題で絵が元にもどっていません')
+  await sleep(900) // 次の問題の「でてくる」演出（0.8秒）が終わるのを待つ
   if ((await page.$$('#show-layer > *')).length !== 0) errors.push('次の問題になっても演出の要素が残っています')
   console.log('5a. うごくえ: OK')
 
@@ -674,11 +679,12 @@ try {
   // まだのもの: 影（brightness(0)）と「？？？」・親向けのヒント
   const lock = await page.$eval('.book-card.locked', (el) => ({ name: el.querySelector('.card-name').textContent, hint: el.querySelector('.card-hint')?.textContent ?? '', filter: getComputedStyle(el.querySelector('.card-icon')).filter }))
   if (lock.name !== '？？？' || !lock.hint || !lock.filter.includes('brightness(0)')) errors.push(`まだのカードが 影＋？？？＋ヒントになっていません: ${JSON.stringify(lock)}`)
-  // 0件のタブは「もうすぐ」
+  // 9つのタブには ぜんぶ カードがある（もうすぐ は出ない）。でてくるは はじめから1つ
   await page.click('.book-tab[data-cat="deteku"]')
   await sleep(300)
-  if (!(await page.$eval('.book-soon', (el) => el.textContent.includes('もうすぐ')).catch(() => false))) errors.push('0件のタブに「もうすぐ」が出ていません')
-  await page.screenshot({ path: `${OUT}/15-book-soon.png` })
+  if (await page.$('.book-soon')) errors.push('でてくるのタブが「もうすぐ」のままです')
+  if ((await page.$$('.book-card[data-id^="deteku:"]')).length !== 5) errors.push('でてくるのタブが5枚ではありません')
+  await page.screenshot({ path: `${OUT}/15-book-deteku.png` })
   await page.click('.book-tab[data-cat="ugoku"]')
   await sleep(300)
   if (await page.$('.pin-btn')) errors.push('うごくえに「こてい」ボタンが出ています')
@@ -794,6 +800,196 @@ try {
   if (!sv11.shows.got['zukkoke:guruguru']) errors.push(`手に入れた記録（shows.got）が保存されていません: ${JSON.stringify(sv11.shows.got)}`)
   for (const id of ['ugoku:pika', 'zukkoke:slip', 'michi:jungle', 'ongaku:march', 'finale:photo', 'banana:fusa']) if (!sv11.shows.got[id]) errors.push(`はじめから持っている演出が got に入っていません: ${id}`)
   console.log('11b. 手に入れた記録の保存: OK')
+
+  // 12. でてくる・おうえん: クイズ画面に出る
+  const dob = encodeURIComponent('どうぶつ')
+  const waapi = (sel) => page.$eval(sel, (el) => el.getAnimations().filter((a) => !('animationName' in a)).length).catch(() => -1)
+  for (const id of ['baa', 'present', 'ki', 'shabon', 'tsuchi']) {
+    await start(page, `?show=deteku:${id}&cat=${dob}&goal=10&time=60`)
+    await page.click('.level-btn')
+    await sleep(160)
+    if ((await waapi('.picture')) < 1) errors.push(`でてくる ${id}: 最初の問題の絵に演出が動いていません`)
+    await sleep(170)
+    await page.screenshot({ path: `${OUT}/17-deteku-${id}.png` })
+    if (id === 'baa') {
+      // 演出が出ている間も 読み上げは止まらない（選択肢の読み上げが進む）
+      await page.waitForSelector('.choice.is-reading', { timeout: 10000 }).catch(() => errors.push('でてくる: 演出のあと 選択肢の読み上げが始まりません'))
+      if ((await waapi('.picture')) !== 0) errors.push('でてくる: 0.8秒をすぎても 絵の演出が終わっていません')
+      if ((await page.$eval('.picture', (el) => getComputedStyle(el).opacity)) !== '1') errors.push('でてくる: 終わっても絵が見えていません')
+      if (!(await page.$('.picture-wrap .cheer[data-ouen="nakama"]'))) errors.push('おうえん: きょうのなかま が クイズ画面に出ていません')
+    }
+  }
+  console.log('12a. でてくる: OK')
+
+  // おうえん（きょうのなかま）: 正解した絵が ふちに加わる。選択肢・リーチのおさるとは重ならない
+  const cheerOverlap = () =>
+    page.evaluate(() => {
+      const wrap = document.querySelector('.picture-wrap').getBoundingClientRect()
+      const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+      const boxes = [...document.querySelectorAll('.cheer-item, .cheer-bird')].map((e) => e.getBoundingClientRect())
+      const others = [...document.querySelectorAll('.choice, .decide, .reach-crowd .reach-mk')].map((e) => e.getBoundingClientRect())
+      const out = []
+      boxes.forEach((b, i) => {
+        if (others.some((o) => hit(b, o))) out.push(`${i}: 選択肢かリーチのおさると重なる`)
+        if (b.left < -24 || b.right > innerWidth + 24) out.push(`${i}: 画面のよこに はみ出す`)
+        if (!b.width) out.push(`${i}: 大きさがない`)
+      })
+      return { n: boxes.length, out, wrapTop: wrap.top, wrapBottom: wrap.bottom }
+    })
+  await start(page, `?show=ouen:nakama&cat=${dob}&goal=10&time=90`)
+  await page.click('.level-btn')
+  await sleep(1200)
+  const q12 = await currentQ(page)
+  await answer(page, 80)
+  await sleep(1100)
+  const ch1 = await cheerOverlap()
+  if (ch1.n !== 1) errors.push(`おうえん(なかま): 1つ正解したら 1つ加わるはず（${ch1.n}）`)
+  ch1.out.forEach((m) => errors.push(`おうえん(なかま) ${m}`))
+  if (!(await page.$eval('.cheer-item img', (el, src) => el.src.endsWith(src), q12.img).catch(() => false))) errors.push('おうえん(なかま): 正解した絵が ふちに入っていません')
+  await page.screenshot({ path: `${OUT}/17-ouen-nakama.png` })
+  // おさる・ことり（E=0.6 / 3羽 → 正解で 4羽）。リーチ（のこり3問）でも重ならない
+  await start(page, `?show=ouen:osaru&cat=${dob}&goal=20&start=12&time=90`)
+  await page.click('.level-btn')
+  await sleep(1500)
+  const osaruN = (await page.$$('.cheer-osaru .cheer-item')).length
+  if (osaruN < 5) errors.push(`おうえん(おさる): E=0.6 で ${osaruN}匹しかいません`)
+  const chO = await cheerOverlap()
+  chO.out.forEach((m) => errors.push(`おうえん(おさる) ${m}`))
+  await page.screenshot({ path: `${OUT}/17-ouen-osaru.png` })
+  await start(page, `?show=ouen:kotori&cat=${dob}&goal=20&start=3&time=90`)
+  await page.click('.level-btn')
+  await sleep(1500)
+  if ((await page.$$('.cheer-bird')).length !== 3) errors.push('おうえん(ことり): start=3 で3羽のはず')
+  await answer(page, 81)
+  await sleep(1300)
+  if ((await page.$$('.cheer-bird')).length !== 4) errors.push('おうえん(ことり): 正解で4羽になるはず')
+  const chK = await cheerOverlap()
+  chK.out.forEach((m) => errors.push(`おうえん(ことり) ${m}`))
+  await page.screenshot({ path: `${OUT}/17-ouen-kotori.png` })
+  await start(page, `?show=ouen:nakama&cat=${dob}&goal=6&start=3&time=90`) // のこり3問 = リーチ（画面の下におさる）
+  await page.click('.level-btn')
+  await sleep(1500)
+  if (!(await page.$('.reach-crowd .reach-mk'))) errors.push('リーチのおさるが出ていません（おうえんとの重なり確認）')
+  await answer(page, 82)
+  await sleep(1200)
+  const chR = await cheerOverlap()
+  chR.out.forEach((m) => errors.push(`おうえん+リーチ ${m}`))
+  await page.screenshot({ path: `${OUT}/17-ouen-reach.png` })
+  // 動きの強さ 0: 跳ねずに並ぶだけ
+  await page.evaluate(() => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: 0 })))
+  await start(page, `?show=ouen:osaru&cat=${dob}&goal=20&start=12&time=90`)
+  await page.click('.level-btn')
+  await sleep(1200)
+  if (!(await page.$('.cheer.still'))) errors.push('動きの強さ 0 の おうえんに still が付いていません')
+  if ((await page.$$eval('.cheer-mk.hop', (e) => e.length)) !== 0) errors.push('動きの強さ 0 なのに おうえんが跳ねています')
+  await page.screenshot({ path: `${OUT}/17-ouen-motion0.png` })
+  await page.evaluate(() => localStorage.setItem('saru-quiz/settings', JSON.stringify({ motion: 1 })))
+  console.log('12b. おうえん: OK')
+
+  // 13. ハプニング: ?hap=hap:ufo は 2問目の読み上げ中に起きる。「みつけた！」のバッジ・選択肢は押せる・3秒以内に消える・絵がもとにもどる
+  await start(page, `?hap=hap:ufo&cat=${dob}&goal=10&time=90`)
+  await page.click('.level-btn')
+  await sleep(1200)
+  await answer(page, 90)
+  await page.waitForSelector('.hap-badge', { timeout: 30000 })
+  const t13 = Date.now()
+  if (!(await page.$eval('.hap-badge', (el) => el.textContent.includes('みつけた'))) ) errors.push('ハプニングの「みつけた！」バッジが出ていません')
+  await sleep(900)
+  if (!(await page.$('#show-layer .hap-arena'))) errors.push('ハプニングの演出が出ていません')
+  const blocked = await page.evaluate(() => [...document.querySelectorAll('.choice')].filter((c) => {
+    const r = c.getBoundingClientRect()
+    const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+    return !el?.closest('.choice')
+  }).length)
+  if (blocked) errors.push(`ハプニング中に 選択肢が押せません（${blocked}個）`)
+  await page.screenshot({ path: `${OUT}/17-hap-ufo.png` })
+  await page.waitForFunction(() => !document.querySelector('#show-layer .hap-arena'), { timeout: 6000 }).catch(() => errors.push('ハプニングが終わりません'))
+  if (Date.now() - t13 > 3800) errors.push(`ハプニングが3秒を大きくこえています: ${Date.now() - t13}ms`)
+  await sleep(300)
+  if ((await page.$eval('.picture', (el) => getComputedStyle(el).opacity)) !== '1' || (await page.$eval('.picture', (el) => getComputedStyle(el).transform)) !== 'none') errors.push('ハプニング（UFO）のあと 絵がもとにもどっていません')
+  await page.waitForFunction(() => !document.querySelector('.hap-badge'), { timeout: 4000 }).catch(() => errors.push('「みつけた！」のバッジが消えません'))
+  console.log('13a. ハプニング（?hap）: OK')
+
+  // 13b. ふつうに遊ぶ（?hap なし）と、日付で決まるハプニングが起きて seen が保存され、プレゼントに出る。
+  //   今を、そのキャラで 2〜3問目に起きる日（planHappening で探す）にして遊ぶ
+  const { planHappening } = await server.ssrLoadModule('/src/shows/hapPlan.ts')
+  const { HAP_IDS } = await server.ssrLoadModule('/src/shows/happening.ts')
+  const { dayKey } = await server.ssrLoadModule('/src/lib/day.ts')
+  const pid = await page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/players')).current)
+  let fake = null
+  for (let d = 0; d < 400 && !fake; d++) {
+    const t = new Date(2031, 0, 1 + d, 12).getTime()
+    const plan = planHappening({ day: dayKey(t), charId: pid, plays: 0, seen: {}, goal: 4, ids: HAP_IDS, salt: '' })
+    if (plan && plan.at <= 3) fake = { t, plan }
+  }
+  if (!fake) throw new Error('ハプニングが起きる日が見つかりません')
+  const clock = await page.evaluateOnNewDocument((t) => {
+    Date.now = () => t
+  }, fake.t)
+  await start(page, '?goal=4&time=120', { hap: false })
+  await page.click('.level-btn')
+  await sleep(1200)
+  let badgeSeen = false
+  for (let i = 0; i < 4; i++) {
+    await answer(page, 100 + i)
+    await sleep(400)
+    if (!badgeSeen) badgeSeen = !!(await page.$('.hap-badge'))
+    if (i < 3) await settle(page)
+  }
+  let hapGift = false
+  const dl13 = Date.now() + 150000
+  while (Date.now() < dl13 && !(await page.$('.again-pop'))) {
+    if (!badgeSeen) badgeSeen = !!(await page.$('.hap-badge'))
+    if (await page.$(`.gift-card[data-show="${fake.plan.id}"]`)) hapGift = true
+    await sleep(250)
+  }
+  await page.removeScriptToEvaluateOnNewDocument(clock.identifier)
+  if (!hapGift) errors.push(`ハプニング ${fake.plan.id} のプレゼント（結果の ShowGift）が出ていません`)
+  const sv13 = await mySave0()
+  if (!sv13.shows.seen[fake.plan.id]) errors.push(`見たハプニング（shows.seen）が保存されていません: ${JSON.stringify(sv13.shows.seen)}`)
+  if (!sv13.shows.got[fake.plan.id]) errors.push('見たハプニングが shows.got に入っていません')
+  console.log(`13b. ハプニングの保存・プレゼント: ${fake.plan.id}（${fake.plan.at}問目）バッジ=${badgeSeen}`)
+
+  // 14. ずかん: でてくる・おうえん・ハプニングのタブで「ためす」が動く（ハプニングは ぜんぶ「みつけた」にしておく）
+  await page.evaluate((haps) => {
+    const p = JSON.parse(localStorage.getItem('saru-quiz/players'))
+    const me = p.list.find((x) => x.id === p.current)
+    Object.assign(me.save, { stats: {}, plays: 0, cleared: [], coins: 0, diary: { '2020-01-01': { words: [], plays: 1 } } })
+    me.save.shows = { got: {}, seen: Object.fromEntries(haps.map((id) => [id, 1])), pick: {} }
+    localStorage.setItem('saru-quiz/players', JSON.stringify(p))
+  }, HAP_IDS)
+  await start(page, '')
+  await page.click('.book-btn')
+  await sleep(600)
+  const tabN = (c) => page.$eval(`.book-tab[data-cat="${c}"] .tab-n`, (el) => el.textContent)
+  if ((await tabN('deteku')) !== '1/5' || (await tabN('ouen')) !== '1/3' || (await tabN('happening')) !== '10/10') errors.push(`ずかんの集計がちがう: でてくる ${await tabN('deteku')} / おうえん ${await tabN('ouen')} / ハプニング ${await tabN('happening')}`)
+  await page.click('.book-tab[data-cat="deteku"]')
+  await sleep(300)
+  await page.click('.book-card.own[data-id="deteku:baa"]')
+  await page.waitForFunction(() => document.querySelector('.pv-stage .picture')?.getAnimations().some((a) => !('animationName' in a)), { timeout: 4000, polling: 50 }).catch(() => errors.push('ずかん: でてくる「ためす」が動きません'))
+  await page.screenshot({ path: `${OUT}/17-book-deteku.png` })
+  await page.click('.book-tab[data-cat="ouen"]')
+  await sleep(300)
+  await page.click('.book-card.own[data-id="ouen:nakama"]')
+  await page.waitForFunction(() => document.querySelectorAll('.pv-stage .cheer-item').length >= 3, { timeout: 9000 }).catch(() => errors.push('ずかん: おうえん「ためす」で なかまが集まりません'))
+  await page.screenshot({ path: `${OUT}/17-book-ouen.png` })
+  await page.click('.book-tab[data-cat="happening"]')
+  await sleep(300)
+  if ((await page.$$('.book-card .card-mark.found')).length !== 10) errors.push('ずかん: みつけたハプニングに「みつけた！」の印が10個出ていません')
+  for (const id of HAP_IDS) {
+    await page.click(`.book-card.own[data-id="${id}"]`)
+    await page.waitForSelector('#show-layer .hap-arena', { timeout: 4000 }).catch(() => errors.push(`ずかん: ${id} の「ためす」が動きません`))
+    await sleep(900)
+    const inside = await page.evaluate(() => {
+      const a = document.querySelector('#show-layer .hap-arena')?.getBoundingClientRect()
+      const s = document.querySelector('.pv-stage')?.getBoundingClientRect()
+      return a && s ? Math.abs(a.left - s.left) < 2 && Math.abs(a.top - s.top) < 2 && Math.abs(a.width - s.width) < 2 && Math.abs(a.height - s.height) < 2 : false
+    })
+    if (!inside) errors.push(`ずかん: ${id} の舞台が ずかんの舞台と合っていません`)
+    if (id === 'hap:ufo' || id === 'hap:kujira') await page.screenshot({ path: `${OUT}/17-book-${id.replace(':', '-')}.png` })
+    await page.waitForFunction(() => !document.querySelector('#show-layer .hap-arena'), { timeout: 5000 }).catch(() => errors.push(`ずかん: ${id} が終わりません`))
+  }
+  console.log('14. ずかん（でてくる・おうえん・ハプニング）: OK')
 } finally {
   await browser.close()
   await server.close()

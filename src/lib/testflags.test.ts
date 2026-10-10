@@ -24,4 +24,16 @@ describe('testflags', () => {
     expect((await withSearch('?cat=どうぶつ')).catParam()).toBe('どうぶつ')
     expect((await withSearch('')).catParam()).toBeNull()
   })
+
+  it('?hap=<id> は記録しない・id を返す。?hap=off は記録する・強制ではない', async () => {
+    const f = await withSearch('?hap=hap:ufo')
+    expect(f.isTestRun()).toBe(true)
+    expect(f.hapForced()).toBe('hap:ufo')
+    const off = await withSearch('?hap=off&seed=1')
+    expect(off.isTestRun()).toBe(false)
+    expect(off.hapForced()).toBeNull()
+    expect(off.hapOff()).toBe(true)
+    expect((await withSearch('')).hapForced()).toBeNull()
+    expect((await withSearch('?seed=7')).seedSalt()).toBe('7')
+  })
 })

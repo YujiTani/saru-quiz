@@ -63,5 +63,7 @@ export type Show = {
   unlock?: (u: UnlockCtx) => boolean
   /** うごくえの対象カテゴリ名（questions.json の categories[].name） */
   forCat?: string
+  /** 再生をうちきる時間（ミリ秒）。ふぃなーれは Quiz が この時間で結果へ進む（なければ 5000）。ハプニングは 3000 以内 */
+  maxMs?: number
   play: (ctx: ShowCtx) => Promise<void> | void
 }

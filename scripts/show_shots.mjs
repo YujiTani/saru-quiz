@@ -1,5 +1,5 @@
 // 演出を1つずつ再生してスクショを撮る（目で確かめる用）。使い方: node scripts/show_shots.mjs [演出id…]（なければ全部）
-// うごくえは正解、ずっこけは まちがいで再生する。ほかに特別な場面も撮れる（peekaboo / michi-… / reach-… / band-…）。出力: .smoke/shows/<id>-<ミリ秒>.png
+// うごくえは正解、ずっこけは まちがいで再生する。ほかに特別な場面も撮れる（peekaboo / michi-… / reach-… / band-… / deteku-… / ouen-… / finale-… / hap-…）。出力: .smoke/shows/<id>-<ミリ秒>.png
 // 動きの強さを変えて見るとき: MOTION=0 node scripts/show_shots.mjs …（出力は .smoke/shows-m0/）
 import { createServer } from 'vite'
 import fs from 'fs'
@@ -64,6 +64,27 @@ targets.push({ id: 'band-4', query: 'cat=どうぶつ&goal=10&start=7', answer: 
 targets.push({ id: 'band-5', query: 'cat=どうぶつ&goal=10&start=7', answer: 'ok', times: [200, 600, 1200] })
 targets.push({ id: 'band-combo', query: 'cat=どうぶつ&goal=10&start=3', answer: 'ok', repeat: 3, times: [300, 900] }) // れんぞく3のとき、バンドは左に寄る
 targets.push({ id: 'band-fever', query: 'cat=どうぶつ&goal=40&start=3', answer: null, times: [1500] })
+// でてくる: 5種 × E=0 / 0.9（最初の問題の絵が出てくるところ。start=18 は goal=20 のE）
+for (const t of ['baa', 'present', 'ki', 'shabon', 'tsuchi']) {
+  for (const n of [0, 18]) targets.push({ id: `deteku-${t}-e${n * 5}`, query: `show=deteku:${t}&cat=どうぶつ&goal=20&start=${n}`, answer: null, times: [40, 180, 320, 460, 600, 760, 1000] })
+}
+// おうえん: 正解がすすんで にぎやかになったところ（なかま・おさる・ことり）
+// （ok,ok,ng の順に答えて、フィーバーに入らない ふだんの状態で撮る。times は最後の答えのあと）
+for (const t of ['nakama', 'osaru', 'kotori']) {
+  targets.push({ id: `ouen-${t}`, query: `show=ouen:${t}&cat=どうぶつ&goal=24&start=12&time=120`, answer: 'ok', pattern: ['ok', 'ok', 'ng'], repeat: 9, times: [300, 4500, 6000] })
+  targets.push({ id: `ouen-${t}-early`, query: `show=ouen:${t}&cat=どうぶつ&goal=24&time=120`, answer: 'ok', pattern: ['ok', 'ng'], repeat: 2, times: [300, 6500] })
+}
+// おうえんと リーチ（のこり3問）の重なり
+targets.push({ id: 'ouen-reach', query: 'show=ouen:nakama&cat=どうぶつ&goal=9&start=5&time=120', answer: 'ok', pattern: ['ok', 'ng', 'ok'], repeat: 3, times: [4500, 6000] })
+targets.push({ id: 'ouen-kotori-reach', query: 'show=ouen:kotori&cat=どうぶつ&goal=9&start=5&time=120', answer: 'ok', pattern: ['ok', 'ng', 'ok'], repeat: 3, times: [4500, 6000] })
+// ふぃなーれ: クリアの「くりあー！」(約5.5秒)のあとに始まる
+targets.push({ id: 'finale-parade', query: 'show=finale:parade&cat=どうぶつ&goal=5', answer: 'ok', repeat: 5, times: FRAMES(MOTION === '0' ? 3000 : 6200, 14000, 780) })
+targets.push({ id: 'finale-bananatree', query: 'show=finale:bananatree&cat=どうぶつ&goal=3', answer: 'ok', repeat: 3, times: FRAMES(MOTION === '0' ? 3000 : 5800, 10200, 400) })
+targets.push({ id: 'finale-rocket', query: 'show=finale:rocket&cat=どうぶつ&goal=3', answer: 'ok', repeat: 3, times: FRAMES(MOTION === '0' ? 3000 : 5800, 10200, 400) })
+// ハプニング: 2問目で起きる（「みつけた！」のバッジが出た時刻から撮る）
+for (const t of ['ufo', 'kirin', 'kisha', 'niji', 'obake', 'mochi', 'kujira', 'hato', 'fusen', 'nagareboshi']) {
+  targets.push({ id: `hap-${t}`, query: `hap=hap:${t}&cat=どうぶつ`, answer: 'ok', hap: true, times: [150, 500, 850, 1200, 1550, 1900, 2250, 2600] })
+}
 const want = process.argv.slice(2)
 const shows = targets.filter((t) => !want.length || want.some((w) => t.id === w || t.id.startsWith(`${w}-`)))
 const browser = await launch()
@@ -102,8 +123,9 @@ try {
       for (let r = 0; r < (s.repeat ?? 1); r++) {
         const key = await page.$eval('.picture', (el) => el.querySelector('img')?.getAttribute('src') ?? el.textContent)
         const q = data.questions.find((q) => q.img === key || q.e === key)
+        const mode = s.pattern ? s.pattern[r % s.pattern.length] : s.answer // pattern: ['ok','ok','ng'] のように 順番に答える（ねつを上げすぎない）
         for (const b of await page.$$('.choice')) {
-          if (((await b.evaluate((el) => el.textContent)) === q.a) !== (s.answer === 'ng')) {
+          if (((await b.evaluate((el) => el.textContent)) === q.a) !== (mode === 'ng')) {
             await b.click()
             await sleep(200)
             break
@@ -117,6 +139,8 @@ try {
         }
       }
     }
+    // ハプニングは、バッジ（.hap-badge）が出た時刻から数える
+    if (s.hap) await page.waitForSelector('.hap-badge', { timeout: 20000 })
     const t1 = Date.now()
     for (const at of s.times) {
       await sleep(Math.max(0, at - (Date.now() - (s.answer ? t1 : t0))))
