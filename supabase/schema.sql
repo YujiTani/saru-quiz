@@ -58,7 +58,7 @@ create or replace function public.submit_score(
 declare
   v_day   text := to_char(now() at time zone 'Asia/Tokyo', 'YYYY-MM-DD');
   v_month text := to_char(now() at time zone 'Asia/Tokyo', 'YYYY-MM');
-  v_goal  integer := case p_course when 1 then 100 when 2 then 120 else 150 end;
+  v_goal  integer := case p_course when 1 then 50 when 2 then 55 else 60 end;
   v_period text;
   v_key   text;
   v_ranks json := '{}'::json;

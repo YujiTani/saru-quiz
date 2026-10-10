@@ -233,7 +233,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       const c = combo + 1
       const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (feverLv ? feverLv + 1 : 1)
       setCombo(c)
-      const nh = Math.min(300, heatRef.current + 15 + feverLv * 3)
+      const nh = Math.min(300, heatRef.current + 10 + feverLv * 2)
       const nlv = feverLevelOf(nh)
       const levelUp = nlv > feverLv ? FEVER_TEXT[nlv] : null
       setHeatBoth(nh)
@@ -278,8 +278,8 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
       })()
     } else {
       setCombo(0)
-      // ねつは少しだけ下がる（すぐには止まらない）
-      setHeatBoth(Math.max(0, heatRef.current - 20))
+      // ねつは下がる（0にはならない）
+      setHeatBoth(Math.max(0, heatRef.current - 40))
       timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
       setTimeLeft(timeRef.current)
       setTimeGain({ key: Date.now(), plus: false })

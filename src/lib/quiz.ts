@@ -6,9 +6,9 @@ export type Round = { q: Question; choices: string[] }
 
 /** コースごとの制限時間（秒）と、クリアになる正解数 */
 export const COURSE: Record<number, { name: string; time: number; goal: number }> = {
-  1: { name: 'かんたん', time: 45, goal: 100 },
-  2: { name: 'ふつう', time: 30, goal: 120 },
-  3: { name: 'むずかしい', time: 20, goal: 150 },
+  1: { name: 'かんたん', time: 45, goal: 50 },
+  2: { name: 'ふつう', time: 30, goal: 55 },
+  3: { name: 'むずかしい', time: 20, goal: 60 },
 }
 
 export const categories: { name: string; icon: string }[] = data.categories
