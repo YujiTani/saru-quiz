@@ -39,9 +39,10 @@ async function post(s: Pending): Promise<SubmitResult> {
       p_name: getPlayerName(),
       p_course: s.course,
       p_cleared: s.cleared,
-      p_clear_ms: s.clearMs,
-      p_correct: s.correct,
-      p_bananas: s.bananas,
+      // performance.now() 由来の小数はサーバーの integer で弾かれるので丸める
+      p_clear_ms: s.clearMs === null ? null : Math.round(s.clearMs),
+      p_correct: Math.round(s.correct),
+      p_bananas: Math.round(s.bananas),
       p_combo: Math.min(s.bestCombo ?? 0, s.correct),
     }),
   })

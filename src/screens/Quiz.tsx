@@ -198,12 +198,10 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
     return [r.left + r.width / 2, r.top + r.height / 2] as const
   }
 
-  // 3歳児はひらがなが読めないので、1回目のタップは「選ぶ＋読み上げ」、
-  // 同じボタンをもう一度 or「これ！」ボタンで回答する
+  // 3歳児はひらがなが読めないので、タップは「選ぶ＋読み上げ」だけ。回答は「これ！」ボタンだけで行う
+  // （同じボタンを2回タップしても回答にはせず、もう一度読み上げる）
   function select(i: number) {
     if (phase !== 'reading' && phase !== 'answering') return
-    const el = choiceRefs.current[i]
-    if (selected === i && el) return answer(round.choices[i], el)
     token.current++
     stopSpeaking()
     setReading(-1)

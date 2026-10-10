@@ -11,7 +11,7 @@ fs.mkdirSync(OUT, { recursive: true })
 const data = JSON.parse(fs.readFileSync('src/data/questions.json', 'utf8'))
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/** 今の問題に答える（wrong=true でわざと間違える）。i が偶数なら「これ！」、奇数なら同じボタンをもう一度 */
+/** 今の問題に答える（wrong=true でわざと間違える）。選んでから「これ！」。同じボタンの2回タップでは回答にならないことも確かめる */
 async function answer(page, i, wrong = false) {
   const key = await page.$eval('.picture', (el) => el.querySelector('img')?.getAttribute('src') ?? el.textContent)
   const q = data.questions.find((q) => q.img === key || q.e === key)
@@ -21,8 +21,12 @@ async function answer(page, i, wrong = false) {
       await b.click()
       await sleep(200)
       if (i === 1) await page.screenshot({ path: `${OUT}/2b-selected.png` })
-      if (i % 2 === 0) await page.click('.decide.show')
-      else await b.click()
+      if (i === 1) {
+        await b.click()
+        await sleep(300)
+        if (await page.$('.choice.is-answer')) errors.push('同じ選択肢の2回タップで回答になっています')
+      }
+      await page.click('.decide.show')
       return
     }
   }
@@ -44,6 +48,19 @@ try {
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  // ランキング（Supabase）は本番に書きこまないよう差し替え、送った中身を記録する
+  const submitted = []
+  const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS' }
+  await page.setRequestInterception(true)
+  page.on('request', (r) => {
+    if (!r.url().includes('/rest/v1/')) return r.continue()
+    if (r.method() === 'OPTIONS') return r.respond({ status: 204, headers: CORS })
+    if (r.url().includes('/rpc/submit_score')) {
+      submitted.push(JSON.parse(r.postData()))
+      return r.respond({ status: 200, contentType: 'application/json', headers: CORS, body: '{"day":1,"month":1,"newBest":true}' })
+    }
+    r.respond({ status: 200, contentType: 'application/json', headers: CORS, body: '[]' })
+  })
 
   // 1. 時間切れで終わる
   await start(page, '?time=15')
@@ -68,7 +85,11 @@ try {
   if (await page.$('.result-cleartime')) errors.push('時間切れなのにクリアタイムが出ています')
   console.log(`1. 時間切れ: ${answered}問回答`)
 
-  // 2. 3問クリアで終わる
+  // 2. 3問クリアで終わる（なまえを入れておき、ランキングに送る中身も確かめる）
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('saru-quiz/settings') ?? '{}')
+    localStorage.setItem('saru-quiz/settings', JSON.stringify({ ...s, playerName: 'てすと' }))
+  })
   await start(page, '?goal=3&time=60')
   await page.click('.level-btn')
   await sleep(1200)
@@ -82,6 +103,10 @@ try {
   await page.waitForSelector('.result-cleartime', { timeout: 20000 })
   await sleep(600)
   await page.screenshot({ path: `${OUT}/6-cleartime.png` })
+  await sleep(500)
+  const sent = submitted.find((b) => b.p_cleared)
+  if (!sent) errors.push('クリアしたのにランキングに送っていません')
+  else if (!Number.isInteger(sent.p_clear_ms) || sent.p_course !== 1) errors.push(`ランキングに送る値がおかしい: ${JSON.stringify(sent)}`)
   console.log('2. クリア: OK')
 
   // 3. かんたんクリアで ふつうが解放 → せってい

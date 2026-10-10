@@ -57,9 +57,10 @@ $$;
 
 -- スコアを送る。きょう・こんげつの順位を返す
 drop function if exists public.submit_score(uuid, text, smallint, boolean, integer, integer, integer);
+drop function if exists public.submit_score(uuid, text, smallint, boolean, integer, integer, integer, integer);
 create or replace function public.submit_score(
   p_player uuid, p_name text, p_course smallint,
-  p_cleared boolean, p_clear_ms integer, p_correct integer, p_bananas integer,
+  p_cleared boolean, p_clear_ms numeric, p_correct integer, p_bananas integer,
   p_combo integer default 0
 ) returns json language plpgsql security definer set search_path = public as $$
 declare
@@ -80,6 +81,7 @@ begin
      or p_combo < 0 or p_combo > p_correct then raise exception 'bad score'; end if;
   if p_cleared and (p_correct < v_goal or p_clear_ms is null or p_clear_ms < v_goal * 1000) then raise exception 'bad clear'; end if;
   if not p_cleared then p_clear_ms := null; end if;
+  p_clear_ms := round(p_clear_ms);
 
   foreach v_period in array array['day', 'month'] loop
     v_key := case v_period when 'day' then v_day else v_month end;
