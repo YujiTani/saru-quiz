@@ -194,7 +194,7 @@ export function Quiz({ level, questions, onFinish, onQuit }: { level: number; qu
         {round.choices.map((c, i) => {
           const state = phase === 'correct' || phase === 'wrong' ? (c === q.a ? 'is-answer' : c === picked ? 'is-wrong' : 'is-dim') : reading === i ? 'is-reading' : ''
           return (
-            <button key={c + index} className={`btn choice ${state}`} onClick={(e) => answer(c, e.currentTarget)}>
+            <button key={c + index} className={`btn choice ${state}`} style={{ fontSize: `min(36px, ${(78 / c.length).toFixed(1)}vw)` }} onClick={(e) => answer(c, e.currentTarget)}>
               {c}
             </button>
           )
