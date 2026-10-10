@@ -3,7 +3,7 @@ import { MuteButton } from './components/MuteButton'
 import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects, burst } from './lib/effects'
 import { pickSession, type Question } from './lib/quiz'
-import { unlockAudio, sfx } from './lib/sound'
+import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
 import { load, save, type Save } from './lib/storage'
 import { Quiz, type QuizResult } from './screens/Quiz'
@@ -23,6 +23,7 @@ export default function App() {
     if (fx.current) attachEffects(fx.current)
     // どこをタップしてもキラキラ
     const onDown = (e: PointerEvent) => {
+      resumeAudio()
       burst(e.clientX, e.clientY, 'star', 7, 0.45)
       sfx.sparkle()
     }

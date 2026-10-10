@@ -22,8 +22,65 @@ export function unlockAudio() {
     })
     master.connect(ctx.destination)
     voiceGain.connect(ctx.destination)
+    allowWithSilentSwitch()
   }
-  if (ctx.state === 'suspended') void ctx.resume()
+  resumeAudio()
+  // 無音を一瞬鳴らして確実に有効化（古い iOS 対策）
+  const b = ctx.createBuffer(1, 1, 22050)
+  const src = ctx.createBufferSource()
+  src.buffer = b
+  src.connect(ctx.destination)
+  src.start(0)
+}
+
+/** アプリを裏に回して戻ると iOS が音を止めることがあるので、タップのたびに復帰させる */
+export function resumeAudio() {
+  if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => {})
+}
+
+/**
+ * iPhone はマナーモード（消音スイッチ）中、Web Audio の音が鳴らない。
+ * iOS 17+ は audioSession を「playback」にすれば動画と同じく鳴る。
+ * それより古い iOS は、無音の <audio> を流し続けると同じ扱いになる。
+ */
+function allowWithSilentSwitch() {
+  const nav = navigator as Navigator & { audioSession?: { type: string } }
+  if (nav.audioSession) {
+    try {
+      nav.audioSession.type = 'playback'
+      return
+    } catch {
+      // 下の方法にフォールバック
+    }
+  }
+  const el = document.createElement('audio')
+  el.src = URL.createObjectURL(new Blob([silentWav()], { type: 'audio/wav' }))
+  el.loop = true
+  el.setAttribute('playsinline', '')
+  void el.play().catch(() => {})
+}
+
+/** 0.5秒の無音 WAV */
+function silentWav() {
+  const rate = 8000
+  const n = rate / 2
+  const buf = new ArrayBuffer(44 + n)
+  const v = new DataView(buf)
+  const str = (o: number, t: string) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)))
+  str(0, 'RIFF')
+  v.setUint32(4, 36 + n, true)
+  str(8, 'WAVEfmt ')
+  v.setUint32(16, 16, true)
+  v.setUint16(20, 1, true)
+  v.setUint16(22, 1, true)
+  v.setUint32(24, rate, true)
+  v.setUint32(28, rate, true)
+  v.setUint16(32, 1, true)
+  v.setUint16(34, 8, true)
+  str(36, 'data')
+  v.setUint32(40, n, true)
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128)
+  return buf
 }
 
 function loadBuffer(url: string) {
