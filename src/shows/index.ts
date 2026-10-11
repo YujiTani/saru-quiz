@@ -10,7 +10,7 @@ import { makeLayer } from './layer'
 
 export { attachLayer, layer } from './layer'
 export { SHOWS, finaleLimit, getShow, isUnlocked, ownedIn, pickShow, ugokuFor } from './registry'
-export { unlockCtx } from './unlock'
+export { demoUnlockCtx, unlockCtx } from './unlock'
 export { BOOK_CATS, bookCounts, grantShows, isOwned, newlyUnlocked, showsOf } from './book'
 export { HAP_IDS } from './happening'
 export { HAP_AT_MAX, forcedPlan, hapChance, planHappening } from './hapPlan'

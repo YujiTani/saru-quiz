@@ -21,12 +21,13 @@ type Props = {
   onDiary: () => void
   onBook: () => void
   onWords: () => void
+  onGuide: () => void
   onSwitch: (id: string) => void
   onNewPlayer: () => void
 }
 
 /** タイトル（メニュー）。選んでいるキャラの見た目・なまえ・色で表示が変わる */
-export function Title({ player, onStart, onReview, onSettings, onRanking, onDiary, onBook, onWords, onSwitch, onNewPlayer }: Props) {
+export function Title({ player, onStart, onReview, onSettings, onRanking, onDiary, onBook, onWords, onGuide, onSwitch, onNewPlayer }: Props) {
   const { cleared, coins, review, stickers } = player.save
   // ひとつ前のコースをクリアすると解放。むずかしいは解放されるまで出さない
   const open = (level: number) => UNLOCK_ALL || level === 1 || cleared.includes(level - 1)
@@ -124,6 +125,10 @@ export function Title({ player, onStart, onReview, onSettings, onRanking, onDiar
         <button className="icon-btn words-btn" onClick={() => { sfx.tap(); onWords() }} aria-label="ことば">
           <span className="ic">📚</span>
           <span className="lb">ことば</span>
+        </button>
+        <button className="icon-btn guide-btn" onClick={() => { sfx.tap(); onGuide() }} aria-label="あそびかた">
+          <span className="ic">❓</span>
+          <span className="lb">あそびかた</span>
         </button>
         <button className="icon-btn gear-btn rank-btn" onClick={() => { sfx.tap(); onRanking() }} aria-label="らんきんぐ">
           <span className="ic">🏆</span>

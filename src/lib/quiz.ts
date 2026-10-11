@@ -8,14 +8,16 @@ import { catParam, wordParam } from './testflags'
 export type Question = { id: string; a: string; c: string; l: number; img?: string; e?: string }
 export type Round = { q: Question; choices: string[]; hint: Hint }
 
-/** 遊びかた。あとで 'demo' も足す。決まりごとは MODE_RULES に書く */
-export type Mode = 'course' | 'review' | 'practice'
-export const MODE_RULES: Record<Mode, { timer: boolean; ranked: boolean; course: boolean }> = {
-  // timer: 時間ゲージがある / ranked: ランキングに送る / course: コースのクリア・「まえより」の記録に入る
-  course: { timer: true, ranked: true, course: true },
-  review: { timer: false, ranked: false, course: false },
+/** 遊びかた。決まりごとは MODE_RULES に書く */
+export type Mode = 'course' | 'review' | 'practice' | 'demo'
+export const MODE_RULES: Record<Mode, { timer: boolean; ranked: boolean; course: boolean; record: boolean }> = {
+  // timer: 時間ゲージがある / ranked: ランキングに送る / course: コースのクリア・「まえより」の記録に入る / record: 何かを保存する
+  course: { timer: true, ranked: true, course: true, record: true },
+  review: { timer: false, ranked: false, course: false, record: true },
   // れんしゅう: 1つのカテゴリから10問。記録（stats・ふくしゅう・えにっき）はつけるが、ランキング・コース・「まえより」には入れない。ハプニングも起こさない
-  practice: { timer: false, ranked: false, course: false },
+  practice: { timer: false, ranked: false, course: false, record: true },
+  // デモ: おさるが自動で10問あそぶ。ゲージは出すが減らさない。何も記録しない（stats・えにっき・ふくしゅう・バナナ・シール・ずかん・ランキング）
+  demo: { timer: true, ranked: false, course: false, record: false },
 }
 
 /** ふくしゅうで出す最大の問題数 */

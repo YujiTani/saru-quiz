@@ -12,7 +12,8 @@ export const VOICES = [
 export type VoiceId = (typeof VOICES)[number]['id']
 
 // motion: 動きの強さ 0〜1。さわるまでは未保存で、端末の「視差効果を減らす」設定に合わせる
-type Settings = { muted: boolean; volume: number; voice: VoiceId; motion?: number }
+// guideSeen: はじめてのガイドを見たか（端末共通）
+type Settings = { muted: boolean; volume: number; voice: VoiceId; motion?: number; guideSeen?: boolean }
 
 /** 端末が「視差効果を減らす」ならゼロ、そうでなければ最大 */
 const defaultMotion = () => (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1)
@@ -25,9 +26,10 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
-      const { muted, volume, voice, motion, ...others } = JSON.parse(raw)
+      const { muted, volume, voice, motion, guideSeen, ...others } = JSON.parse(raw)
       rest = others
       Object.assign(def, { muted: muted ?? def.muted, volume: volume ?? def.volume, voice: voice ?? def.voice })
+      if (guideSeen === true) def.guideSeen = true
       if (typeof motion === 'number') def.motion = Math.max(0, Math.min(1, motion))
     }
     else def.muted = localStorage.getItem(OLD_MUTED_KEY) === '1' // 前のバージョンのミュート設定を引き継ぐ
@@ -62,6 +64,12 @@ export const isMuted = () => state.muted
 export const getVolume = () => state.volume
 export const getVoice = () => state.voice
 export const getMotion = () => state.motion ?? defaultMotion()
+
+export const getGuideSeen = () => state.guideSeen === true
+export function setGuideSeen() {
+  state.guideSeen = true
+  save()
+}
 
 export function setMuted(m: boolean) {
   state.muted = m

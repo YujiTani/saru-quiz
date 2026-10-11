@@ -8,7 +8,7 @@ import { sfx } from '../lib/sound'
 import { speak, stopSpeaking } from '../lib/speech'
 
 /** せってい画面（キャラ・こえ・おと・おんりょう）。音の設定は子どもが押さないようにここだけに置く */
-export function Settings({ onBack, onEditPlayer, onParent }: { onBack: () => void; onEditPlayer: () => void; onParent: () => void }) {
+export function Settings({ onBack, onEditPlayer, onParent, onDemo }: { onBack: () => void; onEditPlayer: () => void; onParent: () => void; onDemo: () => void }) {
   const player = getCurrent()
   const [voice, setVoiceState] = useState<VoiceId>(getVoice)
   const [muted, setMutedState] = useState(isMuted)
@@ -108,6 +108,10 @@ export function Settings({ onBack, onEditPlayer, onParent }: { onBack: () => voi
           <span>🌪️</span>
         </label>
       </section>
+
+      <button className="btn demo-btn" onClick={() => { sfx.tap(); onDemo() }}>
+        🎬 じどうで あそぶのを みる
+      </button>
 
       <div className="settings-foot">
         <PixelMonkey char="monchan" mood="happy" size={44} anim="idle" />

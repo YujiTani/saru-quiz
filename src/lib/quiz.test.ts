@@ -124,7 +124,7 @@ describe('reviewSession ふくしゅうの出題', () => {
 
 describe('practiceSession れんしゅうの出題', () => {
   it('決まりごと: 時間なし・ランキングなし・コースにも入れない', () => {
-    expect(MODE_RULES.practice).toEqual({ timer: false, ranked: false, course: false })
+    expect(MODE_RULES.practice).toEqual({ timer: false, ranked: false, course: false, record: true })
   })
 
   it('そのカテゴリだけから10問（同じ単語は1回）', () => {

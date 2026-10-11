@@ -7,7 +7,8 @@ import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { dayKey, now } from '../lib/day'
 import { isCloudy } from '../lib/leitner'
 import type { Save } from '../lib/storage'
-import { HAP_IDS, chooseShow, chooseUgoku, chooseZukkoke, finaleLimit, forcedPlan, getShow, layer, makeCtx, planHappening, play, reachFor, shouldAnnounce, themeOf, unlockCtx, type HapPlan } from '../shows'
+import { DEMO_GOAL, DEMO_HEAT_BONUS, DEMO_IGNORE_TAP_MS, DEMO_SHOWS, DEMO_THINK_MS, isDemoWrong } from '../lib/demo'
+import { HAP_IDS, chooseShow, demoUnlockCtx, chooseUgoku, chooseZukkoke, finaleLimit, forcedPlan, getShow, layer, makeCtx, planHappening, play, reachFor, shouldAnnounce, themeOf, unlockCtx, type HapPlan } from '../shows'
 import { songOf } from '../lib/bgm'
 import { getMotion } from '../lib/settings'
 import { getCurrent } from '../lib/players'
@@ -17,6 +18,8 @@ import { COURSE, MODE_RULES, categories, hintFor, makeRound, questionById, type 
 import { pauseBgm, resumeBgm, setBgmKey, setBgmLevel, sfx, startBgm, stopBgm } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
+
+type Hand = { x: number; y: number; tap: number }
 
 export type QuizResult = { correct: number; total: number; coins: number; bestCombo: number; answers: { id: string; ok: boolean }[]; cleared: boolean; clearMs?: number; /** このプレイで見たハプニング（id） */ happenings: string[] }
 
@@ -98,7 +101,8 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
   const course = COURSE[level] ?? COURSE[1]
   const TIME_MAX = (TIME_OVERRIDE || course.time) * 1000
   // コースはクリア数、ふくしゅう・れんしゅうは出題数（ぜんぶ正解したらクリア）
-  const GOAL = rules.course ? GOAL_OVERRIDE || course.goal : questions.length
+  const demo = mode === 'demo'
+  const GOAL = demo ? DEMO_GOAL : rules.course ? GOAL_OVERRIDE || course.goal : questions.length
   const startedAt = useRef(performance.now())
   const queueRef = useRef(questions)
   const [index, setIndex] = useState(0)
@@ -142,16 +146,18 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
   const stats = useRef({ correct: START_CORRECT, bestCombo: 0, answers: [] as { id: string; ok: boolean }[] })
   const token = useRef(0) // 読み上げ途中で次へ進んだとき、古い非同期処理を止める
   // 演出の解放状況（遊び始めの時点のもの）と、直前に使ったずっこけ
-  const unlock = useRef(unlockCtx(save, now()))
+  const unlock = useRef(demo ? demoUnlockCtx(categories.map((c) => c.name)) : unlockCtx(save, now()))
+  const demoMisses = useRef(0)
   const lastZukkoke = useRef<string | undefined>(undefined)
   // みちのりと BGM の曲は遊び始めに選ぶ。動きの強さも遊び始めのもの
-  const [theme] = useState(() => themeOf(chooseShow('michi', save.shows.pick, unlock.current).id))
-  const [song] = useState(() => songOf(chooseShow('ongaku', save.shows.pick, unlock.current).id))
+  const [theme] = useState(() => themeOf(demo ? DEMO_SHOWS.michi : chooseShow('michi', save.shows.pick, unlock.current).id))
+  const [song] = useState(() => songOf(demo ? DEMO_SHOWS.ongaku : chooseShow('ongaku', save.shows.pick, unlock.current).id))
   // でてくる（問題の絵の出かた）とおうえん（ふちの観客）も 遊び始めに選ぶ
-  const [detekuId] = useState(() => chooseShow('deteku', save.shows.pick, unlock.current).id)
-  const [ouenId] = useState(() => chooseShow('ouen', save.shows.pick, unlock.current).id)
+  const [pickedDeteku] = useState(() => chooseShow('deteku', save.shows.pick, unlock.current).id)
+  const [ouenId] = useState<string>(() => (demo ? DEMO_SHOWS.ouen : chooseShow('ouen', save.shows.pick, unlock.current).id))
   // ハプニング: 起こすか・どれか・何問目かは 遊び始めに決める（日付・キャラ・その日の回数から。?hap=<id> なら必ず2問目）
   const [hapPlan] = useState<HapPlan | null>(() => {
+    if (demo) return DEMO_SHOWS.hap
     if (mode === 'practice') return null // れんしゅうはハプニングを起こさない
     const forced = hapForced()
     if (forced) return getShow(forced)?.cat === 'happening' ? forcedPlan(forced) : null
@@ -197,6 +203,8 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
     if (token.current === my) reachDone.current.add(rem)
   }
 
+  // デモは出かたを順番に見せる
+  const detekuId: string = demo ? DEMO_SHOWS.deteku[index % DEMO_SHOWS.deteku.length] : pickedDeteku
   // 問題の絵の「でてくる」演出。前の問題の演出を片づけてから、絵が見える前に始める（読み上げは止めない）
   useLayoutEffect(() => {
     layer.clear()
@@ -269,7 +277,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
 
   // 時間ゲージ
   useEffect(() => {
-    if (!rules.timer) return // ふくしゅう・れんしゅうは時間がない
+    if (!rules.timer || demo) return // ふくしゅう・れんしゅうは時間がない。デモはゲージを出すだけで減らさない
     const id = setInterval(() => {
       const p = phaseRef.current
       if (p !== 'reading' && p !== 'answering') return
@@ -388,13 +396,13 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       const c = combo + 1
       const add = 10 * (1 + Math.floor(c / 3)) * (isBonus ? 3 : 1) * (feverLv ? feverLv + 1 : 1)
       setCombo(c)
-      const nh = Math.min(300, heatRef.current + 10 + feverLv * 2)
+      const nh = Math.min(300, heatRef.current + 10 + feverLv * 2 + (demo ? DEMO_HEAT_BONUS : 0))
       const nlv = feverLevelOf(nh)
       const levelUp = nlv > feverLv ? FEVER_TEXT[nlv] : null
       setHeatBoth(nh)
       setCoins((v) => v + add)
       setGain({ n: add, key: Date.now() })
-      if (rules.timer) {
+      if (rules.timer && !demo) {
         timeRef.current = Math.min(TIME_MAX, timeRef.current + TIME_BONUS)
         setTimeLeft(timeRef.current)
         setTimeGain({ key: Date.now(), plus: true })
@@ -468,7 +476,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       setCombo(0)
       // ねつは下がる（0にはならない）
       setHeatBoth(Math.max(0, heatRef.current - 40))
-      if (rules.timer) {
+      if (rules.timer && !demo) {
         timeRef.current = Math.max(0, timeRef.current - TIME_PENALTY)
         setTimeLeft(timeRef.current)
         setTimeGain({ key: Date.now(), plus: false })
@@ -484,7 +492,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       const qs = queueRef.current
       queueRef.current = [...qs.slice(0, index + 4), q, ...qs.slice(index + 4)]
       // おさるのずっこけ ＋「おしい！ これは、〇〇だよ」の読み上げ → 次へ
-      const zk = chooseZukkoke(save.shows.pick, unlock.current, lastZukkoke.current)
+      const zk = demo ? getShow(DEMO_SHOWS.zukkoke[demoMisses.current++ % DEMO_SHOWS.zukkoke.length])! : chooseZukkoke(save.shows.pick, unlock.current, lastZukkoke.current)
       lastZukkoke.current = zk.id
       const zctx = makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current })
       ;(async () => {
@@ -494,6 +502,47 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       })()
     }
   }
+
+  // デモ: 読み上げが終わったら少し待って、てぶくろの手が選択肢へ動いて「これ！」まで押す。2問はわざとまちがえる
+  const decideEl = useRef<HTMLButtonElement>(null)
+  const act = useRef({ select, decide })
+  act.current = { select, decide }
+  const [hand, setHand] = useState<Hand>(() => ({ x: innerWidth / 2, y: innerHeight + 60, tap: 0 }))
+  const shownAt = useRef(performance.now())
+  useEffect(() => {
+    if (!demo || phase !== 'answering' || selected !== null) return
+    let alive = true
+    const move = (el: Element | null, tap = false) => {
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setHand((h) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2, tap: tap ? h.tap + 1 : h.tap }))
+    }
+    ;(async () => {
+      await wait(DEMO_THINK_MS)
+      if (!alive) return
+      const right = round.choices.indexOf(round.q.a)
+      const wrong = isDemoWrong(index, misses.current.has(round.q.id))
+      const i = wrong ? round.choices.findIndex((_, k) => k !== right) : right
+      move(choiceRefs.current[i])
+      await wait(600)
+      if (!alive) return
+      move(choiceRefs.current[i], true)
+      await wait(150)
+      act.current.select(i)
+      await wait(900)
+      if (!alive) return
+      move(decideEl.current)
+      await wait(600)
+      if (!alive) return
+      move(decideEl.current, true)
+      await wait(150)
+      if (alive) act.current.decide()
+    })()
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, round, index])
 
   function celebrate(text: string, kind: Banner['kind'], who: CharId, x: number, y: number) {
     setBanner({ text, kind, key: Date.now() })
@@ -565,7 +614,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       if (!mounted.current) return
       setBanner(null)
       const ctx = makeCtx({ E: 1, today })
-      const fin = chooseShow('finale', save.shows.pick, unlock.current)
+      const fin = demo ? getShow(DEMO_SHOWS.finale)! : chooseShow('finale', save.shows.pick, unlock.current)
       await Promise.race([play(fin, ctx), wait(finaleLimit(fin))]) // 長さは演出ごと（maxMs）
       if (mounted.current) onFinish(result)
     }, 2400)
@@ -671,7 +720,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
             </button>
           )
         })}
-        <button className={`btn decide ${selected !== null && phase === 'answering' ? 'show' : ''}`} onClick={decide} aria-label="これにする">
+        <button ref={decideEl} className={`btn decide ${selected !== null && phase === 'answering' ? 'show' : ''}`} onClick={decide} aria-label="これにする">
           <PixelMonkey char="monchan" mood="happy" size={40} anim="none" />
           これ！
         </button>
@@ -684,6 +733,17 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
         </>
       )}
       <ReachCrowd n={phase === 'end' && !puha ? 0 : reach.crowd > 0 ? reach.crowd : puha ? crowdN.current : 0} puha={puha} motion={motion} />
+      {demo && (
+        <>
+          {/* さわると デモをやめてタイトルへ（始まって すぐのタップは無視）。✕は上に出ているので押せる */}
+          <div className="demo-shield" onPointerDown={() => performance.now() - shownAt.current > DEMO_IGNORE_TAP_MS && onQuit()} />
+          <div className="demo-label">🎬 デモ</div>
+          <div className="demo-hand" style={{ left: hand.x, top: hand.y, display: phase === 'end' ? 'none' : undefined }} aria-hidden>
+            <span key={hand.tap} className={`hand-ring ${hand.tap ? 'tap' : ''}`} />
+            <span key={`h${hand.tap}`} className={`hand-glove ${hand.tap ? 'tap' : ''}`}>👆</span>
+          </div>
+        </>
+      )}
       {banner && (
         <div className={`banner ${banner.kind}`} key={banner.key}>
           {banner.text}

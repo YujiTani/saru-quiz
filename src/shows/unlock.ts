@@ -35,3 +35,18 @@ export function unlockCtx(save: Save, _now: number, catOf: (id: string) => strin
     coins: save.coins,
   }
 }
+
+/** デモ用: ぜんぶ手に入れている状態（記録はしない。見本をひととおり見せるため） */
+export function demoUnlockCtx(cats: string[]): UnlockCtx {
+  return {
+    masteredTotal: 9999,
+    masteredByCat: Object.fromEntries(cats.map((c) => [c, 99])),
+    starsTotal: 9999,
+    playDays: 99,
+    plays: 999,
+    clears: 99,
+    polishedTotal: 99,
+    seen: {},
+    coins: 99999,
+  }
+}

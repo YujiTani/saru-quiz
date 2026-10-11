@@ -91,6 +91,11 @@ async function start(page, query, opts = {}) {
     await page.click('.name-save')
     await sleep(600)
   }
+  // はじめてのガイドが出ていたら とばす（ほかのテストのじゃまにならないように）
+  if (await page.$('.guide')) {
+    await page.click('.guide-skip')
+    await sleep(200)
+  }
 }
 
 const server = await createServer({ server: { port: 5199 }, logLevel: 'error' })
@@ -665,7 +670,7 @@ try {
   await sleep(500)
   // タイトル: ボタンが最大まで並んでも、アイコンは1行・ロゴとおさるが重ならない・全部が画面に入る
   const tops = await page.$$eval('.icon-row .icon-btn', (els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
-  if (tops.length !== 6 || new Set(tops).size !== 1) errors.push(`タイトルのアイコンが1行に6つ並んでいません: ${JSON.stringify(tops)}`)
+  if (tops.length !== 7 || new Set(tops).size !== 1) errors.push(`タイトルのアイコンが1行に7つ並んでいません: ${JSON.stringify(tops)}`)
   const lay = await page.evaluate(() => {
     const r = (s) => document.querySelector(s)?.getBoundingClientRect()
     const hero = r('.player-hero img')
@@ -1026,6 +1031,7 @@ try {
       localStorage.setItem('saru-quiz/players', JSON.stringify(p))
     }, dobW.map((q) => q.id), tabeW.map((q) => q.id))
   await page.goto('http://localhost:5199/', { waitUntil: 'networkidle0' })
+  await page.goto('http://localhost:5199/', { waitUntil: 'networkidle0' })
   await page.evaluate(() => localStorage.clear())
   await start(page, '')
   await seed15()
@@ -1041,7 +1047,7 @@ try {
       const bs = [...document.querySelectorAll('.icon-row .icon-btn')].map((b) => ({ r: b.querySelector('.ic').getBoundingClientRect(), lb: b.querySelector('.lb'), b: b.getBoundingClientRect() }))
       return { n: bs.length, tops: bs.map((x) => Math.round(x.r.top)), left: bs[0]?.r.left, right: bs[bs.length - 1]?.r.right, vw: innerWidth, overlap: bs.some((x, i) => i > 0 && x.r.left < bs[i - 1].r.right - 0.5), clipped: bs.filter((x) => x.lb.scrollWidth > x.b.width + 1).length }
     })
-    if (row.n !== 6 || new Set(row.tops).size !== 1) errors.push(`タイトルのアイコンが1行に6つ並んでいません（${w}px）: ${JSON.stringify(row)}`)
+    if (row.n !== 7 || new Set(row.tops).size !== 1) errors.push(`タイトルのアイコンが1行に7つ並んでいません（${w}px）: ${JSON.stringify(row)}`)
     if (row.left < 0 || row.right > row.vw || row.overlap || row.clipped) errors.push(`タイトルのアイコン行がはみ出す・重なる（${w}px）: ${JSON.stringify(row)}`)
     if (w === 375) await page.screenshot({ path: `${OUT}/18-title-375.png` })
     if (w === 390) await page.screenshot({ path: `${OUT}/18-title.png` })
@@ -1350,6 +1356,160 @@ try {
   }
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
   console.log('15i. おうえんが画面の外に出ない（375/390/430）: OK')
+
+  // 19. はじめてのガイド・デモ（段階5b。19-*.png）
+  // 19a. はじめての起動: キャラを作るとガイドが出る（3ページ・暗い背景では閉じない・後ろのボタンは押せない）→ とばす → もう出ない → 「？」でまた出る
+  await page.evaluate(() => localStorage.clear())
+  await page.goto('http://localhost:5199/?hap=off', { waitUntil: 'networkidle0' })
+  await page.click('.tap-start')
+  await sleep(800)
+  if (await page.$('.guide')) errors.push('キャラを作る前にガイドが出ています')
+  await typeName(page, 'がいど')
+  await page.click('.char-btn:nth-child(5)')
+  await page.click('.name-save')
+  await sleep(900)
+  if (!(await page.$('.guide'))) errors.push('はじめての起動でキャラを作ったあとに ガイドが出ていません')
+  else {
+    await page.screenshot({ path: `${OUT}/19-guide-1.png` })
+    if (!(await page.$('.g-quiz .g-card img'))) errors.push('ガイド1ページ目に 絵カードの見本がありません')
+    await page.mouse.click(4, 4) // 暗い背景
+    await sleep(300)
+    if (!(await page.$('.guide'))) errors.push('ガイドが 暗い背景を押して閉じました')
+    await page.mouse.click(195, 840)
+    await page.mouse.click(60, 700) // 後ろのボタンの位置
+    await sleep(300)
+    if (!(await page.$('.title')) || (await page.$('.quiz'))) errors.push('ガイドの後ろのボタンが押せてしまいました')
+    if (await page.$eval('.guide-back', (el) => getComputedStyle(el).visibility) !== 'hidden') errors.push('1ページ目に「もどる」が見えています')
+    await page.click('.guide-next')
+    await sleep(2500)
+    await page.screenshot({ path: `${OUT}/19-guide-2.png` })
+    if (!(await page.$('.g-show .pv-stage')) || !(await page.$('.g-show .road'))) errors.push('ガイド2ページ目に うごくえの舞台とみちのりの見本がありません')
+    await page.click('.guide-next')
+    await sleep(1200)
+    await page.screenshot({ path: `${OUT}/19-guide-3.png` })
+    if ((await page.$$('.g-sample .sticker')).length < 3) errors.push('ガイド3ページ目に シールの見本がありません')
+    if ((await page.$eval('.guide-next', (el) => el.textContent)).trim() !== 'あそぶ！') errors.push('最後のページのボタンが「あそぶ！」ではありません')
+    if (await page.$('.guide-skip')) errors.push('最後のページに「とばす」が出ています')
+    await page.click('.guide-back')
+    await sleep(300)
+    if ((await page.$eval('.guide-title', (el) => el.textContent)) !== 'あたると、えが うごくよ！') errors.push('「もどる」で2ページ目に戻っていません')
+    await page.click('.guide-skip')
+    await sleep(300)
+    if (await page.$('.guide')) errors.push('「とばす」でガイドが閉じません')
+  }
+  const guideSeen = () => page.evaluate(() => JSON.parse(localStorage.getItem('saru-quiz/settings') ?? '{}').guideSeen)
+  if ((await guideSeen()) !== true) errors.push('ガイドを見たことが 端末の設定に保存されていません')
+  await page.goto('http://localhost:5199/?hap=off', { waitUntil: 'networkidle0' })
+  await page.click('.tap-start')
+  await sleep(900)
+  if (!(await page.$('.title')) || (await page.$('.guide'))) errors.push('ガイドを見たあとなのに また自動で出ています')
+  if (!(await page.$('.guide-btn'))) errors.push('タイトルに「？」（.guide-btn）がありません')
+  await page.screenshot({ path: `${OUT}/19-title-guide-btn.png` })
+  await page.click('.guide-btn')
+  await sleep(500)
+  if (!(await page.$('.guide'))) errors.push('「？」を押してもガイドが出ません')
+  await page.click('.guide-next')
+  await page.click('.guide-next')
+  await sleep(300)
+  await page.click('.guide-next') // あそぶ！
+  await sleep(300)
+  if (await page.$('.guide')) errors.push('「あそぶ！」でガイドが閉じません')
+  console.log('19a. ガイド（初回・3ページ・背景では閉じない・とばす・？で再表示）: OK')
+
+  // 19b. 設定からデモ: 手が動く → わざとまちがえる → リーチ・夜・フィーバー → クリア → フィナーレ → デモの結果 → 3秒で自動でタイトルへ。記録は何も変わらない
+  const snap = () => page.evaluate(() => JSON.stringify(['saru-quiz/players', 'saru-quiz/settings', 'saru-quiz/pending'].map((k) => localStorage.getItem(k))))
+  const before19 = await snap()
+  await page.click('.settings-btn')
+  await sleep(500)
+  await page.$eval('.demo-btn', (el) => el.scrollIntoView({ block: 'center' }))
+  await page.screenshot({ path: `${OUT}/19-settings-demo.png` })
+  await page.click('.demo-btn')
+  await sleep(1500)
+  if (!(await page.$('.quiz')) || !(await page.$('.demo-hand')) || !(await page.$('.gauge'))) errors.push('デモが始まっていない（手・ゲージがない）')
+  const seen = { selected: false, wrong: 0, reach: false, fever: false, night: false, clear: false, hand: new Set(), minGauge: 100, hap: false }
+  let wasWrong = false
+  const shots = new Set()
+  const shot = async (name) => {
+    if (shots.has(name)) return
+    shots.add(name)
+    await page.screenshot({ path: `${OUT}/19-demo-${name}.png` })
+  }
+  const t0 = Date.now()
+  while (Date.now() - t0 < 300000 && !(await page.$('.result-demo'))) {
+    const st = await page.evaluate(() => {
+      const w = document.querySelector('.gauge-fill')?.style.width
+      const h = document.querySelector('.demo-hand')?.getBoundingClientRect()
+      return {
+        selected: !!document.querySelector('.choice.is-selected'),
+        wrong: !!document.querySelector('.choice.is-wrong'),
+        reach: !!document.querySelector('.reach-crowd .reach-mk'),
+        fever: document.body.classList.contains('fever'),
+        night: !!document.querySelector('.road.sky-night'),
+        clear: !!document.querySelector('.banner.clear'),
+        hand: h ? `${Math.round(h.left / 20)},${Math.round(h.top / 20)}` : '',
+        gauge: w ? parseFloat(w) : 100,
+        band: document.querySelectorAll('.band .band-monkey, .band img').length,
+        badge: !!document.querySelector('.hap-badge'),
+      }
+    })
+    if (st.selected && !seen.selected) { seen.selected = true; await shot('hand-select') }
+    if (st.wrong && !wasWrong) { seen.wrong++; if (seen.wrong === 1) await shot('wrong') }
+    wasWrong = st.wrong
+    if (st.reach && !seen.reach) { seen.reach = true; await shot('reach') }
+    if (st.fever && !seen.fever) { seen.fever = true; await shot('fever') }
+    if (st.night && !seen.night) { seen.night = true; await shot('night') }
+    if (st.badge) seen.hap = true
+    seen.hand.add(st.hand)
+    seen.minGauge = Math.min(seen.minGauge, st.gauge)
+    if (st.clear && !seen.clear) {
+      seen.clear = true
+      await sleep(3600)
+      await shot('finale')
+    }
+    await sleep(250)
+  }
+  await page.waitForSelector('.result-demo', { timeout: 20000 })
+  await sleep(300)
+  await page.screenshot({ path: `${OUT}/19-demo-result.png` })
+  if (!seen.selected) errors.push('デモ: 手が選択肢を選んでいません')
+  if (seen.hand.size < 6) errors.push(`デモ: 手があまり動いていません（${seen.hand.size}か所）`)
+  if (seen.wrong !== 2) errors.push(`デモ: わざとまちがえた回数が2ではありません（${seen.wrong}）`)
+  if (!seen.reach) errors.push('デモ: リーチが出ていません')
+  if (!seen.night) errors.push('デモ: みちのりが夜になっていません')
+  if (!seen.fever) errors.push('デモ: フィーバーに入っていません')
+  if (!seen.clear) errors.push('デモ: クリアしていません')
+  if (!seen.hap) errors.push('デモ: ハプニングの見本が出ていません')
+  if (seen.minGauge < 99) errors.push(`デモ: 時間ゲージが減っています（${seen.minGauge}%）`)
+  const demoMsg = await page.$eval('.result-demo', (el) => el.textContent)
+  if (!demoMsg.includes('デモ')) errors.push('デモの結果に「デモ」の表示がありません')
+  await page.waitForSelector('.title', { timeout: 6000 })
+  if ((await snap()) !== before19) errors.push('デモのあとで 保存データ（players/settings/pending）が変わっています')
+  console.log(`19b. デモ（手・まちがえ${seen.wrong}回・リーチ・夜・フィーバー・クリア・自動でタイトル・記録なし）: OK`)
+
+  // 19c. デモの途中でタップするとタイトルに戻る（始まって600msのタップは無視）。✕でも戻れる。?demo で始まる
+  const nSubmitted = submitted.length
+  await page.click('.settings-btn')
+  await sleep(400)
+  await page.click('.demo-btn')
+  await sleep(150)
+  await page.mouse.click(195, 500)
+  await sleep(200)
+  if (!(await page.$('.quiz'))) errors.push('デモ: 始まってすぐのタップで戻ってしまいました')
+  await sleep(3500)
+  await page.mouse.click(195, 500)
+  await sleep(500)
+  if (!(await page.$('.title')) || (await page.$('.quiz'))) errors.push('デモの途中のタップで タイトルに戻っていません')
+  await page.goto('http://localhost:5199/?demo', { waitUntil: 'networkidle0' })
+  await page.click('.tap-start')
+  await sleep(1500)
+  if (!(await page.$('.quiz .demo-hand'))) errors.push('?demo でデモが始まっていません')
+  await page.screenshot({ path: `${OUT}/19-demo-url.png` })
+  await page.click('.quit')
+  await sleep(500)
+  if (!(await page.$('.title'))) errors.push('デモの ✕ でタイトルに戻っていません')
+  if (submitted.length !== nSubmitted) errors.push('デモがランキングに送られています')
+  if ((await snap()) !== before19) errors.push('デモの途中でやめたあとで 保存データが変わっています')
+  console.log('19c. デモ（途中のタップ・最初600msは無視・✕・?demo）: OK')
 } finally {
   await browser.close()
   await server.close()
