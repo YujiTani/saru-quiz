@@ -7,13 +7,13 @@ import { burst, fountain, rain, shake, flash } from '../lib/effects'
 import { dayKey, now } from '../lib/day'
 import { isCloudy } from '../lib/leitner'
 import type { Save } from '../lib/storage'
-import { HAP_IDS, chooseShow, chooseUgoku, chooseZukkoke, finaleLimit, forcedPlan, getShow, layer, makeCtx, peekaboo, planHappening, play, reachFor, shouldAnnounce, themeOf, unlockCtx, type HapPlan } from '../shows'
+import { HAP_IDS, chooseShow, chooseUgoku, chooseZukkoke, finaleLimit, forcedPlan, getShow, layer, makeCtx, planHappening, play, reachFor, shouldAnnounce, themeOf, unlockCtx, type HapPlan } from '../shows'
 import { songOf } from '../lib/bgm'
 import { getMotion } from '../lib/settings'
 import { getCurrent } from '../lib/players'
 import { photoWords } from '../lib/riser'
 import { hapForced, hapOff, isTestRun, seedSalt, startParam } from '../lib/testflags'
-import { COURSE, MODE_RULES, hintFor, makeRound, questionById, type Mode, type Question, type Round } from '../lib/quiz'
+import { COURSE, MODE_RULES, categories, hintFor, makeRound, questionById, type Mode, type Question, type Round } from '../lib/quiz'
 import { pauseBgm, resumeBgm, setBgmKey, setBgmLevel, sfx, startBgm, stopBgm } from '../lib/sound'
 import { preloadSpeech, speak, stopSpeaking } from '../lib/speech'
 import type { CharId, Mood } from '../sprites/monkeys'
@@ -97,7 +97,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
   const rules = MODE_RULES[mode]
   const course = COURSE[level] ?? COURSE[1]
   const TIME_MAX = (TIME_OVERRIDE || course.time) * 1000
-  // コースはクリア数、ふくしゅうは出題数（ぜんぶ正解したらクリア）
+  // コースはクリア数、ふくしゅう・れんしゅうは出題数（ぜんぶ正解したらクリア）
   const GOAL = rules.course ? GOAL_OVERRIDE || course.goal : questions.length
   const startedAt = useRef(performance.now())
   const queueRef = useRef(questions)
@@ -150,9 +150,9 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
   // でてくる（問題の絵の出かた）とおうえん（ふちの観客）も 遊び始めに選ぶ
   const [detekuId] = useState(() => chooseShow('deteku', save.shows.pick, unlock.current).id)
   const [ouenId] = useState(() => chooseShow('ouen', save.shows.pick, unlock.current).id)
-  const [cheerWords, setCheerWords] = useState<Question[]>([])
   // ハプニング: 起こすか・どれか・何問目かは 遊び始めに決める（日付・キャラ・その日の回数から。?hap=<id> なら必ず2問目）
   const [hapPlan] = useState<HapPlan | null>(() => {
+    if (mode === 'practice') return null // れんしゅうはハプニングを起こさない
     const forced = hapForced()
     if (forced) return getShow(forced)?.cat === 'happening' ? forcedPlan(forced) : null
     if (hapOff() || isTestRun()) return null
@@ -269,7 +269,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
 
   // 時間ゲージ
   useEffect(() => {
-    if (!rules.timer) return // ふくしゅうは時間がない
+    if (!rules.timer) return // ふくしゅう・れんしゅうは時間がない
     const id = setInterval(() => {
       const p = phaseRef.current
       if (p !== 'reading' && p !== 'answering') return
@@ -404,8 +404,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       answered.current.add(q.id)
       stats.current.correct++
       setCorrectN(stats.current.correct)
-      // おうえん: きょうのなかま（正解した絵がふちへ）・ことり（正解のたび 音階が1つ上がる「ぴっ」）
-      setCheerWords((w) => (w.some((x) => x.id === q.id) ? w : [...w, q]))
+      // おうえん: ことり（正解のたび 音階が1つ上がる「ぴっ」）
       if (ouenId === 'ouen:kotori') {
         const n = stats.current.correct - 1
         setTimeout(() => sfx.chirp(n), 380)
@@ -484,13 +483,12 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
       // まちがえた問題はあとでもう一度
       const qs = queueRef.current
       queueRef.current = [...qs.slice(0, index + 4), q, ...qs.slice(index + 4)]
-      // おさるのずっこけ → 正解の絵が おさるの後ろから「ばあ！」と出てくる
+      // おさるのずっこけ ＋「おしい！ これは、〇〇だよ」の読み上げ → 次へ
       const zk = chooseZukkoke(save.shows.pick, unlock.current, lastZukkoke.current)
       lastZukkoke.current = zk.id
       const zctx = makeCtx({ q, E: Math.min(1, stats.current.correct / GOAL), heat: heatRef.current })
       ;(async () => {
-        await Promise.all([play(zk, zctx), speak('おしい！ これは、')])
-        await Promise.all([peekaboo(zctx).catch(() => {}), speak([q.a, 'だよ'])])
+        await Promise.all([play(zk, zctx), speak(['おしい！ これは、', q.a, 'だよ'])])
         await wait(600)
         next()
       })()
@@ -559,7 +557,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
     fountain('coin', 80)
     rain('star', 150)
     rain('confetti', 200)
-    void speak(mode === 'review' ? 'ふくしゅう、くりあー！' : 'くりあー！')
+    void speak(mode === 'review' ? 'ふくしゅう、くりあー！' : mode === 'practice' ? 'れんしゅう、くりあー！' : 'くりあー！')
     const result: QuizResult = { correct: stats.current.correct, total: stats.current.answers.length, coins: coinsRef.current, bestCombo: stats.current.bestCombo, answers: stats.current.answers, cleared: true, clearMs, happenings: hapSeen.current }
     // 「くりあー！」のあとにフィナーレ（きねんしゃしん）。うまく動かなくても結果へ進む
     const today = photoWords(stats.current.answers, 30).flatMap((id) => questionById(id) ?? [])
@@ -603,7 +601,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
             )}
           </div>
         ) : (
-          <div className="mode-chip">🔁 ふくしゅう</div>
+          <div className="mode-chip">{mode === 'practice' ? `✏️ れんしゅう ${categories.find((c) => c.name === questions[0]?.c)?.icon ?? ''}` : '🔁 ふくしゅう'}</div>
         )}
         <div className="coin-badge">
           🍌 {coins}
@@ -646,7 +644,7 @@ export function Quiz({ mode, level, questions, save, onFinish, onQuit }: QuizPro
           {q.img ? <img src={q.img} alt="" draggable={false} /> : <span className="emoji">{q.e}</span>}
         </div>
         {phase === 'correct' && <div className="stamp">せいかい！</div>}
-        <Cheer id={ouenId} E={E} motion={motion} words={cheerWords} correct={correctN} />
+        <Cheer id={ouenId} E={E} motion={motion} correct={correctN} />
         {found && (
           <div className="hap-badge" key={found.key} aria-hidden>
             ✨ みつけた！

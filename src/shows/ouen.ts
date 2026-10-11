@@ -5,8 +5,7 @@ import type { Show } from './types'
 const ouen = (id: string, name: string, icon: string, extra: Partial<Show>): Show => ({ id: `ouen:${id}`, cat: 'ouen', name, icon, play: () => {}, ...extra })
 
 export const OUEN_SHOWS: Show[] = [
-  ouen('nakama', 'きょうのなかま', '🧸', { base: true }),
-  ouen('osaru', 'おさるおうえんだん', '🚩', { hint: 'ことばを 20こ おぼえる', unlock: (u) => u.masteredTotal >= 20 }),
+  ouen('osaru', 'おさるおうえんだん', '🚩', { base: true }),
   ouen('kotori', 'ことりのコーラス', '🐦', { hint: 'とりを 5ことば おぼえる', unlock: (u) => (u.masteredByCat['とり'] ?? 0) >= 5 }),
 ]
 
@@ -26,10 +25,4 @@ export function cheerSlot(k: number): { side: 'left' | 'right'; row: number; y: 
   const i = ((Math.floor(k) % CHEER_SLOTS) + CHEER_SLOTS) % CHEER_SLOTS
   const row = Math.floor(i / 2)
   return { side: i % 2 === 0 ? 'left' : 'right', row, y: 90 - row * 15 }
-}
-
-/** きょうのなかま: 最大12個。新しいものを残す（古いものから外れる）。[単語の番号, 置き場所] */
-export function nakamaItems<T>(words: T[], max = CHEER_SLOTS): { word: T; index: number; slot: number }[] {
-  const start = Math.max(0, words.length - max)
-  return words.slice(start).map((word, j) => ({ word, index: start + j, slot: (start + j) % CHEER_SLOTS }))
 }

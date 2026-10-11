@@ -91,7 +91,7 @@ describe('bookCounts', () => {
     expect(Object.values(c.byCat).reduce((n, x) => n + x.got, 0)).toBe(c.all.got)
     expect(c.byCat.ugoku.total).toBe(22)
     expect(c.byCat.zukkoke.total).toBe(8)
-    // はじめから持っているもの: ぴかっ・つるん・はくしょん・じゃんぐる・ジャングルマーチ・いないいないばあ・きょうのなかま・きねんしゃしん・ひとふさ
+    // はじめから持っているもの: ぴかっ・つるん・はくしょん・じゃんぐる・ジャングルマーチ・くるっと・おさるおうえんだん・きねんしゃしん・ひとふさ
     expect(c.all.got).toBe(SHOWS.filter((s) => s.base).length)
   })
 

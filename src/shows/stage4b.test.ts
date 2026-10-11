@@ -7,11 +7,11 @@ import { emptySave } from '../lib/storage'
 import type { QuizResult } from '../screens/Quiz'
 import { HAP_MAX, HAPPENING_SHOWS } from './happening'
 import { HAP_AT_MAX, forcedPlan, hapChance, planHappening } from './hapPlan'
-import { BIRD_MAX, CHEER_SLOTS, birdCount, cheerSlot, nakamaItems, osaruCount } from './ouen'
-import { DETEKU_MS } from './deteku'
+import { BIRD_MAX, CHEER_SLOTS, birdCount, cheerSlot, osaruCount } from './ouen'
+import { DETEKU_MS, KURUTTO_MS } from './deteku'
 import { PARADE_MAX, paradeMs } from './finaleMore'
 import { SHOWS, finaleLimit, getShow, isUnlocked, ownedIn, pickShow } from './registry'
-import { bookCounts, showsOf } from './book'
+import { bookCounts, grantShows, showsOf } from './book'
 import type { UnlockCtx } from './types'
 
 const u0: UnlockCtx = { masteredTotal: 0, masteredByCat: {}, starsTotal: 0, playDays: 0, plays: 0, clears: 0, polishedTotal: 0, seen: {}, coins: 0 }
@@ -20,9 +20,9 @@ const ids = (l: { id: string }[]) => l.map((s) => s.id)
 const HAP = ids(HAPPENING_SHOWS)
 
 describe('登録の数と id', () => {
-  it('でてくる5・おうえん3・ふぃなーれ4・ハプニング10', () => {
-    expect(ids(showsOf('deteku'))).toEqual(['deteku:baa', 'deteku:present', 'deteku:ki', 'deteku:shabon', 'deteku:tsuchi'])
-    expect(ids(showsOf('ouen'))).toEqual(['ouen:nakama', 'ouen:osaru', 'ouen:kotori'])
+  it('でてくる5・おうえん2・ふぃなーれ4・ハプニング10', () => {
+    expect(ids(showsOf('deteku'))).toEqual(['deteku:kurutto', 'deteku:present', 'deteku:ki', 'deteku:shabon', 'deteku:tsuchi'])
+    expect(ids(showsOf('ouen'))).toEqual(['ouen:osaru', 'ouen:kotori'])
     expect(ids(showsOf('finale'))).toEqual(['finale:photo', 'finale:parade', 'finale:bananatree', 'finale:rocket'])
     expect(HAP).toEqual(['hap:ufo', 'hap:kirin', 'hap:kisha', 'hap:niji', 'hap:obake', 'hap:mochi', 'hap:kujira', 'hap:hato', 'hap:fusen', 'hap:nagareboshi'])
     expect(showsOf('happening')).toHaveLength(10)
@@ -38,9 +38,9 @@ describe('登録の数と id', () => {
 describe('解放条件', () => {
   const ok = (id: string, u: UnlockCtx) => isUnlocked(getShow(id)!, u)
 
-  it('はじめから: いないいないばあ・きょうのなかま', () => {
-    expect(ids(ownedIn('deteku', u0))).toEqual(['deteku:baa'])
-    expect(ids(ownedIn('ouen', u0))).toEqual(['ouen:nakama'])
+  it('はじめから: くるっと・おさるおうえんだん', () => {
+    expect(ids(ownedIn('deteku', u0))).toEqual(['deteku:kurutto'])
+    expect(ids(ownedIn('ouen', u0))).toEqual(['ouen:osaru'])
   })
 
   it('でてくる: プレゼント plays>=3 / き playDays>=3 / しゃぼん clears>=1 / つち masteredTotal>=10（ぴったりで開く）', () => {
@@ -50,8 +50,8 @@ describe('解放条件', () => {
     expect([ok('deteku:tsuchi', withU({ masteredTotal: 9 })), ok('deteku:tsuchi', withU({ masteredTotal: 10 }))]).toEqual([false, true])
   })
 
-  it('おうえん: おさる masteredTotal>=20 / ことり とり5語', () => {
-    expect([ok('ouen:osaru', withU({ masteredTotal: 19 })), ok('ouen:osaru', withU({ masteredTotal: 20 }))]).toEqual([false, true])
+  it('おうえん: おさるは はじめから / ことり とり5語', () => {
+    expect(ok('ouen:osaru', u0)).toBe(true)
     expect(ok('ouen:kotori', withU({ masteredTotal: 99, masteredByCat: { どうぶつ: 9 } }))).toBe(false)
     expect(ok('ouen:kotori', withU({ masteredByCat: { とり: 4 } }))).toBe(false)
     expect(ok('ouen:kotori', withU({ masteredByCat: { とり: 5 } }))).toBe(true)
@@ -70,15 +70,33 @@ describe('解放条件', () => {
 
 describe('選びかた（でてくる・おうえん）', () => {
   it('はじめは1つだけ。ふえたら おまかせで どれでも / こていなら それ', () => {
-    expect(pickShow('deteku', {}, u0, () => 0.9)?.id).toBe('deteku:baa')
+    expect(pickShow('deteku', {}, u0, () => 0.9)?.id).toBe('deteku:kurutto')
     const u = withU({ plays: 3, playDays: 3, clears: 1, masteredTotal: 10 })
     expect(ids(ownedIn('deteku', u))).toHaveLength(5)
     expect(pickShow('deteku', {}, u, () => 0.999)?.id).toBe('deteku:tsuchi')
     expect(pickShow('deteku', { deteku: 'deteku:ki' }, u, () => 0)?.id).toBe('deteku:ki')
-    expect(pickShow('deteku', { deteku: 'auto' }, u, () => 0)?.id).toBe('deteku:baa')
+    expect(pickShow('deteku', { deteku: 'auto' }, u, () => 0)?.id).toBe('deteku:kurutto')
     // まだ持っていない固定は無視
-    expect(pickShow('ouen', { ouen: 'ouen:kotori' }, u0, () => 0)?.id).toBe('ouen:nakama')
-    expect(pickShow('ouen', { ouen: 'ouen:osaru' }, withU({ masteredTotal: 20 }), () => 0.999)?.id).toBe('ouen:osaru')
+    expect(pickShow('ouen', { ouen: 'ouen:kotori' }, u0, () => 0)?.id).toBe('ouen:osaru')
+    expect(pickShow('ouen', { ouen: 'ouen:kotori' }, withU({ masteredByCat: { とり: 5 } }), () => 0)?.id).toBe('ouen:kotori')
+  })
+
+  it('けした演出（いないいないばあ・きょうのなかま）が保存データに残っていても こわれない', () => {
+    expect(getShow('deteku:baa')).toBeUndefined()
+    expect(getShow('ouen:nakama')).toBeUndefined()
+    const u = withU({ plays: 3 })
+    // 固定の id が もうない → おまかせで ほかのものが選ばれる
+    expect(pickShow('deteku', { deteku: 'deteku:baa' }, u0, () => 0.9)?.id).toBe('deteku:kurutto')
+    expect(pickShow('deteku', { deteku: 'deteku:baa' }, u, () => 0)?.id).toBe('deteku:kurutto')
+    expect(pickShow('ouen', { ouen: 'ouen:nakama' }, u0, () => 0.9)?.id).toBe('ouen:osaru')
+    // got に残った古い id は、集計にも プレゼントにも出ない（くるっと・おさるは はじめから持っているので だまって got に入る）
+    const got = { 'deteku:baa': 1, 'ouen:nakama': 1 }
+    expect(bookCounts(u0, got).byCat.deteku).toEqual({ got: 1, total: 5 })
+    expect(bookCounts(u0, got).byCat.ouen).toEqual({ got: 1, total: 2 })
+    const g = grantShows(got, u0, u0, 5)
+    expect(g.newShows).toEqual([])
+    expect(g.got['deteku:kurutto']).toBe(5)
+    expect(g.got['deteku:baa']).toBe(1)
   })
 })
 
@@ -104,6 +122,7 @@ describe('長さ（maxMs）', () => {
     expect(HAP_MAX).toBeLessThanOrEqual(3000)
     for (const s of HAPPENING_SHOWS) expect(s.maxMs, s.id).toBeLessThanOrEqual(3000)
     expect(DETEKU_MS).toBeLessThanOrEqual(800)
+    expect(KURUTTO_MS).toBeLessThanOrEqual(500) // テンポを落とさない
   })
 })
 
@@ -117,16 +136,6 @@ describe('おうえんの数と置き場所', () => {
 
   it('ことり: 正解のたび1羽ずつ、最大5', () => {
     expect([0, 1, 4, 5, 9].map(birdCount)).toEqual([0, 1, 4, BIRD_MAX, BIRD_MAX])
-  })
-
-  it('なかま: 最大12個。新しいものを残す。置き場所は かさならない', () => {
-    const words = Array.from({ length: 15 }, (_, i) => `w${i}`)
-    const items = nakamaItems(words)
-    expect(items).toHaveLength(12)
-    expect(items[0].word).toBe('w3')
-    expect(items[11].word).toBe('w14')
-    expect(new Set(items.map((x) => x.slot)).size).toBe(12)
-    expect(nakamaItems(['a', 'b']).map((x) => x.slot)).toEqual([0, 1])
   })
 
   it('置き場所: 左右に交互・下から上へ。カードの内側（0〜100%）におさまる', () => {
@@ -257,10 +266,10 @@ describe('ハプニングの記録（applyResult）', () => {
 })
 
 describe('新しい声', () => {
-  it('みつけた！・ばあ！ は voice_lines.py にある（ないと端末の合成音声になる）', () => {
+  it('みつけた！ は voice_lines.py にある（ないと端末の合成音声になる）。けした「ばあ！」はない', () => {
     const py = voiceLines
     expect(py).toContain("'みつけた！'")
-    expect(py).toContain("'ばあ！'")
+    expect(py).not.toContain("'ばあ！'")
   })
 
   it('SHOWS に重複がない', () => {

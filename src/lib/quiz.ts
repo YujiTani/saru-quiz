@@ -8,16 +8,23 @@ import { catParam, wordParam } from './testflags'
 export type Question = { id: string; a: string; c: string; l: number; img?: string; e?: string }
 export type Round = { q: Question; choices: string[]; hint: Hint }
 
-/** 遊びかた。あとで 'practice'（れんしゅう）と 'demo' も足す。決まりごとは MODE_RULES に書く */
-export type Mode = 'course' | 'review'
+/** 遊びかた。あとで 'demo' も足す。決まりごとは MODE_RULES に書く */
+export type Mode = 'course' | 'review' | 'practice'
 export const MODE_RULES: Record<Mode, { timer: boolean; ranked: boolean; course: boolean }> = {
   // timer: 時間ゲージがある / ranked: ランキングに送る / course: コースのクリア・「まえより」の記録に入る
   course: { timer: true, ranked: true, course: true },
   review: { timer: false, ranked: false, course: false },
+  // れんしゅう: 1つのカテゴリから10問。記録（stats・ふくしゅう・えにっき）はつけるが、ランキング・コース・「まえより」には入れない。ハプニングも起こさない
+  practice: { timer: false, ranked: false, course: false },
 }
 
 /** ふくしゅうで出す最大の問題数 */
 export const REVIEW_SESSION = 10
+/** れんしゅうで出す問題数（カテゴリの単語がこれより少なければ、あるだけ） */
+export const PRACTICE_SESSION = 10
+/** れんしゅうを始められるカテゴリの、出題できる単語数の下限（これより少ないカテゴリはボタンを出さない） */
+export const PRACTICE_MIN = 6
+
 /** ふくしゅうモードの選択肢の数・難しさ（コースに関係なく ふつう と同じ） */
 export const REVIEW_LEVEL = 2
 
@@ -63,13 +70,31 @@ export function pickSession(level: number, count: number, stats: Record<string, 
   const word = wordParam()
   const byCat = word ? playable.filter((q) => q.id === word) : cat ? playable.filter((q) => q.c === cat) : []
   const pool = byCat.length > 0 ? byCat : playable.filter((q) => q.l <= level)
-  const w = (q: Question) => {
+  return pickWeighted(pool, count, (q) => {
     const s = stats[q.id]
     return stepWeight(s, nowMs) * (!s && q.l === level ? 2 : 1)
-  }
+  }, random)
+}
+
+/** 重みつきの抽選（u^(1/w) の大きい順に count 個）。並びはシャッフルする */
+function pickWeighted(pool: Question[], count: number, w: (q: Question) => number, random: Rng): Question[] {
   const scored = pool.map((q) => ({ q, k: Math.pow(random(), 1 / w(q)) }))
   scored.sort((x, y) => y.k - x.k)
   return shuffle(scored.slice(0, count).map((s) => s.q), random)
+}
+
+/** そのカテゴリの出題できる単語 */
+export const wordsOfCat = (cat: string): Question[] => playable.filter((q) => q.c === cat)
+
+/** れんしゅうを始められるか（出題できる単語が PRACTICE_MIN 以上） */
+export const canPractice = (cat: string): boolean => wordsOfCat(cat).length >= PRACTICE_MIN
+
+/** れんしゅうの選択肢の難しさ: そのカテゴリの単語のレベルの最大値（1〜3。コースと同じ 2択 / 3択） */
+export const practiceLevel = (cat: string): number => Math.min(3, Math.max(1, ...wordsOfCat(cat).map((q) => q.l)))
+
+/** れんしゅうの出題: 1つのカテゴリの中から、重み（くもり・まだ出ていない・まちがえた単語を多め）で最大10問 */
+export function practiceSession(cat: string, stats: Record<string, WordStat>, nowMs: number = now(), random: Rng = rng, count: number = PRACTICE_SESSION): Question[] {
+  return pickWeighted(wordsOfCat(cat), count, (q) => stepWeight(stats[q.id], nowMs), random)
 }
 
 /** ふくしゅうの出題: review の新しいほう（後ろ）から最大 max 問。絵のない単語は飛ばす */

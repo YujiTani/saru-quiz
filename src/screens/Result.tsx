@@ -31,6 +31,8 @@ type Tail = { grow: boolean; mastered: boolean; stars: boolean; polish: boolean;
 export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, onAgain, onHome, onRanking }: Props) {
   const rules = MODE_RULES[mode]
   const review = mode === 'review'
+  const practice = mode === 'practice'
+  const side = review || practice // ふくしゅう・れんしゅうは、クリアタイムを出さない
   // 「まえより のびたよ」と「おぼえたよ」のカード（結果発表の最後に1つずつ出す）
   const [tail, setTail] = useState<Tail>({ grow: false, mastered: false, stars: false, polish: false, sticker: false, banana: false, more: false })
   // プレゼント（新しく手に入れた演出）。いま開けているもの
@@ -83,7 +85,7 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
       at(n * per + 200, () => {
         sfx.combo(2)
         burst(innerWidth / 2, innerHeight * 0.4, 'star', 30, 1.2)
-        if (!review && result.cleared && result.clearMs) {
+        if (!side && result.cleared && result.clearMs) {
           const sec = Math.floor(result.clearMs / 1000)
           const m = Math.floor(sec / 60)
           void speak([`${n}こ、せいかい！`, 'くりあたいむは', ...(m > 0 ? [`${m}ふん`] : []), `${sec % 60}びょう`, 'だよ'])
@@ -234,16 +236,17 @@ export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, on
         </h2>
       ) : (
         <h2 className={`result-title pop ${stage === 4 && perfect ? 'perfect' : ''}`}>
-          {stage === 4 ? (perfect ? 'ぱーふぇくと！' : review && result.cleared ? <>ふくしゅう<br />くりあー！</> : 'よくできました！') : 'けっか'}
+          {stage === 4 ? (perfect ? 'ぱーふぇくと！' : review && result.cleared ? <>ふくしゅう<br />くりあー！</> : practice && result.cleared ? <>れんしゅう<br />くりあー！</> : 'よくできました！') : 'けっか'}
         </h2>
       )}
       {review && <div className="mode-chip result-mode">🔁 ふくしゅう</div>}
+      {practice && <div className="mode-chip result-mode">✏️ れんしゅう</div>}
       <div className="result-monkeys">
         <PixelMonkey char="mandrill" mood="happy" size={58} anim={stage >= 1 ? 'dance' : 'idle'} />
         <PixelMonkey char="monchan" mood="happy" size={100} anim={stage === 4 ? 'jump' : stage >= 1 ? 'dance' : 'idle'} />
         <PixelMonkey char="gorilla" mood="happy" size={66} anim={stage >= 1 ? 'dance' : 'idle'} />
       </div>
-      {stage >= 1 && !review && result.cleared && result.clearMs !== undefined && (
+      {stage >= 1 && !side && result.cleared && result.clearMs !== undefined && (
         <div className="result-cleartime">
           <span>⏱ くりあたいむ</span>
           <span className="time">

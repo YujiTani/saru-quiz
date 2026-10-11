@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { seeded } from './rng'
-import { allQuestions, choiceCount, hintFor, makeRound, pickSession, playable, questionById, reviewSession, REVIEW_SESSION } from './quiz'
+import { allQuestions, canPractice, categories, choiceCount, hintFor, makeRound, MODE_RULES, pickSession, playable, practiceLevel, practiceSession, PRACTICE_MIN, PRACTICE_SESSION, questionById, reviewSession, REVIEW_SESSION, wordsOfCat } from './quiz'
 import type { WordStat } from './storage'
 
 const DAY = 86400000
@@ -119,5 +119,64 @@ describe('reviewSession ふくしゅうの出題', () => {
     expect(reviewSession(['nothing', ids[0]]).map((q) => q.id)).toEqual([ids[0]])
     expect(questionById('nothing')).toBeUndefined()
     expect(questionById(allQuestions[0].id)).toBe(allQuestions[0])
+  })
+})
+
+describe('practiceSession れんしゅうの出題', () => {
+  it('決まりごと: 時間なし・ランキングなし・コースにも入れない', () => {
+    expect(MODE_RULES.practice).toEqual({ timer: false, ranked: false, course: false })
+  })
+
+  it('そのカテゴリだけから10問（同じ単語は1回）', () => {
+    for (const cat of ['どうぶつ', 'たべもの', 'のりもの']) {
+      const s = practiceSession(cat, {}, NOW, seeded(`p-${cat}`))
+      expect(s).toHaveLength(PRACTICE_SESSION)
+      expect(s.every((q) => q.c === cat && (q.img || q.e))).toBe(true)
+      expect(new Set(s.map((q) => q.id)).size).toBe(PRACTICE_SESSION)
+    }
+  })
+
+  it('単語が10語より少ないカテゴリは あるだけ。同じ乱数なら同じ並び', () => {
+    const small = categories.find((c) => wordsOfCat(c.name).length < PRACTICE_SESSION)
+    if (small) expect(practiceSession(small.name, {}, NOW, seeded('s'))).toHaveLength(wordsOfCat(small.name).length)
+    const a = practiceSession('どうぶつ', {}, NOW, seeded('same')).map((q) => q.id)
+    expect(practiceSession('どうぶつ', {}, NOW, seeded('same')).map((q) => q.id)).toEqual(a)
+    expect(practiceSession('ないカテゴリ', {})).toEqual([])
+  })
+
+  it('重み: くもり・まだ出ていない単語を、ついさっき覚えた単語より出しやすい', () => {
+    const pool = wordsOfCat('どうぶつ')
+    const stats: Record<string, WordStat> = {}
+    const fresh = new Set<string>()
+    pool.forEach((q, i) => {
+      if (i % 2 === 0) stats[q.id] = { ok: 1, ng: 0, last: NOW, box: 1, boxAt: NOW, due: NOW + 10 * DAY, firstOkAt: NOW } // 覚えたばかり
+      else fresh.add(q.id)
+    })
+    let hit = 0
+    let total = 0
+    for (let t = 0; t < 20; t++) {
+      for (const q of practiceSession('どうぶつ', stats, NOW, seeded(`w${t}`))) {
+        total++
+        if (fresh.has(q.id)) hit++
+      }
+    }
+    expect(hit / total).toBeGreaterThan(0.8) // 重みなしなら 0.5
+  })
+
+  it('?cat などのテスト用パラメータに左右されない（引数のカテゴリだけ）', () => {
+    expect(practiceSession('とり', {}, NOW, seeded('x')).every((q) => q.c === 'とり')).toBe(true)
+  })
+
+  it('選択肢の難しさ: そのカテゴリの単語のレベルの最大値（1〜3）。出題の少ないカテゴリは ボタンを出さない', () => {
+    for (const c of categories) {
+      const lv = practiceLevel(c.name)
+      expect(lv).toBeGreaterThanOrEqual(1)
+      expect(lv).toBeLessThanOrEqual(3)
+      expect(lv).toBe(Math.min(3, Math.max(...wordsOfCat(c.name).map((q) => q.l))))
+      expect(canPractice(c.name)).toBe(wordsOfCat(c.name).length >= PRACTICE_MIN)
+    }
+    expect(canPractice('ないカテゴリ')).toBe(false)
+    const q = wordsOfCat('どうぶつ')[0]
+    expect(makeRound(q, practiceLevel('どうぶつ'), 'none', seeded('r')).choices).toHaveLength(choiceCount(practiceLevel('どうぶつ')))
   })
 })

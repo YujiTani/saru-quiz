@@ -78,7 +78,7 @@ export async function withClone(ctx: ShowCtx, body: (clone: HTMLElement, from: D
   }
 }
 
-/** ことばの吹き出し（ぱくっ・ばあ！ など）。(x,y) が中心 */
+/** ことばの吹き出し（ぱくっ・ぽんっ！ など）。(x,y) が中心 */
 export function bubbleText(ctx: ShowCtx, text: string, x: number, y: number, ms = 900): Promise<void> {
   const el = document.createElement('div')
   el.className = 'show-bubble'

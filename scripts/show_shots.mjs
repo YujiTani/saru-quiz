@@ -1,5 +1,5 @@
 // 演出を1つずつ再生してスクショを撮る（目で確かめる用）。使い方: node scripts/show_shots.mjs [演出id…]（なければ全部）
-// うごくえは正解、ずっこけは まちがいで再生する。ほかに特別な場面も撮れる（peekaboo / michi-… / reach-… / band-… / deteku-… / ouen-… / finale-… / hap-…）。出力: .smoke/shows/<id>-<ミリ秒>.png
+// うごくえは正解、ずっこけは まちがいで再生する。ほかに特別な場面も撮れる（wrong-flow / michi-… / reach-… / band-… / deteku-… / ouen-… / finale-… / hap-…）。出力: .smoke/shows/<id>-<ミリ秒>.png
 // 動きの強さを変えて見るとき: MOTION=0 node scripts/show_shots.mjs …（出力は .smoke/shows-m0/）
 import { createServer } from 'vite'
 import fs from 'fs'
@@ -46,8 +46,8 @@ for (const [name, v, show, word] of VARIANTS) {
 for (const [v, month] of [['spring', 4], ['summer', 7], ['autumn', 10], ['winter', 1]]) {
   targets.push({ id: `kisetsu-${v}`, query: `show=ugoku:kisetsu&cat=${encodeURIComponent('きせつ・ぎょうじ')}&month=${month}`, answer: 'ok', times: [400, 900, 1400, 1900] })
 }
-// いないいない…ばあ！ を細かく（まちがえたあと）
-targets.push({ id: 'peekaboo', query: 'show=zukkoke:slip&cat=どうぶつ', answer: 'ng', times: FRAMES(1500, 4500, 300) })
+// まちがえたあとの流れ（ずっこけ →「おしい！ これは、〇〇だよ」→ 次の問題）
+targets.push({ id: 'wrong-flow', query: 'show=zukkoke:slip&cat=どうぶつ', answer: 'ng', times: FRAMES(300, 4500, 450) })
 // みちのり: 4種類 × E=0 / 0.5 / 0.9（goal=20 に start=0 / 10 / 18）
 for (const t of ['jungle', 'umi', 'okashi', 'uchu']) {
   for (const n of [0, 10, 18]) targets.push({ id: `michi-${t}-e${n * 5}`, query: `show=michi:${t}&cat=どうぶつ&goal=20&start=${n}`, answer: null, times: [1500] })
@@ -65,17 +65,17 @@ targets.push({ id: 'band-5', query: 'cat=どうぶつ&goal=10&start=7', answer: 
 targets.push({ id: 'band-combo', query: 'cat=どうぶつ&goal=10&start=3', answer: 'ok', repeat: 3, times: [300, 900] }) // れんぞく3のとき、バンドは左に寄る
 targets.push({ id: 'band-fever', query: 'cat=どうぶつ&goal=40&start=3', answer: null, times: [1500] })
 // でてくる: 5種 × E=0 / 0.9（最初の問題の絵が出てくるところ。start=18 は goal=20 のE）
-for (const t of ['baa', 'present', 'ki', 'shabon', 'tsuchi']) {
+for (const t of ['kurutto', 'present', 'ki', 'shabon', 'tsuchi']) {
   for (const n of [0, 18]) targets.push({ id: `deteku-${t}-e${n * 5}`, query: `show=deteku:${t}&cat=どうぶつ&goal=20&start=${n}`, answer: null, times: [40, 180, 320, 460, 600, 760, 1000] })
 }
-// おうえん: 正解がすすんで にぎやかになったところ（なかま・おさる・ことり）
+// おうえん: 正解がすすんで にぎやかになったところ（おさる・ことり）
 // （ok,ok,ng の順に答えて、フィーバーに入らない ふだんの状態で撮る。times は最後の答えのあと）
-for (const t of ['nakama', 'osaru', 'kotori']) {
+for (const t of ['osaru', 'kotori']) {
   targets.push({ id: `ouen-${t}`, query: `show=ouen:${t}&cat=どうぶつ&goal=24&start=12&time=120`, answer: 'ok', pattern: ['ok', 'ok', 'ng'], repeat: 9, times: [300, 4500, 6000] })
   targets.push({ id: `ouen-${t}-early`, query: `show=ouen:${t}&cat=どうぶつ&goal=24&time=120`, answer: 'ok', pattern: ['ok', 'ng'], repeat: 2, times: [300, 6500] })
 }
 // おうえんと リーチ（のこり3問）の重なり
-targets.push({ id: 'ouen-reach', query: 'show=ouen:nakama&cat=どうぶつ&goal=9&start=5&time=120', answer: 'ok', pattern: ['ok', 'ng', 'ok'], repeat: 3, times: [4500, 6000] })
+targets.push({ id: 'ouen-reach', query: 'show=ouen:osaru&cat=どうぶつ&goal=9&start=5&time=120', answer: 'ok', pattern: ['ok', 'ng', 'ok'], repeat: 3, times: [4500, 6000] })
 targets.push({ id: 'ouen-kotori-reach', query: 'show=ouen:kotori&cat=どうぶつ&goal=9&start=5&time=120', answer: 'ok', pattern: ['ok', 'ng', 'ok'], repeat: 3, times: [4500, 6000] })
 // ふぃなーれ: クリアの「くりあー！」(約5.5秒)のあとに始まる
 targets.push({ id: 'finale-parade', query: 'show=finale:parade&cat=どうぶつ&goal=5', answer: 'ok', repeat: 5, times: FRAMES(MOTION === '0' ? 3000 : 6200, 14000, 780) })

@@ -21,19 +21,21 @@ type Props = {
   /** 再生がおわったとき */
   onDone?: () => void
   className?: string
+  /** 絵のカードに入れる単語（なければ 演出に合わせた見本。ことば図鑑は、えらんだ単語を渡す） */
+  word?: Question
 }
 
 const IDLE = 'これ なあに？'
 
-export function ShowStage({ show, run, onDone, className = '' }: Props) {
+export function ShowStage({ show, run, onDone, className = '', word: given }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const picRef = useRef<HTMLDivElement>(null)
   const [E, setE] = useState(0)
   const [bubble, setBubble] = useState(IDLE)
-  const [cheer, setCheer] = useState<{ E: number; words: Question[]; correct: number } | null>(null)
+  const [cheer, setCheer] = useState<{ E: number; correct: number } | null>(null)
   const motion = getMotion()
   const char = getCurrent()?.char ?? 'monchan'
-  const word = useMemo(() => previewWord(show, run), [show, run])
+  const word = useMemo(() => given ?? previewWord(show, run), [given, show, run])
   const cat = show?.cat
   const done = useRef(onDone)
   done.current = onDone
@@ -85,7 +87,7 @@ export function ShowStage({ show, run, onDone, className = '' }: Props) {
           <div className="picture" ref={picRef} key={word.id}>
             {word.img ? <img src={word.img} alt="" draggable={false} /> : <span className="emoji">{word.e}</span>}
           </div>
-          {cheer && show && <Cheer id={show.id} E={cheer.E} motion={motion} words={cheer.words} correct={cheer.correct} />}
+          {cheer && show && <Cheer id={show.id} E={cheer.E} motion={motion} correct={cheer.correct} />}
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import { grantShows } from '../shows/book'
 import { getShow } from '../shows/registry'
 import { unlockCtx } from '../shows/unlock'
 import { applyAnswer, migrate } from './leitner'
+import { MODE_RULES, type Mode } from './quiz'
 import { stickerComplete, stickerKind } from './stickers'
 import type { QuizResult } from '../screens/Quiz'
 import { normalizeSave, type DiaryDay, type LastResult, type Save, type WordStat } from './storage'
@@ -60,11 +61,13 @@ export function firstAnswers(answers: QuizResult['answers']): Map<string, boolea
 
 const addUnique = (list: string[], ids: string[]) => [...list, ...ids.filter((id) => !list.includes(id))]
 
-/** 結果を反映した新しい Save と、今回あったこと。review はふくしゅうモードか */
-export function applyResult(input: Save, result: QuizResult, nowMs: number, level: number, review = false): { save: Save; events: ResultEvents } {
+/** 結果を反映した新しい Save と、今回あったこと。mode が review / practice のときは、コースのクリア・「まえより」には入れない */
+export function applyResult(input: Save, result: QuizResult, nowMs: number, level: number, mode: Mode = 'course'): { save: Save; events: ResultEvents } {
   const save = normalizeSave(input) // 古いデータ（lastByLevel がない）でも同じに扱う
   const events: ResultEvents = { newMastered: [], starUps: [], polished: [], firstPlayToday: false, sticker: null, bananaUp: null, newShows: [], growth: [] }
   const first = firstAnswers(result.answers)
+  const review = mode === 'review'
+  const toCourse = MODE_RULES[mode].course
 
   // 単語ごとの記録（ok/ng は全部の答えを数える。箱は最初の答えだけ）
   const stats: Record<string, WordStat> = { ...save.stats }
@@ -107,10 +110,10 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
   const solved = review ? new Set([...first].filter(([, ok]) => ok).map(([id]) => id)) : new Set<string>()
   const reviewList = addUnique(save.review, missed).filter((id) => !solved.has(id)).slice(-REVIEW_MAX)
 
-  // ふくしゅうは、コースのクリア（解放）にも「まえより」の記録にも入れない
-  const cleared = !review && result.cleared && !save.cleared.includes(level) ? [...save.cleared, level] : save.cleared
+  // ふくしゅう・れんしゅうは、コースのクリア（解放）にも「まえより」の記録にも入れない
+  const cleared = toCourse && result.cleared && !save.cleared.includes(level) ? [...save.cleared, level] : save.cleared
   const last: LastResult = { correct: result.correct, bestCombo: result.bestCombo, clearMs: result.clearMs, level, at: nowMs }
-  if (!review) events.growth = growthLines(save.lastByLevel[level], last, level)
+  if (toCourse) events.growth = growthLines(save.lastByLevel[level], last, level)
   const next: Save = {
     ...save,
     coins: save.coins + result.coins,
@@ -121,7 +124,7 @@ export function applyResult(input: Save, result: QuizResult, nowMs: number, leve
     stats,
     diary,
     review: reviewList,
-    ...(review ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
+    ...(!toCourse ? {} : { lastResult: last, lastByLevel: { ...save.lastByLevel, [level]: last } }),
   }
   events.bananaUp = stageUp(save.coins, next.coins)
   // ハプニング: 見たものを seen に記録する（はじめて見たときだけ。時刻は変えない）。先に入れておくと、手に入れた判定（seen で決まる）が新しいものを拾える
