@@ -1207,11 +1207,11 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .diary-words { width: 100%; max-width: 360px; padding: 8px 10px 12px; background: var(--card); border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); text-align: center; }
 .diary-words-title { font-size: 16px; color: #8a6a5a; margin-bottom: 6px; }
 /* ---------- タイトルの アイコンボタンの1行 ---------- */
-.icon-row { width: 100%; display: flex; justify-content: space-between; gap: 2px; --ic: min(54px, calc((100vw - 32px - 10px) / 6 - 2px)); }
+.icon-row { width: 100%; display: flex; justify-content: space-between; gap: 2px; --ic: min(54px, calc((100vw - 32px - 10px) / 7 - 2px)); }
 .icon-btn { position: relative; flex: 1; min-width: 0; max-width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .icon-btn .ic { width: var(--ic); height: var(--ic); display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, 0.92); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); font-size: calc(var(--ic) * 0.48); line-height: 1; transition: transform 0.08s, box-shadow 0.08s; }
 .icon-btn:active .ic { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
-.icon-btn .lb { font-size: min(11px, 2.9vw); line-height: 1.1; color: #fff; text-shadow: 0 2px 0 var(--ink); white-space: nowrap; }
+.icon-btn .lb { font-size: min(10px, 2.4vw); letter-spacing: -0.03em; line-height: 1.1; color: #fff; text-shadow: 0 2px 0 var(--ink); white-space: nowrap; }
 .icon-btn .n { position: absolute; top: -6px; right: 2px; min-width: 22px; height: 22px; padding: 0 5px; display: grid; place-items: center; border-radius: 11px; background: #ff3a5a; border: 2px solid var(--ink); color: #fff; font-size: 13px; line-height: 1; }
 .icon-btn .n.sticker-n { background: #e0407a; }
 .review-btn .ic { background: #ffe9a8; }
@@ -1447,3 +1447,50 @@ body.fever::before { animation-duration: var(--fever-speed, 2.4s); }
 .parent .delete-btn, .parent .keep-btn { height: 48px; font-size: 17px; }
 .parent .keep-btn { font-size: 18px; }
 .parent-notice { text-align: center; }
+
+/* ---------- はじめてのガイド ---------- */
+.guide { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(30, 20, 40, 0.72); overflow-y: auto; }
+.guide-card { position: relative; width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 14px 14px; background: var(--card); border: 4px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 var(--ink); }
+.guide-dots { display: flex; gap: 8px; }
+.guide-dot { width: 12px; height: 12px; border-radius: 50%; background: #e4d6c8; border: 2px solid var(--ink); }
+.guide-dot.on { background: var(--yellow); transform: scale(1.2); }
+.guide-monkey { height: 78px; display: grid; place-items: end center; }
+.guide-page { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: pop-small 0.35s; }
+.guide-title { margin: 0; text-align: center; text-wrap: balance; word-break: keep-all; font-size: 22px; line-height: 1.3; color: var(--ink); }
+.guide-body { margin: 0; text-align: center; text-wrap: balance; word-break: keep-all; font-size: 18px; line-height: 1.4; color: #6a4a3a; }
+.guide-nav { width: 100%; display: flex; gap: 10px; margin-top: 4px; }
+.guide-nav .btn { flex: 1; height: 54px; font-size: 22px; }
+.guide-back { --c: #fff; }
+.guide-next { --c: var(--yellow); }
+.guide-skip { padding: 8px 18px; font-size: 16px; color: #8a6a5a; background: none; text-decoration: underline; }
+.g-sample { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.g-quiz { padding-bottom: 4px; }
+.g-card { width: 120px; height: 110px; display: grid; place-items: center; background: #fff; border: 3px solid var(--ink); border-radius: 18px; }
+.g-card img { width: 96px; height: 96px; object-fit: contain; }
+.g-choices { display: flex; gap: 10px; margin-bottom: 18px; }
+.g-choice { min-width: 96px; text-align: center; padding: 8px 10px; font-size: 22px; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 4px 0 var(--ink); transition: transform 0.2s, background 0.2s; }
+.g-choice.on { background: var(--yellow); transform: translateY(3px) scale(1.04); box-shadow: 0 1px 0 var(--ink); }
+.g-choice { position: relative; }
+.g-finger { position: absolute; right: -10px; bottom: -34px; font-size: 38px; line-height: 1; transition: transform 0.5s ease-in-out; transform: translateY(10px); pointer-events: none; }
+.g-finger.down { transform: translateY(-4px); }
+.g-decide { display: flex; align-items: center; gap: 6px; padding: 2px 16px 2px 8px; font-size: 22px; background: #7be3a0; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); }
+.g-show .pv-stage { gap: 4px; }
+.g-show .pv-stage .picture-wrap { height: 120px; }
+.g-show .road { width: 100%; }
+.g-sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; background: #fff8e8; border: 3px dashed #c9a27a; border-radius: 18px; }
+.g-slot { display: grid; animation: pop-small 0.5s backwards; }
+
+/* ---------- デモ ---------- */
+.demo-shield { position: fixed; left: 0; right: 0; bottom: 0; top: 64px; z-index: 45; }
+.demo-label { position: fixed; left: 46%; top: 13px; z-index: 46; padding: 2px 12px; font-size: 14px; color: #fff; background: rgba(43, 26, 46, 0.7); border-radius: 999px; pointer-events: none; white-space: nowrap; }
+.demo-hand { position: fixed; z-index: 47; width: 0; height: 0; pointer-events: none; transition: left 0.55s ease-in-out, top 0.55s ease-in-out; }
+.hand-glove { position: absolute; left: -22px; top: -6px; font-size: 54px; line-height: 1; filter: drop-shadow(0 3px 0 rgba(43, 26, 46, 0.5)); }
+.hand-glove.tap { animation: hand-tap 0.3s ease-out; }
+.hand-ring { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; border: 5px solid #fff; opacity: 0; }
+.hand-ring.tap { animation: hand-ring 0.5s ease-out; }
+@keyframes hand-tap { 40% { transform: translateY(8px) scale(0.88); } }
+@keyframes hand-ring { from { opacity: 0.9; transform: scale(0.3); } to { opacity: 0; transform: scale(1.3); } }
+.demo-btn { --c: #ffe9a8; width: 100%; height: 56px; font-size: 20px; }
+.result-demo { justify-content: center; text-align: center; gap: 14px; }
+.demo-note { margin: 0; font-size: 18px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.result-demo .mode-chip { flex: none; margin-bottom: 28px; padding: 4px 18px; }

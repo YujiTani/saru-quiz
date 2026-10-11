@@ -9,6 +9,7 @@ import { burst, fountain, rain, shake } from '../lib/effects'
 import { rankingEnabled, submitScore, type SubmitResult } from '../lib/ranking'
 import { getPlayerName } from '../lib/players'
 import type { ResultEvents } from '../lib/progress'
+import { DEMO_BACK_MS } from '../lib/demo'
 import { MODE_RULES, type Mode } from '../lib/quiz'
 import { STICKER_KINDS, stickerImg, stickerInSet } from '../lib/stickers'
 import { isTestRun } from '../lib/testflags'
@@ -28,7 +29,38 @@ const GIFT_MAX = 3
 
 type Tail = { grow: boolean; mastered: boolean; stars: boolean; polish: boolean; sticker: boolean; banana: boolean; more: boolean }
 
-export function Result({ mode, level, result, events = NO_EVENTS, totalCoins, onAgain, onHome, onRanking }: Props) {
+/** デモの結果。デモだと分かる表示を出して、3秒たったら自動でタイトルに戻る（さわっても戻る） */
+function DemoResult({ result, onHome }: { result: QuizResult; onHome: () => void }) {
+  useEffect(() => {
+    sfx.fanfare()
+    const id = setTimeout(onHome, DEMO_BACK_MS)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <div className="screen result result-demo" onPointerDown={onHome}>
+      <div className="mode-chip result-mode">🎬 デモ</div>
+      <div className="result-monkeys">
+        <PixelMonkey char="mandrill" mood="happy" size={58} anim="dance" />
+        <PixelMonkey char="monchan" mood="happy" size={100} anim="jump" />
+        <PixelMonkey char="gorilla" mood="happy" size={66} anim="dance" />
+      </div>
+      <h2 className="result-title pop">くりあー！</h2>
+      <div className="result-count">
+        <span>せいかい</span>
+        <span className="num">{result.correct}</span>
+        <span>もん！</span>
+      </div>
+      <p className="demo-note">デモは きろくに のこらないよ</p>
+    </div>
+  )
+}
+
+export function Result(props: Props) {
+  return props.mode === 'demo' ? <DemoResult result={props.result} onHome={props.onHome} /> : <PlayResult {...props} />
+}
+
+function PlayResult({ mode, level, result, events = NO_EVENTS, totalCoins, onAgain, onHome, onRanking }: Props) {
   const rules = MODE_RULES[mode]
   const review = mode === 'review'
   const practice = mode === 'practice'

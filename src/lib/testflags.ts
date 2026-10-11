@@ -11,6 +11,9 @@ export function isTestRun(): boolean {
   return p.has('show') || p.has('cat') || p.has('demo') || p.has('start') || p.has('word') || hapForced() !== null
 }
 
+/** ?demo（デモプレイを始める） */
+export const demoParam = (): boolean => params().has('demo')
+
 /** ?cat=カテゴリ名（なければ null） */
 export const catParam = (): string | null => params().get('cat') || null
 

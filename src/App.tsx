@@ -1,7 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects, burst, setMotion as setEffectsMotion } from './lib/effects'
-import { getMotion, onSettingsChange } from './lib/settings'
+import { getGuideSeen, getMotion, onSettingsChange, setGuideSeen } from './lib/settings'
+import { demoSession, shouldRecord } from './lib/demo'
+import { shouldShowGuide } from './lib/guide'
 import { attachLayer } from './shows'
 import { COURSE, MODE_RULES, REVIEW_LEVEL, pickSession, practiceLevel, practiceSession, reviewSession, type Mode, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
@@ -10,8 +12,9 @@ import { getCurrent, onPlayersChange, savePlayerData, selectPlayer } from './lib
 import { emptySave } from './lib/storage'
 import { now } from './lib/day'
 import { applyResult, type ResultEvents } from './lib/progress'
-import { isTestRun } from './lib/testflags'
+import { demoParam, isTestRun } from './lib/testflags'
 import { flushPending } from './lib/ranking'
+import { Guide } from './screens/Guide'
 import { Diary } from './screens/Diary'
 import { Quiz, type QuizResult } from './screens/Quiz'
 import { Parent } from './screens/Parent'
@@ -42,6 +45,8 @@ type Screen =
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
+  // はじめてのガイド。はじめてタイトルに来たとき1回だけ自動で出て、タイトルの「？」でいつでも出せる
+  const [guide, setGuide] = useState(false)
   // キャラ（プレイヤー）が変わったら描き直す。進捗データは選んでいるキャラのもの
   const [, refresh] = useReducer((x: number) => x + 1, 0)
   useEffect(() => onPlayersChange(refresh), [])
@@ -71,6 +76,19 @@ export default function App() {
     }
   }, [])
 
+  // はじめてタイトルに来たとき（ガイドを見ていなければ）1回だけ出す。出した時点で「見た」にする
+  useEffect(() => {
+    if (screen.name === 'title' && player && !isTestRun() && shouldShowGuide(getGuideSeen())) {
+      setGuideSeen()
+      setGuide(true)
+    }
+  }, [screen.name, player])
+
+  /** デモ（おさるが自動で10問あそぶ）。何も記録しない */
+  function startDemo() {
+    setScreen({ name: 'quiz', mode: 'demo', level: 1, questions: demoSession(), key: Date.now() })
+  }
+
   /** コースを始める（mode 'course'）、ふくしゅう（'review'。level は選択肢の難しさだけに使う）、れんしゅう（'practice'。cat のカテゴリ10問） */
   function startQuiz(mode: Mode, level: number = REVIEW_LEVEL, cat?: string) {
     if (mode === 'practice' && cat) level = practiceLevel(cat)
@@ -82,7 +100,7 @@ export default function App() {
   function finish(mode: Mode, level: number, result: QuizResult, cat?: string) {
     const { save, events } = applyResult(data, result, now(), level, mode)
     // テスト用のURLのときは記録しない
-    if (player && !isTestRun()) savePlayerData(player.id, save)
+    if (player && shouldRecord(MODE_RULES[mode], isTestRun())) savePlayerData(player.id, save)
     setScreen({ name: 'result', mode, level, result, events, cat })
   }
 
@@ -109,7 +127,8 @@ export default function App() {
             unlockSpeech()
             sfx.coin()
             void speak('おさるの、なあにクイズ！')
-            // はじめてなら、まずキャラをつくる
+            // ?demo ならデモを始める。はじめてなら、まずキャラをつくる
+            if (demoParam() && getCurrent()) return startDemo()
             setScreen(getCurrent() ? { name: 'title' } : { name: 'player', edit: false, first: true, back: 'title' })
           }}
         >
@@ -127,6 +146,7 @@ export default function App() {
           onDiary={() => setScreen({ name: 'diary' })}
           onBook={() => setScreen({ name: 'book' })}
           onWords={() => setScreen({ name: 'words' })}
+          onGuide={() => setGuide(true)}
           onSwitch={(id) => {
             selectPlayer(id)
             const p = getCurrent()
@@ -144,7 +164,7 @@ export default function App() {
           onBack={() => setScreen({ name: screen.back } as Screen)}
         />
       )}
-      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} onParent={() => setScreen({ name: 'parent' })} />}
+      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} onParent={() => setScreen({ name: 'parent' })} onDemo={startDemo} />}
       {screen.name === 'parent' && player && <Parent player={player} onBack={() => setScreen({ name: 'settings' })} />}
       {screen.name === 'words' && player && <WordBook player={player} initialCat={screen.cat} onPractice={(cat) => startQuiz('practice', 1, cat)} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'diary' && player && <Diary player={player} />}
@@ -165,6 +185,7 @@ export default function App() {
           onRanking={() => setScreen({ name: 'ranking', course: MODE_RULES[screen.mode].ranked ? screen.level : 1 })}
         />
       )}
+      {guide && <Guide onClose={() => setGuide(false)} />}
       <div id="show-layer" className="show-layer" ref={showLayer} />
       <canvas ref={fx} className="fx" />
       <div id="flash" />
