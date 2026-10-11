@@ -35,8 +35,8 @@ export type PreviewEls = { host: HTMLElement | null; pic: HTMLElement | null }
 /** E: みちのり・おんがくの進み具合（舞台が Road や おさるバンドの表示に使う）、GOAL: みちのりの1周のこたえ数 */
 export type PreviewHooks = {
   setE?: (E: number) => void
-  /** おうえんの舞台の観客（E・正解した単語・正解の数）。null で消す */
-  setCheer?: (c: { E: number; words: Question[]; correct: number } | null) => void
+  /** おうえんの舞台の観客（E・正解の数）。null で消す */
+  setCheer?: (c: { E: number; correct: number } | null) => void
 }
 
 const CHEER_STEPS = 8
@@ -83,13 +83,11 @@ export async function runPreview(show: Show, els: PreviewEls, word: Question, ho
     return
   }
   if (show.cat === 'ouen') {
-    // おうえん: 正解が進むようすを見せる（E が 0 → 1。1つ正解するたびに なかまが加わる・ことりは音階が上がる）
-    const words = sampleToday()
+    // おうえん: 正解が進むようすを見せる（E が 0 → 1。おさるが増える・ことりは1つ正解するたびに音階が上がる）
     try {
       for (let i = 0; i < CHEER_STEPS && !cancel.cancelled; i++) {
-        hooks.setCheer?.({ E: i / (CHEER_STEPS - 1), words: words.slice(0, i + 1), correct: i + 1 })
+        hooks.setCheer?.({ E: i / (CHEER_STEPS - 1), correct: i + 1 })
         if (show.id === 'ouen:kotori') sfx.chirp(i)
-        else if (show.id === 'ouen:nakama') sfx.sparkle()
         await wait(CHEER_MS)
       }
       if (!cancel.cancelled) await wait(1200)

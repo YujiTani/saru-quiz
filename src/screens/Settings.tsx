@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { HoldButton } from '../components/HoldButton'
 import { PixelMonkey } from '../components/PixelMonkey'
 import { getCurrent } from '../lib/players'
 import { burst } from '../lib/effects'
@@ -7,7 +8,7 @@ import { sfx } from '../lib/sound'
 import { speak, stopSpeaking } from '../lib/speech'
 
 /** せってい画面（キャラ・こえ・おと・おんりょう）。音の設定は子どもが押さないようにここだけに置く */
-export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditPlayer: () => void }) {
+export function Settings({ onBack, onEditPlayer, onParent }: { onBack: () => void; onEditPlayer: () => void; onParent: () => void }) {
   const player = getCurrent()
   const [voice, setVoiceState] = useState<VoiceId>(getVoice)
   const [muted, setMutedState] = useState(isMuted)
@@ -114,6 +115,12 @@ export function Settings({ onBack, onEditPlayer }: { onBack: () => void; onEditP
           もどる
         </button>
       </div>
+
+      {/* 保護者メニュー: 子どもが誤って入らないよう、2秒の長押しで開く */}
+      <HoldButton className="parent-btn" onHold={onParent} label="おうちのかた（2びょう ながおし）">
+        <span className="parent-title">おうちのかた</span>
+        <small className="parent-note">2秒 長押しで開きます</small>
+      </HoldButton>
     </div>
   )
 }

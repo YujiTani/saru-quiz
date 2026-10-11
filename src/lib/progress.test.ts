@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BANANA_STAGES } from './banana'
-import { allQuestions } from './quiz'
+import { MODE_RULES, allQuestions } from './quiz'
 import { SHOWS } from '../shows/registry'
 import { applyResult, firstAnswers, growthLines } from './progress'
 import { emptySave, normalizeSave } from './storage'
@@ -100,7 +100,7 @@ describe('progress 記録', () => {
   it('review: 通常のプレイでは正解しても外れない。ふくしゅうモードで最初に正解すると外れる', () => {
     const base: Save = { ...emptySave(), review: ['a', 'b'] }
     expect(applyResult(base, res([['a', true]]), T0, 1).save.review).toEqual(['a', 'b'])
-    expect(applyResult(base, res([['a', true], ['b', false], ['b', true]]), T0, 1, true).save.review).toEqual(['b'])
+    expect(applyResult(base, res([['a', true], ['b', false], ['b', true]]), T0, 1, 'review').save.review).toEqual(['b'])
   })
 
   it('review: 最大30（古いものから落とす）', () => {
@@ -183,12 +183,57 @@ describe('lastByLevel コースごとの前回', () => {
 
   it('ふくしゅうモードは、クリア（解放）にも「まえより」の記録にも入れない', () => {
     const base: Save = { ...emptySave(), review: ['a'] }
-    const { save, events } = applyResult(base, res([['a', true]], { cleared: true, clearMs: 1000 }), T0, 2, true)
+    const { save, events } = applyResult(base, res([['a', true]], { cleared: true, clearMs: 1000 }), T0, 2, 'review')
     expect(save.cleared).toEqual([])
     expect(save.lastResult).toBeUndefined()
     expect(save.lastByLevel).toEqual({})
     expect(events.growth).toEqual([])
     expect(save.review).toEqual([]) // 最初に正解したので外れる
+  })
+})
+
+describe('れんしゅうモードの記録', () => {
+  const run = (answers: [string, boolean][], extra: Partial<QuizResult> = {}, base: Save = emptySave()) => applyResult(base, res(answers, { cleared: true, clearMs: 1000, ...extra }), T0, 3, 'practice')
+
+  it('stats・えにっき・ふくしゅう・バナナ・シールは通常どおり記録する', () => {
+    const { save, events } = run([['a', true], ['b', false], ['b', true]])
+    expect(save.stats.a).toMatchObject({ ok: 1, ng: 0, box: 1 })
+    expect(save.stats.b).toMatchObject({ ok: 1, ng: 1, box: 0 })
+    expect(save.diary['2026-01-01'].plays).toBe(1)
+    expect(save.diary['2026-01-01'].words).toEqual(['a', 'b'])
+    expect(save.review).toEqual(['b']) // 最初にまちがえた単語は ふくしゅうへ
+    expect(save.coins).toBe(10)
+    expect(save.plays).toBe(1)
+    expect(events.newMastered).toEqual(['a'])
+    expect(events.firstPlayToday).toBe(true)
+    expect(save.stickers).toBe(1)
+  })
+
+  it('ふくしゅうと違い、最初に正解しても review からは外れない', () => {
+    const base: Save = { ...emptySave(), review: ['a'] }
+    expect(run([['a', true]], {}, base).save.review).toEqual(['a'])
+  })
+
+  it('コースの解放と「まえより」には入れない（クリアしても）', () => {
+    const { save, events } = run([['a', true]])
+    expect(save.cleared).toEqual([])
+    expect(save.lastResult).toBeUndefined()
+    expect(save.lastByLevel).toEqual({})
+    expect(events.growth).toEqual([])
+  })
+
+  it('すでにあるコースの「まえより」の記録を書きかえない', () => {
+    const prev = applyResult(emptySave(), res([['a', true]], { cleared: true, clearMs: 5000 }), T0, 3)
+    const after = run([['a', true], ['b', true]], { correct: 9 }, prev.save)
+    expect(after.save.lastByLevel).toEqual(prev.save.lastByLevel)
+    expect(after.save.cleared).toEqual([3])
+    expect(after.events.growth).toEqual([])
+  })
+
+  it('ランキングには送らない（決まりごと ranked=false）', () => {
+    expect(MODE_RULES.practice.ranked).toBe(false)
+    expect(MODE_RULES.practice.course).toBe(false)
+    expect(MODE_RULES.course.ranked).toBe(true)
   })
 })
 
@@ -217,7 +262,7 @@ describe('diary の mastered（☆1になった日）', () => {
 
   it('ふくしゅうでも、その日の mastered に入る', () => {
     const base: Save = { ...emptySave(), review: ['a'] }
-    expect(applyResult(base, res([['a', true]]), T0, 1, true).save.diary['2026-01-01'].mastered).toEqual(['a'])
+    expect(applyResult(base, res([['a', true]]), T0, 1, 'review').save.diary['2026-01-01'].mastered).toEqual(['a'])
   })
 })
 
@@ -267,7 +312,7 @@ describe('シール（applyResult）', () => {
 
   it('ふくしゅうでも、その日はじめてならもらえる', () => {
     const base: Save = { ...emptySave(), review: ['a'] }
-    expect(applyResult(base, res([['a', true]]), T0, 1, true).events.sticker?.count).toBe(1)
+    expect(applyResult(base, res([['a', true]]), T0, 1, 'review').events.sticker?.count).toBe(1)
   })
 
   it('古い日（シールなしの diary）しかない日に遊んでも、2回目扱いでシールは増えない', () => {

@@ -3,7 +3,7 @@ import { PixelMonkey } from './components/PixelMonkey'
 import { attachEffects, burst, setMotion as setEffectsMotion } from './lib/effects'
 import { getMotion, onSettingsChange } from './lib/settings'
 import { attachLayer } from './shows'
-import { COURSE, MODE_RULES, REVIEW_LEVEL, pickSession, reviewSession, type Mode, type Question } from './lib/quiz'
+import { COURSE, MODE_RULES, REVIEW_LEVEL, pickSession, practiceLevel, practiceSession, reviewSession, type Mode, type Question } from './lib/quiz'
 import { resumeAudio, unlockAudio, sfx } from './lib/sound'
 import { unlockSpeech, speak } from './lib/speech'
 import { getCurrent, onPlayersChange, savePlayerData, selectPlayer } from './lib/players'
@@ -14,12 +14,14 @@ import { isTestRun } from './lib/testflags'
 import { flushPending } from './lib/ranking'
 import { Diary } from './screens/Diary'
 import { Quiz, type QuizResult } from './screens/Quiz'
+import { Parent } from './screens/Parent'
 import { Ranking } from './screens/Ranking'
 import { Result } from './screens/Result'
 import { ShowBook } from './screens/ShowBook'
 import { PlayerEdit } from './screens/PlayerEdit'
 import { Settings } from './screens/Settings'
 import { Title } from './screens/Title'
+import { WordBook } from './screens/WordBook'
 
 // 出題はクリアに必要な数＋予備（足りなければ先頭に戻る）
 const sessionSize = (level: number) => (COURSE[level]?.goal ?? 100) + 30
@@ -32,8 +34,11 @@ type Screen =
   | { name: 'ranking'; course: number }
   | { name: 'diary' }
   | { name: 'book' }
-  | { name: 'quiz'; mode: Mode; level: number; questions: Question[]; key: number }
-  | { name: 'result'; mode: Mode; level: number; result: QuizResult; events: ResultEvents }
+  | { name: 'words'; cat?: string }
+  | { name: 'parent' }
+  // cat: れんしゅうのカテゴリ（れんしゅうのときだけ）
+  | { name: 'quiz'; mode: Mode; level: number; questions: Question[]; key: number; cat?: string }
+  | { name: 'result'; mode: Mode; level: number; result: QuizResult; events: ResultEvents; cat?: string }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tap' })
@@ -66,19 +71,23 @@ export default function App() {
     }
   }, [])
 
-  /** コースを始める（mode 'course'）か、ふくしゅうを始める（mode 'review'。level は選択肢の難しさだけに使う） */
-  function startQuiz(mode: Mode, level: number = REVIEW_LEVEL) {
-    const questions = mode === 'review' ? reviewSession(data.review) : pickSession(level, sessionSize(level), data.stats)
+  /** コースを始める（mode 'course'）、ふくしゅう（'review'。level は選択肢の難しさだけに使う）、れんしゅう（'practice'。cat のカテゴリ10問） */
+  function startQuiz(mode: Mode, level: number = REVIEW_LEVEL, cat?: string) {
+    if (mode === 'practice' && cat) level = practiceLevel(cat)
+    const questions = mode === 'review' ? reviewSession(data.review) : mode === 'practice' ? practiceSession(cat ?? '', data.stats) : pickSession(level, sessionSize(level), data.stats)
     if (questions.length === 0) return setScreen({ name: 'title' })
-    setScreen({ name: 'quiz', mode, level, questions, key: Date.now() })
+    setScreen({ name: 'quiz', mode, level, questions, key: Date.now(), cat })
   }
 
-  function finish(mode: Mode, level: number, result: QuizResult) {
-    const { save, events } = applyResult(data, result, now(), level, mode === 'review')
+  function finish(mode: Mode, level: number, result: QuizResult, cat?: string) {
+    const { save, events } = applyResult(data, result, now(), level, mode)
     // テスト用のURLのときは記録しない
     if (player && !isTestRun()) savePlayerData(player.id, save)
-    setScreen({ name: 'result', mode, level, result, events })
+    setScreen({ name: 'result', mode, level, result, events, cat })
   }
+
+  // れんしゅうのあとは ことば図鑑のそのカテゴリへ、ほかはタイトルへ
+  const leave = (mode: Mode, cat?: string): Screen => (mode === 'practice' ? { name: 'words', cat } : { name: 'title' })
 
   return (
     <>
@@ -117,6 +126,7 @@ export default function App() {
           onRanking={() => setScreen({ name: 'ranking', course: 1 })}
           onDiary={() => setScreen({ name: 'diary' })}
           onBook={() => setScreen({ name: 'book' })}
+          onWords={() => setScreen({ name: 'words' })}
           onSwitch={(id) => {
             selectPlayer(id)
             const p = getCurrent()
@@ -134,12 +144,14 @@ export default function App() {
           onBack={() => setScreen({ name: screen.back } as Screen)}
         />
       )}
-      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} />}
+      {screen.name === 'settings' && <Settings onBack={() => setScreen({ name: 'title' })} onEditPlayer={() => setScreen({ name: 'player', edit: true, back: 'settings' })} onParent={() => setScreen({ name: 'parent' })} />}
+      {screen.name === 'parent' && player && <Parent player={player} onBack={() => setScreen({ name: 'settings' })} />}
+      {screen.name === 'words' && player && <WordBook player={player} initialCat={screen.cat} onPractice={(cat) => startQuiz('practice', 1, cat)} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'diary' && player && <Diary player={player} />}
       {screen.name === 'book' && player && <ShowBook player={player} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'ranking' && <Ranking initialCourse={screen.course} onBack={() => setScreen({ name: 'title' })} />}
       {screen.name === 'quiz' && (
-        <Quiz key={screen.key} mode={screen.mode} level={screen.level} questions={screen.questions} save={data} onFinish={(r) => finish(screen.mode, screen.level, r)} onQuit={() => setScreen({ name: 'title' })} />
+        <Quiz key={screen.key} mode={screen.mode} level={screen.level} questions={screen.questions} save={data} onFinish={(r) => finish(screen.mode, screen.level, r, screen.cat)} onQuit={() => setScreen(leave(screen.mode, screen.cat))} />
       )}
       {screen.name === 'result' && (
         <Result
@@ -148,8 +160,8 @@ export default function App() {
           result={screen.result}
           events={screen.events}
           totalCoins={data.coins}
-          onAgain={() => (screen.mode === 'review' && data.review.length === 0 ? setScreen({ name: 'title' }) : startQuiz(screen.mode, screen.level))}
-          onHome={() => setScreen({ name: 'title' })}
+          onAgain={() => (screen.mode === 'review' && data.review.length === 0 ? setScreen({ name: 'title' }) : startQuiz(screen.mode, screen.level, screen.cat))}
+          onHome={() => setScreen(leave(screen.mode, screen.cat))}
           onRanking={() => setScreen({ name: 'ranking', course: MODE_RULES[screen.mode].ranked ? screen.level : 1 })}
         />
       )}

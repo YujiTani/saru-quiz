@@ -2,7 +2,7 @@
 // 読み上げは止めない。どれも 0.8 秒以内。E（進み具合）が上がるほど、はねる高さ・粒の数がふえる
 import { burst, drift } from '../lib/effects'
 import type { Show, ShowCtx } from './types'
-import { centerOf, dust, ease, say, track } from './util'
+import { centerOf, dust, ease, track } from './util'
 
 /** 演出の長さ（ms）。0.8秒以内 */
 export const DETEKU_MS = 780
@@ -31,34 +31,27 @@ function fadeIn(ctx: ShowCtx): Promise<void> {
 /** 絵を動かす（pic の WAAPI。clear() で止まる）。fill なし: 終わったら もとの見た目 */
 const move = (ctx: ShowCtx, kf: Keyframe[], duration = DETEKU_MS) => (ctx.pic ? ctx.layer.go(ctx.pic, kf, { duration, easing: 'linear' }) : Promise.resolve())
 
-/** いないいないばあ（はじめから）: 絵の前に 🙈 の手が出て、パッと開くと 絵がぽんっと出る */
-const baa: Show = {
-  id: 'deteku:baa',
+/** くるっと（はじめから）: 絵が くるっと回って、ぽんっと出る（もとの「picture-in」と同じ動き。テンポを落とさない短さ） */
+export const KURUTTO_MS = 450
+const kurutto: Show = {
+  id: 'deteku:kurutto',
   cat: 'deteku',
-  name: 'いないいないばあ',
-  icon: '🙈',
+  name: 'くるっと',
+  icon: '🔄',
   base: true,
   async play(ctx) {
-    const pic = ctx.pic
-    if (!pic) return
+    if (!ctx.pic) return
     if (ctx.motion <= 0) return fadeIn(ctx)
-    const r = pic.getBoundingClientRect()
-    const c = centerOf(r)
-    const size = Math.min(r.width, r.height) * 0.62
-    const hands = ctx.layer.emoji('🙈', c.x, c.y, size)
-    const over = 1.04 + 0.06 * ctx.E // E が高いほど、ばあ！の ぽんっが大きい
-    void ctx.layer.go(hands, [{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'scale(1)', offset: 0.3 }, { opacity: 1, transform: 'scale(1)', offset: 0.42 }, { opacity: 0, transform: `translateY(${-size * 0.45}px) scale(1.5)` }], { duration: DETEKU_MS, easing: 'ease-out' }, true)
-    later(ctx, DETEKU_MS * 0.42, () => {
-      ctx.sfx.pon()
-      void say(ctx, 'ばあ！', c.x, r.top + 26, 600)
-      burst(c.x, c.y, 'star', Math.round(8 + 18 * ctx.E), 0.7)
-    })
-    await move(ctx, [
-      { opacity: 0, transform: 'scale(.5)', offset: 0 },
-      { opacity: 0, transform: 'scale(.5)', offset: 0.4 },
-      { opacity: 1, transform: `scale(${over})`, offset: 0.7 },
-      { opacity: 1, transform: 'scale(1)', offset: 1 },
-    ])
+    const bounce = 'cubic-bezier(0.2, 1.6, 0.4, 1)' // CSS の picture-in と同じ（区間ごとに かかる）
+    await move(
+      ctx,
+      [
+        { transform: 'perspective(600px) rotateY(180deg) scale(0.4)', opacity: 0, easing: bounce },
+        { transform: 'perspective(600px) rotateY(-12deg) scale(1.05)', opacity: 1, offset: 0.6, easing: bounce },
+        { transform: 'none', opacity: 1 },
+      ],
+      KURUTTO_MS,
+    )
   },
 }
 
@@ -221,4 +214,4 @@ const tsuchi: Show = {
   },
 }
 
-export const DETEKU_SHOWS: Show[] = [baa, present, ki, shabon, tsuchi]
+export const DETEKU_SHOWS: Show[] = [kurutto, present, ki, shabon, tsuchi]
